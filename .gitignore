@@ -1,0 +1,9 @@
+# Environment
+.env
+.env.*
+
+# Dependencies
+/vendor/
+
+# Local scratch
+/scratch/

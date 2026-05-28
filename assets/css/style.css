@@ -1,0 +1,710 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+/* Default Admin App Theme Variables */
+:root {
+    --color-primary: #1b4a9a;
+    --color-primary-light: #2563eb;
+    --color-primary-dark: #0f2d5c;
+    --color-accent: #d4af37;
+    --page-bg: #f8fafc;
+    --card-bg: #ffffff;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --sidebar-width: 260px;
+    --sidebar-collapsed-width: 70px;
+    --transition-speed: 0.3s;
+}
+
+/* Template Theme Class (for reports, exports, tracker, etc.) */
+.theme-template {
+    --color-primary: #0f4c75;
+    --color-primary-light: #1b6ca8;
+    --color-primary-dark: #0a2f4a;
+    --color-accent: #d4af37;
+}
+
+/* Global Styles */
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    line-height: 1.6;
+    background-color: var(--page-bg);
+    color: var(--text-main);
+    overflow-x: hidden;
+}
+
+/* Typography */
+.logo-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.logo-subtitle {
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.85;
+}
+
+/* Touch-Friendly Standard Controls */
+.btn, .form-control, .form-select {
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: all var(--transition-speed) ease;
+}
+
+.btn-primary {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #ffffff;
+}
+
+.btn-primary:hover, .btn-primary:focus {
+    background-color: var(--color-primary-light);
+    border-color: var(--color-primary-light);
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+}
+
+.btn-accent {
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #1e293b;
+}
+
+.btn-accent:hover, .btn-accent:focus {
+    background-color: #c49e2b;
+    border-color: #c49e2b;
+    color: #ffffff;
+}
+
+/* Layout Architecture */
+.wrapper {
+    display: flex;
+    width: 100%;
+    align-items: stretch;
+}
+
+/* Fixed Desktop Sidebar */
+.sidebar {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    background-color: var(--color-primary);
+    color: #ffffff;
+    min-height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1030;
+    transition: all var(--transition-speed) ease;
+    box-shadow: 4px 0 24px rgba(15, 45, 92, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    padding: 1.5rem 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-menu {
+    list-style: none;
+    padding: 1rem 0;
+    margin: 0;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.sidebar-menu li {
+    padding: 0.15rem 1rem;
+}
+
+.sidebar-menu a {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all var(--transition-speed) ease;
+}
+
+.sidebar-menu a i {
+    width: 20px;
+    margin-right: 12px;
+    font-size: 1.1rem;
+}
+
+.sidebar-menu a:hover {
+    background-color: var(--color-primary-dark);
+    color: #ffffff;
+}
+
+.sidebar-menu li.active > a {
+    background-color: var(--color-primary-light);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* Main Content Area */
+.main-content {
+    width: 100%;
+    padding-left: var(--sidebar-width);
+    min-height: 100vh;
+    transition: all var(--transition-speed) ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.top-navbar {
+    background-color: #ffffff;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    padding: 0 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.content-container {
+    flex-grow: 1;
+    padding: 2rem 1.5rem;
+}
+
+/* Footer Section */
+.footer {
+    background-color: #ffffff;
+    padding: 1.25rem 1.5rem;
+    border-top: 1px solid #e2e8f0;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+/* Rounded Cards & Premium Design */
+.card {
+    background: var(--card-bg);
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+    margin-bottom: 1.5rem;
+    transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+}
+
+.card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+}
+
+.card-header {
+    background-color: transparent;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 1.25rem 1.5rem;
+    font-weight: 600;
+    color: var(--color-primary-dark);
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Status Badges */
+.badge-status {
+    padding: 0.5em 0.75em;
+    font-weight: 600;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    letter-spacing: 0.3px;
+}
+
+/* Responsive Table Wrapper styling */
+.table-responsive {
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.table th {
+    background-color: #f8fafc;
+    color: var(--color-primary-dark);
+    font-weight: 600;
+    border-bottom-width: 1px;
+    padding: 1rem 1.25rem;
+}
+
+.table td {
+    padding: 1rem 1.25rem;
+    vertical-align: middle;
+}
+
+/* Floating Chatbot Widget */
+.chatbot-widget {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1040;
+}
+
+.chatbot-toggle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: var(--color-primary);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    box-shadow: 0 4px 12px rgba(15, 45, 92, 0.3);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 3px solid #ffffff;
+}
+
+.chatbot-toggle:hover {
+    transform: scale(1.08);
+    background-color: var(--color-primary-light);
+}
+
+.chatbot-window {
+    width: 380px;
+    height: 500px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    bottom: 72px;
+    right: 0;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(20px) scale(0.95);
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+.chatbot-window.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+}
+
+.chatbot-window.fullscreen {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    width: calc(100vw - 40px) !important;
+    height: calc(100vh - 40px) !important;
+    max-width: none !important;
+    max-height: none !important;
+    border-radius: 16px;
+    z-index: 2000;
+    transform: none !important;
+    bottom: 20px !important;
+    right: 20px !important;
+}
+
+.chatbot-window.fullscreen .chatbot-header {
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+}
+
+.chatbot-window.fullscreen .chatbot-messages {
+    padding: 2rem;
+    gap: 16px;
+}
+
+.chatbot-window.fullscreen .chat-msg {
+    max-width: 70%;
+    font-size: 1rem;
+    padding: 1rem 1.25rem;
+}
+
+.chatbot-header {
+    background-color: var(--color-primary);
+    color: #ffffff;
+    padding: 1rem 1.25rem;
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.chatbot-messages {
+    flex-grow: 1;
+    padding: 1.25rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.chat-msg {
+    max-width: 80%;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    animation: slideIn 0.25s ease;
+}
+
+.chat-msg.bot {
+    background-color: #f1f5f9;
+    color: var(--text-main);
+    align-self: flex-start;
+    border-bottom-left-radius: 2px;
+}
+
+.chat-msg.user {
+    background-color: var(--color-primary-light);
+    color: #ffffff;
+    align-self: flex-end;
+    border-bottom-right-radius: 2px;
+}
+
+.chatbot-quick-replies {
+    padding: 0.5rem 1rem;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    white-space: nowrap;
+    border-top: 1px solid #f1f5f9;
+}
+
+.quick-reply-chip {
+    padding: 6px 12px;
+    background-color: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    font-size: 0.8rem;
+    color: var(--color-primary-dark);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.quick-reply-chip:hover {
+    background-color: var(--color-primary-light);
+    color: #ffffff;
+}
+
+.chatbot-input-container {
+    padding: 1rem;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    gap: 8px;
+}
+
+.chatbot-input {
+    flex-grow: 1;
+    min-height: 40px !important;
+    font-size: 0.9rem;
+}
+
+.chatbot-send-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background-color: var(--color-primary);
+    color: #ffffff;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.chatbot-send-btn:hover {
+    background-color: var(--color-primary-light);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsiveness Rules */
+@media (max-width: 991.98px) {
+    .sidebar {
+        display: none; /* Collapses on mobile, handled by Bootstrap Offcanvas */
+    }
+    
+    .main-content {
+        padding-left: 0;
+    }
+    
+    .chatbot-window {
+        width: calc(100vw - 48px);
+        right: -8px;
+    }
+}
+
+/* Desktop Sidebar Toggle – Collapsed Icon-Only State */
+@media (min-width: 992px) {
+    body.sidebar-collapsed .sidebar {
+        width: var(--sidebar-collapsed-width);
+        min-width: var(--sidebar-collapsed-width);
+        overflow: visible;
+    }
+
+    body.sidebar-collapsed .main-content {
+        padding-left: var(--sidebar-collapsed-width);
+    }
+
+    /* Header: hide text, center logo icon */
+    body.sidebar-collapsed .sidebar-header {
+        padding: 1.25rem 0.5rem;
+        justify-content: center;
+    }
+    body.sidebar-collapsed .sidebar-header .d-flex.flex-column {
+        display: none !important;
+    }
+    body.sidebar-collapsed .sidebar-header img,
+    body.sidebar-collapsed .sidebar-header #sidebar-logo-fallback {
+        margin: 0 auto;
+    }
+    body.sidebar-collapsed .sidebar-header .gap-2 {
+        gap: 0 !important;
+    }
+
+    /* Menu items: hide text spans, center icons */
+    body.sidebar-collapsed .sidebar-menu li {
+        padding: 0.15rem 0.5rem;
+    }
+    body.sidebar-collapsed .sidebar-menu a {
+        justify-content: center;
+        padding: 0.75rem 0;
+    }
+    body.sidebar-collapsed .sidebar-menu a i {
+        margin-right: 0;
+        font-size: 1.25rem;
+    }
+    body.sidebar-collapsed .sidebar-menu a span {
+        display: none;
+    }
+    /* Hide chevron arrows on collapsed submenus */
+    body.sidebar-collapsed .sidebar-menu a .bi-chevron-down {
+        display: none;
+    }
+    /* Hide submenu collapse sections entirely */
+    body.sidebar-collapsed .sidebar-menu .collapse,
+    body.sidebar-collapsed .sidebar-menu .collapsing {
+        display: none !important;
+    }
+
+    /* User profile at bottom: center avatar, hide text & details */
+    body.sidebar-collapsed .sidebar-user-profile {
+        padding: 0.75rem 0.5rem !important;
+        justify-content: center !important;
+    }
+    body.sidebar-collapsed .sidebar-user-profile .d-flex.align-items-center.gap-2 {
+        gap: 0 !important;
+        justify-content: center;
+    }
+    body.sidebar-collapsed .sidebar-user-profile .d-flex.flex-column {
+        display: none !important;
+    }
+    body.sidebar-collapsed .sidebar-user-profile .me-2 {
+        margin-right: 0 !important;
+    }
+    body.sidebar-collapsed .sidebar-user-profile .d-flex.align-items-center.justify-content-between {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    /* Logout button stays centered below avatar */
+    body.sidebar-collapsed .btn-logout-sidebar {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+    }
+
+    /* Tooltip-style labels on hover (optional enhancement) */
+    body.sidebar-collapsed .sidebar-menu a {
+        position: relative;
+    }
+}
+
+/* Sidebar Toggle Button (standalone, no .btn base class) */
+.btn-sidebar-toggle {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid rgba(27, 74, 154, 0.12);
+    background-color: rgba(27, 74, 154, 0.05);
+    color: var(--color-primary);
+    transition: all var(--transition-speed) ease;
+    padding: 0;
+    cursor: pointer;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.btn-sidebar-toggle:hover {
+    background-color: var(--color-primary);
+    color: #ffffff;
+    border-color: var(--color-primary);
+    box-shadow: 0 4px 10px rgba(27, 74, 154, 0.15);
+}
+
+.btn-sidebar-toggle:focus-visible {
+    box-shadow: 0 0 0 3px rgba(27, 74, 154, 0.25);
+}
+
+.btn-sidebar-toggle:active {
+    transform: scale(0.95);
+}
+
+/* Sidebar User Profile at Bottom */
+.sidebar-user-profile {
+    background-color: rgba(0, 0, 0, 0.18);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all var(--transition-speed) ease;
+}
+
+/* Sidebar Logout Button */
+.btn-logout-sidebar {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background-color: #f97316 !important; /* Premium orange/amber */
+    border: none;
+    color: #ffffff !important;
+    transition: all var(--transition-speed) ease;
+    text-decoration: none;
+}
+
+.btn-logout-sidebar:hover {
+    background-color: #ea580c !important; /* Darker orange */
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(234, 88, 12, 0.3);
+}
+
+/* =========================================================================
+   DASHBOARD STAT CARDS — Reference-matched design
+   ========================================================================= */
+.stat-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: #ffffff;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.stat-icon {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
+.stat-icon-blue {
+    background-color: #dbeafe;
+    color: #2563eb;
+}
+
+.stat-icon-orange {
+    background-color: #ffedd5;
+    color: #ea580c;
+}
+
+.stat-icon-green {
+    background-color: #dcfce7;
+    color: #16a34a;
+}
+
+.stat-icon-indigo {
+    background-color: #e0e7ff;
+    color: #4f46e5;
+}
+
+.stat-icon-red {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+.stat-icon-gold {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+.stat-card-accent {
+    border-left: 4px solid var(--color-accent);
+}
+
+.stat-number {
+    font-size: 1.65rem;
+    font-weight: 800;
+    color: var(--text-main);
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+}
+
+.stat-label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: capitalize;
+    letter-spacing: 0.2px;
+}
+
+/* =========================================================================
+   SIDEBAR — Font Awesome icon alignment & divider
+   ========================================================================= */
+.sidebar-menu a .fas,
+.sidebar-menu a .fa-solid,
+.sidebar-menu a .far,
+.sidebar-menu a .fa-regular {
+    width: 22px;
+    margin-right: 12px;
+    font-size: 1rem;
+    text-align: center;
+}
+
+.sidebar-divider {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.1);
+    margin: 0.5rem 1.25rem;
+    padding: 0 !important;
+}
+
+/* Boxicons logout icon alignment */
+.btn-logout-sidebar .bx {
+    font-size: 1.3rem;
+    line-height: 1;
+}
+
