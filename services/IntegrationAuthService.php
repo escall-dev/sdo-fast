@@ -18,6 +18,10 @@ class IntegrationAuthService {
         $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
 
         if (empty($authHeader)) {
+            $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+        }
+
+        if (empty($authHeader)) {
             return false;
         }
 

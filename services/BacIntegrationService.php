@@ -36,6 +36,14 @@ class BacIntegrationService {
                 return true;
             }
 
+            // Check if Purchase Request document is uploaded in transaction_documents
+            $prStmt = $pdo->prepare("SELECT COUNT(*) FROM transaction_documents WHERE transaction_id = ? AND category = 'purchase_request'");
+            $prStmt->execute([$transactionId]);
+            if ($prStmt->fetchColumn() == 0) {
+                error_log("Failed to sync transaction ID {$transactionId} to BACtrack: Purchase Request document is required.");
+                return false;
+            }
+
             // Map FAST status to BAC integration event type
             $eventType = 'DV_CREATED';
             if ($newStatus === 'Approved') {
@@ -117,32 +125,40 @@ class BacIntegrationService {
      */
     private static function dispatchPayload(array $payload, string $refNumber, string $eventType, PDO $pdo) {
         // Target BAC endpoint (defined in .env or defaulting to localhost XAMPP)
-        $bacUrl = env('BAC_API_URL', 'http://localhost/bac/api/integrations/receive-fast.php');
+        $bacUrl = env('BAC_API_URL', 'http://localhost/SDO-BACtrack/api/integrations/receive-fast.php');
         $bacToken = env('BAC_SYSTEM_TOKEN', 'bac_secure_token_123');
 
-        $ch = curl_init($bacUrl);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Authorization: Bearer ' . $bacToken,
-            'Content-Type: application/json'
-        ]);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_TIMEOUT, 6);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        $options = [
+            'http' => [
+                'method' => 'POST',
+                'header' => "Authorization: Bearer " . $bacToken . "\r\n" .
+                            "Content-Type: application/json\r\n",
+                'content' => json_encode($payload),
+                'ignore_errors' => true,
+                'timeout' => 6
+            ],
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false
+            ]
+        ];
+        $context = stream_context_create($options);
+        $response = @file_get_contents($bacUrl, false, $context);
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
+        $httpCode = 500;
+        if (isset($http_response_header) && is_array($http_response_header)) {
+            if (preg_match('/^HTTP\/\d\.\d\s+(\d+)/i', $http_response_header[0], $matches)) {
+                $httpCode = (int)$matches[1];
+            }
+        }
 
         $status = 'SUCCESS';
         $logResponse = $response;
 
-        if ($httpCode !== 200) {
+        if ($response === false || $httpCode !== 200) {
             $status = 'FAILED';
-            $logResponse = !empty($curlError) 
-                ? "cURL Error: {$curlError}" 
+            $logResponse = ($response === false) 
+                ? "Failed to connect to SDO-BACtrack API." 
                 : "HTTP API Error Code {$httpCode}. Response: {$response}";
         }
 

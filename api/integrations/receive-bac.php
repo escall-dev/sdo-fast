@@ -24,6 +24,14 @@ $authSystem = IntegrationAuthService::authenticate($fastPDO);
 if (!$authSystem) {
     http_response_code(401);
     
+    $headers = getallheaders();
+    $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+    $token = '';
+    if (preg_match('/Bearer\s(\S+)/i', $authHeader, $matches)) {
+        $token = $matches[1];
+    }
+    $tokenHash = hash('sha256', $token);
+    
     // Log auth failure for auditing
     SyncLogService::log(
         $fastPDO,
@@ -37,7 +45,13 @@ if (!$authSystem) {
 
     echo json_encode([
         'success' => false,
-        'message' => 'Unauthorized: Invalid or missing integration Bearer token.'
+        'message' => 'Unauthorized: Invalid or missing integration Bearer token.',
+        'debug' => [
+            'authHeader' => $authHeader,
+            'token' => $token,
+            'tokenHash' => $tokenHash,
+            'headers' => $headers
+        ]
     ]);
     exit;
 }
@@ -69,14 +83,43 @@ if (empty($refNumber) || empty($eventType) || empty($payload)) {
 
 // 3. Process Inbound procurement approved event
 if ($eventType === 'PROCUREMENT_APPROVED') {
+    $base64File = $payload['base64_file'] ?? '';
+    $originalFilename = $payload['original_filename'] ?? '';
+    $prNumber = $payload['pr_number'] ?? '';
+
+    // If the payload contains no file, reject the request with HTTP 422
+    if (empty($base64File)) {
+        http_response_code(422);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Approval document is required.'
+        ]);
+        
+        // Log failure in integration_logs
+        SyncLogService::log(
+            $fastPDO,
+            'SDO-BAC',
+            'SDO-FAST',
+            $eventType,
+            $refNumber ?: $prNumber,
+            'FAILED',
+            "Approval document is required. Filename: {$originalFilename} | Sender: SDO-BAC | PR Number: {$prNumber}"
+        );
+        exit;
+    }
+
     // Reconstruct input fields for FastIntegrationService
     $syncData = [
-        'reference_number' => $refNumber,
-        'reference_id' => $payload['reference_id'] ?? 0,
-        'project_number' => $payload['project_number'] ?? '',
-        'procurement_type' => $payload['procurement_type'] ?? 'Goods',
-        'particulars' => $payload['particulars'] ?? '',
-        'amount' => $payload['amount'] ?? 0.00
+        'reference_number'  => $refNumber,
+        'reference_id'      => $payload['reference_id'] ?? 0,
+        'project_number'    => $payload['project_number'] ?? '',
+        'procurement_type'  => $payload['procurement_type'] ?? 'Goods',
+        'particulars'       => $payload['particulars'] ?? '',
+        'amount'            => $payload['amount'] ?? 0.00,
+        'base64_file'       => $base64File,
+        'original_filename' => $originalFilename,
+        'pr_number'         => $prNumber,
+        'checklist'         => $payload['checklist'] ?? []
     ];
 
     $result = FastIntegrationService::processBacProcurement($syncData, $fastPDO);
@@ -90,15 +133,15 @@ if ($eventType === 'PROCUREMENT_APPROVED') {
             ]
         ]);
         
-        // Log sync success
+        // Log sync success including filename, sender, timestamp, and PR number
         SyncLogService::log(
             $fastPDO,
             'SDO-BAC',
             'SDO-FAST',
             $eventType,
-            $refNumber,
+            $prNumber,
             'SUCCESS',
-            "Draft generated successfully: {$result['tracking_number']}"
+            "Draft generated successfully: {$result['tracking_number']} | Filename: {$originalFilename} | Sender: SDO-BAC | PR Number: {$prNumber} | Timestamp: " . date('Y-m-d H:i:s')
         );
     } else {
         // Return 422 if duplicate or payload is invalid

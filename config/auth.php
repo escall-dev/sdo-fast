@@ -10,6 +10,7 @@ require_once __DIR__ . '/env.php';
 function isPublicRoute() {
     $currentScript = $_SERVER['SCRIPT_NAME'];
     $publicPatterns = [
+        '/views/tracker/index.php',
         '/login.php',
         '/views/reset-password.php',
         '/api/auth/login.php',

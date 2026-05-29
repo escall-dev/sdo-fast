@@ -93,11 +93,11 @@ $renderSidebarMenu = function($isMobile = false) use (
         <!-- Transactions Submenu -->
         <?php if ($showTransactions): ?>
             <li class="nav-item">
-                <a class="d-flex align-items-center justify-content-between <?php echo isPageActive(['all_transactions', 'cash_advance', 'reimbursement', 'payroll', 'submit_transaction']) ? 'collapsed' : ''; ?>" 
+                <a class="d-flex align-items-center justify-content-between <?php echo isPageActive(['all_transactions', 'cash_advance', 'reimbursement', 'payroll', 'bactrack', 'submit_transaction']) ? 'collapsed' : ''; ?>" 
                    data-bs-toggle="collapse" 
                    href="#transactionsCollapse<?php echo $isMobile ? 'Mobile' : ''; ?>" 
                    role="button" 
-                   aria-expanded="<?php echo isPageActive(['all_transactions', 'cash_advance', 'reimbursement', 'payroll', 'submit_transaction']) ? 'true' : 'false'; ?>" 
+                   aria-expanded="<?php echo isPageActive(['all_transactions', 'cash_advance', 'reimbursement', 'payroll', 'bactrack', 'submit_transaction']) ? 'true' : 'false'; ?>" 
                    aria-controls="transactionsCollapse<?php echo $isMobile ? 'Mobile' : ''; ?>">
                     <div class="d-flex align-items-center">
                         <i class="fas fa-folder-open"></i>
@@ -105,7 +105,7 @@ $renderSidebarMenu = function($isMobile = false) use (
                     </div>
                     <i class="bi bi-chevron-down fs-8"></i>
                 </a>
-                <div class="collapse <?php echo isPageActive(['all_transactions', 'cash_advance', 'reimbursement', 'payroll', 'submit_transaction']) ? 'show' : ''; ?>" id="transactionsCollapse<?php echo $isMobile ? 'Mobile' : ''; ?>">
+                <div class="collapse <?php echo isPageActive(['all_transactions', 'cash_advance', 'reimbursement', 'payroll', 'bactrack', 'submit_transaction']) ? 'show' : ''; ?>" id="transactionsCollapse<?php echo $isMobile ? 'Mobile' : ''; ?>">
                     <ul class="list-unstyled ps-4 py-1" style="background-color: rgba(0, 0, 0, 0.1); border-radius: 6px; margin: 2px 8px;">
                         <?php if (in_array($userRole, ['Super Admin', 'Admin', 'Accounting Staff', 'Budget Officer', 'Approver']) || 
                                   in_array($userPosition, ['Accounting Support', 'Accountant', 'Budget Officer', 'ASDS', 'SDS'])): ?>
@@ -114,6 +114,7 @@ $renderSidebarMenu = function($isMobile = false) use (
                         
                         <li class="<?php echo isPageActive('cash_advance'); ?>"><a class="py-2" href="<?php echo $baseUrl; ?>/views/transactions/index.php?type=Cash Advance"><i class="bi bi-cash me-2 fs-9"></i>Cash Advance</a></li>
                         <li class="<?php echo isPageActive('reimbursement'); ?>"><a class="py-2" href="<?php echo $baseUrl; ?>/views/transactions/index.php?type=Reimbursement"><i class="bi bi-arrow-repeat me-2 fs-9"></i>Reimbursement</a></li>
+                        <li class="<?php echo isPageActive('bactrack'); ?>"><a class="py-2" href="<?php echo $baseUrl; ?>/views/transactions/index.php?type=BACtrack"><i class="bi bi-cloud-arrow-down me-2 fs-9"></i>BACtrack</a></li>
                         <li class="<?php echo isPageActive('payroll'); ?>"><a class="py-2" href="<?php echo $baseUrl; ?>/views/transactions/index.php?type=Payroll"><i class="bi bi-people-fill me-2 fs-9"></i>Payroll</a></li>
                         
                         <?php if (in_array($userRole, ['Super Admin', 'Admin', 'User'])): ?>
@@ -146,6 +147,12 @@ $renderSidebarMenu = function($isMobile = false) use (
 
         <!-- Integration Monitor -->
         <?php if ($showIntegrationMonitor): ?>
+            <li class="<?php echo isPageActive('integrations_page'); ?>">
+                <a href="<?php echo $baseUrl; ?>/views/integrations/integrations.php">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Integrations</span>
+                </a>
+            </li>
             <li class="<?php echo isPageActive('integrations'); ?>">
                 <a href="<?php echo $baseUrl; ?>/views/integrations/index.php">
                     <i class="fas fa-network-wired"></i>

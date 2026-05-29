@@ -11,6 +11,52 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/auth.php'; // Enforces auth & CSRF
 require_once __DIR__ . '/../../services/BacIntegrationService.php';
 
+// Handle GET request for integration fetch
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    require_once __DIR__ . '/../../services/IntegrationAuthService.php';
+    
+    // Authenticate BACtrack request using IntegrationAuthService
+    $authSystem = IntegrationAuthService::authenticate($fastPDO);
+    if (!$authSystem) {
+        http_response_code(401);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Unauthorized: Invalid or missing integration Bearer token.'
+        ]);
+        exit;
+    }
+
+    try {
+        // Fetch transactions linked to BAC track (i.e. bac_reference_number is not null)
+        // We can fetch those that are not fully Approved/Rejected in SDO-BACtrack yet or simply all of them
+        $stmt = $fastPDO->query("
+            SELECT t.*, u.full_name as requestor_name, d.dv_number, d.bir_2307_number, d.tax_type
+            FROM transactions t
+            LEFT JOIN users u ON t.requestor_id = u.id
+            LEFT JOIN document_details d ON t.id = d.transaction_id
+            WHERE t.bac_reference_number IS NOT NULL
+            ORDER BY t.id DESC
+        ");
+        $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Pending transactions retrieved successfully.',
+            'transactions' => $transactions
+        ]);
+        exit;
+
+    } catch (PDOException $e) {
+        error_log("Failed to fetch pending transactions: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'A database error occurred.'
+        ]);
+        exit;
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405); exit;
 }
@@ -22,7 +68,7 @@ if ($fastPDO === null) {
 }
 
 $userRole = $_SESSION['user_role'] ?? '';
-$adminId = $_SESSION['user_id'];
+$adminId = $_SESSION['user_id'] ?? null;
 
 // Restrict to Super Admin and Accounting Staff
 if (!in_array($userRole, ['Super Admin', 'Accounting Staff'])) {

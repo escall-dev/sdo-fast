@@ -20,9 +20,10 @@ if ($fastPDO === null) {
 
 $userId = $_SESSION['user_id'];
 $userRole = $_SESSION['user_role'];
+$userPosition = $_SESSION['user_position'] ?? '';
 
-// Only allow Requestors and Super Admins to submit transactions
-if (!in_array($userRole, ['Super Admin', 'Requestor'])) {
+// Only allow Requestors, Personnel, and Super Admins to submit transactions
+if (!in_array($userRole, ['Super Admin', 'Requestor']) && $userPosition !== 'Personnel') {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Unauthorized action.']);
     exit;

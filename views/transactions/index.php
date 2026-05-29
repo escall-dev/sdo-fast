@@ -18,6 +18,9 @@ if ($userTypeFilter === 'Cash Advance') {
 } elseif ($userTypeFilter === 'Payroll') {
     $pageTitle = 'Payroll Transactions';
     $currentPage = 'payroll';
+} elseif ($userTypeFilter === 'BACtrack') {
+    $pageTitle = 'BACtrack Transactions';
+    $currentPage = 'bactrack';
 }
 
 $pageHeader = $pageTitle;
@@ -73,6 +76,7 @@ if (in_array($userRole, ['Super Admin', 'Accounting Staff']) && $fastPDO !== nul
                             <option value="Cash Advance">Cash Advance</option>
                             <option value="Reimbursement">Reimbursement</option>
                             <option value="Payroll">Payroll</option>
+                            <option value="BACtrack">BACtrack</option>
                         </select>
                     </div>
                 <?php else: ?>
@@ -403,7 +407,7 @@ function renderTable(transactions) {
         
         // Show Workflow action button if role or position is authorized
         const showWorkflowAction = 
-            (userRole === 'Super Admin') ||
+            (userRole === 'Super Admin' && ['Pending Support', 'Pending Accountant', 'Pending Final Approval'].includes(row.current_status)) ||
             ((userRole === 'Accounting Staff' || userPosition === 'Accounting Support') && row.current_status === 'Pending Support') ||
             ((userRole === 'Budget Officer' || userPosition === 'Budget Officer' || userPosition === 'Accountant') && row.current_status === 'Pending Accountant') ||
             ((userRole === 'Approver' || userPosition === 'ASDS' || userPosition === 'SDS') && row.current_status === 'Pending Final Approval');

@@ -25,6 +25,11 @@ class FastIntegrationService {
         $particulars = trim($payload['particulars'] ?? '');
         $amount = (float)($payload['amount'] ?? 0.00);
 
+        $base64File = $payload['base64_file'] ?? '';
+        $originalFilename = $payload['original_filename'] ?? '';
+        $prNumber = $payload['pr_number'] ?? '';
+        $checklist = $payload['checklist'] ?? [];
+
         if (empty($refNumber) || $refId <= 0 || empty($particulars) || $amount <= 0) {
             return [
                 'success' => false, 
@@ -33,25 +38,233 @@ class FastIntegrationService {
             ];
         }
 
+        // Validate and save the approval file
+        if (empty($base64File)) {
+            return [
+                'success' => false,
+                'status' => 'INVALID_PAYLOAD',
+                'message' => 'Approval document is required.'
+            ];
+        }
+
+        $ext = pathinfo($originalFilename, PATHINFO_EXTENSION) ?: 'pdf';
+        $filename = $prNumber . '_' . time() . '.' . $ext;
+        // Clean filename for safety
+        $filename = preg_replace('/[^a-zA-Z0-9_\.-]/', '', $filename);
+
+        $uploadSubDir = 'uploads/received-approvals/';
+        $uploadDir = __DIR__ . '/../' . $uploadSubDir;
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $filePath = $uploadSubDir . $filename;
+        $fullPath = $uploadDir . $filename;
+
+        $decodedData = base64_decode($base64File);
+        if ($decodedData === false) {
+            return [
+                'success' => false,
+                'status' => 'INVALID_PAYLOAD',
+                'message' => 'Failed to decode base64 file data.'
+            ];
+        }
+
+        if (file_put_contents($fullPath, $decodedData) === false) {
+            return [
+                'success' => false,
+                'status' => 'FILE_SAVE_ERROR',
+                'message' => 'Failed to save approval document on server.'
+            ];
+        }
+
+        // Create transaction_documents table if not exists (outside transaction to avoid implicit commit in MySQL)
+        try {
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS transaction_documents (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    transaction_id INT NOT NULL,
+                    category VARCHAR(255) NOT NULL,
+                    file_path VARCHAR(255) NOT NULL,
+                    original_name VARCHAR(255) NOT NULL,
+                    file_size INT NOT NULL DEFAULT 0,
+                    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
+                    INDEX idx_tx_id (transaction_id),
+                    INDEX idx_cat (category)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            ");
+        } catch (Exception $tblEx) {
+            error_log("Failed to create transaction_documents table: " . $tblEx->getMessage());
+        }
+
+        // Self-healing table creation (DDL) must run OUTSIDE transaction block to prevent implicit commit
+        try {
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS transaction_documents (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    transaction_id INT NOT NULL,
+                    category VARCHAR(255) NOT NULL,
+                    file_path VARCHAR(255) NOT NULL,
+                    original_name VARCHAR(255) NOT NULL,
+                    file_size INT NOT NULL DEFAULT 0,
+                    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
+                    INDEX idx_tx_id (transaction_id),
+                    INDEX idx_cat (category)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            ");
+            
+            // Ensure the procurement_checklist column exists in document_details
+            $colCheck = $pdo->query("
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                  AND TABLE_NAME = 'document_details' 
+                  AND COLUMN_NAME = 'procurement_checklist'
+            ");
+            if ((int)$colCheck->fetchColumn() === 0) {
+                $pdo->exec("ALTER TABLE `document_details` ADD COLUMN `procurement_checklist` JSON DEFAULT NULL AFTER `attachment_path`");
+            }
+        } catch (PDOException $ddlEx) {
+            error_log("Failed to run defensive DDL: " . $ddlEx->getMessage());
+        }
+
         try {
             $pdo->beginTransaction();
 
             // 1. Prevent Duplication check
-            $checkStmt = $pdo->prepare("
-                SELECT COUNT(*) FROM transactions 
+            $existingStmt = $pdo->prepare("
+                SELECT id, tracking_number, approval_file_path
+                FROM transactions 
                 WHERE bac_reference_id = :ref_id OR bac_reference_number = :ref_num
+                ORDER BY id DESC
+                LIMIT 1
             ");
-            $checkStmt->execute([
+            $existingStmt->execute([
                 'ref_id' => $refId,
                 'ref_num' => $refNumber
             ]);
-            
-            if ($checkStmt->fetchColumn() > 0) {
-                $pdo->rollBack();
+            $existingTx = $existingStmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($existingTx) {
+                $existingId = (int)$existingTx['id'];
+
+                // Always refresh approval file path and documents for existing transaction
+                $updateApproval = $pdo->prepare("UPDATE transactions SET approval_file_path = ? WHERE id = ?");
+                $updateApproval->execute([$filePath, $existingId]);
+
+                // Clear existing checklist documents before re-sync
+                $pdo->prepare("DELETE FROM transaction_documents WHERE transaction_id = ?")
+                    ->execute([$existingId]);
+
+                // Copy checklist documents from BACtrack into existing transaction
+                global $bacPDO;
+                if ($bacPDO !== null) {
+                    try {
+                        $stmtDocs = $bacPDO->prepare("SELECT category, file_path, original_name, file_size FROM project_documents WHERE project_id = ?");
+                        $stmtDocs->execute([$refId]);
+                        $bacDocs = $stmtDocs->fetchAll();
+
+                        foreach ($bacDocs as $doc) {
+                            $cat = strtolower(trim($doc['category'] ?? ''));
+                            $categorySlug = '';
+                            if ($cat === 'purchase_request' || $cat === 'purchase request' || $cat === 'purchase-request') {
+                                $categorySlug = 'purchase_request';
+                            } elseif ($cat === 'memorandum') {
+                                $categorySlug = 'memorandum';
+                            } elseif ($cat === 'activity_proposal' || $cat === 'activity or project proposal' || $cat === 'activity-proposal') {
+                                $categorySlug = 'activity_proposal';
+                            } elseif ($cat === 'saro') {
+                                $categorySlug = 'saro';
+                            }
+
+                            if (!empty($categorySlug) && !empty($doc['file_path'])) {
+                                $bacFileFullPath = 'C:/xampp/htdocs/SDO-BACtrack/uploads/' . $doc['file_path'];
+                                if (file_exists($bacFileFullPath)) {
+                                    $fastUploadDir = __DIR__ . '/../uploads/procurement-docs/';
+                                    if (!is_dir($fastUploadDir)) {
+                                        mkdir($fastUploadDir, 0755, true);
+                                    }
+
+                                    $ext = pathinfo($doc['original_name'], PATHINFO_EXTENSION) ?: 'pdf';
+                                    $newFilename = "{$existingId}_{$categorySlug}_" . time() . '.' . $ext;
+                                    $fastRelativePath = 'uploads/procurement-docs/' . $newFilename;
+                                    $fastFileFullPath = $fastUploadDir . $newFilename;
+
+                                    if (copy($bacFileFullPath, $fastFileFullPath)) {
+                                        $docInsert = $pdo->prepare("
+                                            INSERT INTO transaction_documents (transaction_id, category, file_path, original_name, file_size)
+                                            VALUES (?, ?, ?, ?, ?)
+                                        ");
+                                        $docInsert->execute([
+                                            $existingId,
+                                            $categorySlug,
+                                            $fastRelativePath,
+                                            $doc['original_name'],
+                                            $doc['file_size']
+                                        ]);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception $copyEx) {
+                        error_log("Failed to sync checklist documents for existing transaction: " . $copyEx->getMessage());
+                    }
+                }
+
+                // Ensure at least purchase_request exists using approval document as fallback
+                try {
+                    $prCheck = $pdo->prepare("SELECT COUNT(*) FROM transaction_documents WHERE transaction_id = ? AND category = 'purchase_request'");
+                    $prCheck->execute([$existingId]);
+                    if ((int)$prCheck->fetchColumn() === 0) {
+                        $docInsert = $pdo->prepare("
+                            INSERT INTO transaction_documents (transaction_id, category, file_path, original_name, file_size)
+                            VALUES (:tx_id, 'purchase_request', :path, :orig, :size)
+                        ");
+                        $docInsert->execute([
+                            'tx_id' => $existingId,
+                            'path' => $filePath,
+                            'orig' => $originalFilename,
+                            'size' => file_exists($fullPath) ? filesize($fullPath) : 0
+                        ]);
+                    }
+                } catch (Exception $fallbackEx) {
+                    error_log("Failed to insert fallback PR for existing transaction: " . $fallbackEx->getMessage());
+                }
+
+                // Update checklist JSON if document_details exists
+                $docDetailStmt = $pdo->prepare("SELECT id FROM document_details WHERE transaction_id = ? LIMIT 1");
+                $docDetailStmt->execute([$existingId]);
+                $docDetailId = (int)$docDetailStmt->fetchColumn();
+                if ($docDetailId > 0) {
+                    $checklist = $payload['checklist'] ?? [];
+                    $checklistLabels = [
+                        'purchase_request' => 'Purchase Request',
+                        'memorandum' => 'Memorandum',
+                        'activity_proposal' => 'Activity or Project Proposal',
+                        'saro' => 'SARO'
+                    ];
+                    $normalizedChecklist = [];
+                    foreach ($checklistLabels as $key => $label) {
+                        $normalizedChecklist[$key] = !empty($checklist[$key]);
+                    }
+                    $updateDocStmt = $pdo->prepare("
+                        UPDATE document_details
+                        SET procurement_checklist = :checklist_json
+                        WHERE id = :doc_id
+                    ");
+                    $updateDocStmt->execute([
+                        'checklist_json' => json_encode($normalizedChecklist, JSON_UNESCAPED_UNICODE),
+                        'doc_id' => $docDetailId
+                    ]);
+                }
+
+                $pdo->commit();
                 return [
-                    'success' => false,
-                    'status' => 'DUPLICATE',
-                    'message' => "Transaction linked to SDO-BAC reference '{$refNumber}' has already been synchronized."
+                    'success' => true,
+                    'status' => 'UPDATED',
+                    'tracking_number' => $existingTx['tracking_number'],
+                    'message' => "Existing FAST draft updated with submitted documents for '{$refNumber}'."
                 ];
             }
 
@@ -85,15 +298,18 @@ class FastIntegrationService {
             $status = 'Pending Support';
 
             // 5. Insert Transaction Draft
+            $transactionRemarks = "Automatically generated draft from SDO-BAC procurement link: {$refNumber}.";
             $insertSql = "
                 INSERT INTO transactions (
                     uuid, tracking_number, requestor_id, transaction_type, event_name, 
                     amount, tax_amount, net_amount, current_status, remarks,
-                    bac_reference_number, bac_reference_id, bac_project_number, bac_procurement_type
+                    bac_reference_number, bac_reference_id, bac_project_number, bac_procurement_type,
+                    approval_file_path
                 ) VALUES (
-                    :uuid, :tracking_number, :requestor_id, 'Reimbursement', :event_name,
+                    :uuid, :tracking_number, :requestor_id, 'BACtrack', :event_name,
                     :amount, :tax_amount, :net_amount, :current_status, :remarks,
-                    :bac_ref_num, :bac_ref_id, :bac_proj_num, :bac_proc_type
+                    :bac_ref_num, :bac_ref_id, :bac_proj_num, :bac_proc_type,
+                    :approval_file_path
                 )
             ";
             $txStmt = $pdo->prepare($insertSql);
@@ -106,14 +322,91 @@ class FastIntegrationService {
                 'tax_amount' => $taxAmount,
                 'net_amount' => $netAmount,
                 'current_status' => $status,
-                'remarks' => "Automatically generated draft from SDO-BAC procurement link: {$refNumber}.",
+                'remarks' => $transactionRemarks,
                 'bac_ref_num' => $refNumber,
                 'bac_ref_id' => $refId,
                 'bac_proj_num' => $projectNumber,
-                'bac_proc_type' => $procurementType
+                'bac_proc_type' => $procurementType,
+                'approval_file_path' => $filePath
             ]);
 
             $transactionId = $pdo->lastInsertId();
+
+            // 5b. Copy and insert actual checklist documents from SDO-BACtrack
+            global $bacPDO;
+            if ($bacPDO !== null) {
+                try {
+                    $stmtDocs = $bacPDO->prepare("SELECT category, file_path, original_name, file_size FROM project_documents WHERE project_id = ?");
+                    $stmtDocs->execute([$refId]);
+                    $bacDocs = $stmtDocs->fetchAll();
+
+                    foreach ($bacDocs as $doc) {
+                        $cat = strtolower(trim($doc['category'] ?? ''));
+                        $categorySlug = '';
+                        if ($cat === 'purchase_request' || $cat === 'purchase request' || $cat === 'purchase-request') {
+                            $categorySlug = 'purchase_request';
+                        } elseif ($cat === 'memorandum') {
+                            $categorySlug = 'memorandum';
+                        } elseif ($cat === 'activity_proposal' || $cat === 'activity or project proposal' || $cat === 'activity-proposal') {
+                            $categorySlug = 'activity_proposal';
+                        } elseif ($cat === 'saro') {
+                            $categorySlug = 'saro';
+                        }
+
+                        if (!empty($categorySlug) && !empty($doc['file_path'])) {
+                            $bacFileFullPath = 'C:/xampp/htdocs/SDO-BACtrack/uploads/' . $doc['file_path'];
+                            if (file_exists($bacFileFullPath)) {
+                                $fastUploadDir = __DIR__ . '/../uploads/procurement-docs/';
+                                if (!is_dir($fastUploadDir)) {
+                                    mkdir($fastUploadDir, 0755, true);
+                                }
+
+                                $ext = pathinfo($doc['original_name'], PATHINFO_EXTENSION) ?: 'pdf';
+                                $newFilename = "{$transactionId}_{$categorySlug}_" . time() . '.' . $ext;
+                                $fastRelativePath = 'uploads/procurement-docs/' . $newFilename;
+                                $fastFileFullPath = $fastUploadDir . $newFilename;
+
+                                if (copy($bacFileFullPath, $fastFileFullPath)) {
+                                    $docInsert = $pdo->prepare("
+                                        INSERT INTO transaction_documents (transaction_id, category, file_path, original_name, file_size)
+                                        VALUES (?, ?, ?, ?, ?)
+                                    ");
+                                    $docInsert->execute([
+                                        $transactionId,
+                                        $categorySlug,
+                                        $fastRelativePath,
+                                        $doc['original_name'],
+                                        $doc['file_size']
+                                    ]);
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception $copyEx) {
+                    error_log("Failed to sync checklist documents from SDO-BACtrack: " . $copyEx->getMessage());
+                }
+            }
+
+            // Fallback: If no purchase_request was copied, insert the approval document as a fallback
+            try {
+                $prCheck = $pdo->prepare("SELECT COUNT(*) FROM transaction_documents WHERE transaction_id = ? AND category = 'purchase_request'");
+                $prCheck->execute([$transactionId]);
+                if ((int)$prCheck->fetchColumn() === 0) {
+                    $docInsert = $pdo->prepare("
+                        INSERT INTO transaction_documents (transaction_id, category, file_path, original_name, file_size)
+                        VALUES (:tx_id, 'purchase_request', :path, :orig, :size)
+                    ");
+                    $docInsert->execute([
+                        'tx_id' => $transactionId,
+                        'path' => $filePath,
+                        'orig' => $originalFilename,
+                        'size' => file_exists($fullPath) ? filesize($fullPath) : 0
+                    ]);
+                }
+            } catch (Exception $fallbackEx) {
+                error_log("Failed to insert fallback synced PR document: " . $fallbackEx->getMessage());
+            }
+
 
             // 6. Insert Document details
             $docStmt = $pdo->prepare("
@@ -124,6 +417,35 @@ class FastIntegrationService {
                 'transaction_id' => $transactionId,
                 'tax_type' => $taxType
             ]);
+
+            $documentDetailId = $pdo->lastInsertId();
+
+            // 6b. Persist checklist JSON into document_details
+            $checklist = $payload['checklist'] ?? [];
+            if (!empty($checklist)) {
+                $checklistLabels = [
+                    'purchase_request' => 'Purchase Request',
+                    'memorandum' => 'Memorandum',
+                    'activity_proposal' => 'Activity or Project Proposal',
+                    'saro' => 'SARO'
+                ];
+
+                // Normalize checklist: only keep known keys with boolean values
+                $normalizedChecklist = [];
+                foreach ($checklistLabels as $key => $label) {
+                    $normalizedChecklist[$key] = !empty($checklist[$key]);
+                }
+
+                $updateDocStmt = $pdo->prepare("
+                    UPDATE document_details 
+                    SET procurement_checklist = :checklist_json 
+                    WHERE id = :doc_id
+                ");
+                $updateDocStmt->execute([
+                    'checklist_json' => json_encode($normalizedChecklist, JSON_UNESCAPED_UNICODE),
+                    'doc_id' => $documentDetailId
+                ]);
+            }
 
             // 7. Insert Workflow Log
             $logStmt = $pdo->prepare("
@@ -165,12 +487,14 @@ class FastIntegrationService {
             ];
 
         } catch (PDOException $e) {
-            $pdo->rollBack();
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             error_log("Failed to process BAC integration: " . $e->getMessage());
             return [
                 'success' => false,
                 'status' => 'DB_ERROR',
-                'message' => 'A database error occurred during integration ingestion.'
+                'message' => 'A database error occurred during integration ingestion: ' . $e->getMessage()
             ];
         }
     }
