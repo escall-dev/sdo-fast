@@ -1,51 +1,48 @@
 <?php
 /**
  * Password Reset Submission Processor API for SDO FAST.
+ * Updated to return JSON for AJAX submission.
  */
+
+header('Content-Type: application/json');
 
 require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/env.php';
 
-// Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: ' . env('APP_URL') . '/login.php');
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Method not allowed.']);
     exit;
 }
 
-$token = trim($_POST['token'] ?? '');
-$password = $_POST['password'] ?? '';
-$confirmPassword = $_POST['confirm_password'] ?? '';
-
-// Validate CSRF token (normally executed by auth.php but since public routes skip auth.php checks, we enforce it here manually)
-$csrfToken = $_POST['csrf_token'] ?? '';
-if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrfToken)) {
-    $_SESSION['flash_error'] = 'Session expired. Please try again.';
-    header('Location: ' . env('APP_URL') . '/login.php');
+$input = json_decode(file_get_contents('php://input'), true);
+if (!$input) {
+    echo json_encode(['success' => false, 'message' => 'Invalid request format.']);
     exit;
 }
+
+$token = trim($input['token'] ?? '');
+$password = $input['password'] ?? '';
+$confirmPassword = $input['confirm_password'] ?? '';
 
 if (empty($token) || empty($password) || empty($confirmPassword)) {
-    $_SESSION['flash_error'] = 'All password fields are required.';
-    header('Location: ' . env('APP_URL') . '/login.php');
+    echo json_encode(['success' => false, 'message' => 'All password fields are required.']);
     exit;
 }
 
 if ($password !== $confirmPassword) {
-    $_SESSION['flash_error'] = 'Passwords do not match. Please verify.';
-    header('Location: ' . env('APP_URL') . '/views/reset-password.php?token=' . urlencode($token));
+    echo json_encode(['success' => false, 'message' => 'Passwords do not match. Please verify.']);
     exit;
 }
 
 if (strlen($password) < 8) {
-    $_SESSION['flash_error'] = 'Password must be at least 8 characters long.';
-    header('Location: ' . env('APP_URL') . '/views/reset-password.php?token=' . urlencode($token));
+    echo json_encode(['success' => false, 'message' => 'Password must be at least 8 characters long.']);
     exit;
 }
 
 if ($fastPDO === null) {
-    $_SESSION['flash_error'] = 'Database connection failure. Please contact administrator.';
-    header('Location: ' . env('APP_URL') . '/login.php');
+    echo json_encode(['success' => false, 'message' => 'Database connection failure.']);
     exit;
 }
 
@@ -60,8 +57,7 @@ try {
     $tokenRow = $stmt->fetch();
 
     if (!$tokenRow) {
-        $_SESSION['flash_error'] = 'This password reset link is invalid or has expired.';
-        header('Location: ' . env('APP_URL') . '/login.php');
+        echo json_encode(['success' => false, 'message' => 'This password reset link is invalid or has expired.']);
         exit;
     }
 
@@ -95,16 +91,12 @@ try {
 
     $fastPDO->commit();
 
-    $_SESSION['flash_success'] = 'Password updated successfully! You can now log in with your new credentials.';
-    header('Location: ' . env('APP_URL') . '/login.php');
-    exit;
+    echo json_encode(['success' => true, 'message' => 'Password updated successfully!']);
 
 } catch (Exception $e) {
     if ($fastPDO->inTransaction()) {
         $fastPDO->rollBack();
     }
     error_log("Password reset processing error: " . $e->getMessage());
-    $_SESSION['flash_error'] = 'An unexpected database error occurred. Please try again.';
-    header('Location: ' . env('APP_URL') . '/login.php');
-    exit;
+    echo json_encode(['success' => false, 'message' => 'An unexpected database error occurred.']);
 }

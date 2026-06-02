@@ -210,7 +210,7 @@ if (empty($_SESSION['csrf_token'])) {
 
             <!-- Forgot Password Link -->
             <div class="d-flex justify-content-end mb-4">
-                <a href="#resetModal" data-bs-toggle="modal" class="text-decoration-none fs-8 text-accent-link fw-semibold">
+                <a href="<?php echo env('APP_URL'); ?>/forgot-password.php" class="text-decoration-none fs-8 text-accent-link fw-semibold">
                     <i class="bi bi-key-fill me-1"></i>Forgot Password?
                 </a>
             </div>
@@ -243,36 +243,6 @@ if (empty($_SESSION['csrf_token'])) {
 <div class="page-footer">
     <div>DepEd — Schools Division Office of San San Pedro City</div>
     <div class="text-white-50">© 2026 ICT Unit</div>
-</div>
-
-<!-- =========================================================================
-     MODALS & POPUPS
-     ========================================================================= -->
-<!-- Password Reset Request Modal -->
-<div class="modal fade" id="resetModal" tabindex="-1" aria-labelledby="resetModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4 shadow" style="background-color: #0f1d3a; color: #f8fafc; border: 1px solid rgba(255,255,255,0.08) !important;">
-            <div class="modal-header border-bottom-0 pb-0">
-                <h5 class="modal-title fw-bold text-white" id="resetModalLabel">Reset Your Password</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="resetForm" action="<?php echo env('APP_URL'); ?>/api/auth/reset-request.php" method="POST">
-                <div class="modal-body py-3">
-                    <p class="text-muted fs-8">Provide your registered email address below. If an account is associated with this email, we will dispatch a secure, 60-minute password reset link.</p>
-                    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-                    
-                    <div class="mb-2">
-                        <label for="resetEmail" class="form-label">Email Address</label>
-                        <input type="email" name="email" class="form-control dark-input" id="resetEmail" placeholder="your.email@deped.gov.ph" required>
-                    </div>
-                </div>
-                <div class="modal-footer border-top-0 pt-0">
-                    <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" style="min-height: 48px; border-radius: 8px;">Send Reset Link</button>
-                </div>
-            </form>
-        </div>
-    </div>
 </div>
 
 <!-- Bootstrap 5 Bundle JS (Includes Popper) CDN -->
