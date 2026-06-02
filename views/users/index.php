@@ -607,7 +607,7 @@ async function handleEditUserSubmit(e) {
 }
 
 async function toggleUserStatus(userId, status) {
-    if (!confirm(`Are you sure you want to suspend or activate this user account?`)) return;
+    if (!await API.confirmAction("Confirmation", `Are you sure you want to suspend or activate this user account?`, "Yes, Proceed", "warning")) return;
 
     const payload = new FormData();
     payload.append('user_id', userId);
@@ -629,7 +629,7 @@ async function toggleUserStatus(userId, status) {
 }
 
 async function triggerPasswordReset(userId) {
-    if (!confirm("Are you sure you want to reset this user's password? It will invalidate their current password immediately.")) return;
+    if (!await API.confirmAction("Warning", "Are you sure you want to reset this user's password? It will invalidate their current password immediately.", "Yes, Reset", "warning")) return;
     
     const payload = new FormData();
     payload.append('user_id', userId);
@@ -773,7 +773,7 @@ async function handleAddPosition(e) {
 }
 
 async function deletePosition(positionId, positionName) {
-    if (!confirm(`Are you sure you want to delete the position "${positionName}"?`)) return;
+    if (!await API.confirmAction("Delete Position", `Are you sure you want to delete the position "${positionName}"?`, "Yes, Delete", "error")) return;
     
     const formData = new FormData();
     formData.append('position_id', positionId);
@@ -794,7 +794,7 @@ async function deletePosition(positionId, positionName) {
 }
 
 async function deleteUser(userId, userName) {
-    if (!confirm(`Are you sure you want to permanently delete the user account "${userName}"? This action cannot be undone.`)) return;
+    if (!await API.confirmAction("Delete User", `Are you sure you want to permanently delete the user account "${userName}"? This action cannot be undone.`, "Yes, Delete", "error")) return;
     
     const formData = new FormData();
     formData.append('user_id', userId);

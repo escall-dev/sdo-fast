@@ -152,5 +152,27 @@ const API = {
         if (spinner) {
             spinner.style.display = 'none';
         }
+    },
+
+    /**
+     * Global Confirmation Dialog using SweetAlert2
+     */
+    async confirmAction(title = 'Are you sure?', text = 'This action cannot be undone.', confirmButtonText = 'Yes, proceed', type = 'warning') {
+        if (typeof Swal !== 'undefined') {
+            const result = await Swal.fire({
+                title: title,
+                text: text,
+                icon: type,
+                showCancelButton: true,
+                confirmButtonColor: '#1b4a9a',
+                cancelButtonColor: '#d33',
+                confirmButtonText: confirmButtonText,
+                reverseButtons: true
+            });
+            return result.isConfirmed;
+        } else {
+            // Fallback to native confirm if SweetAlert2 fails to load
+            return window.confirm(`${title}\n\n${text}`);
+        }
     }
 };

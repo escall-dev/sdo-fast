@@ -85,6 +85,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <?php endif; ?>
 
+<!-- SweetAlert2 CDN -->
+<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.6/dist/sweetalert2.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.6/dist/sweetalert2.all.min.js"></script>
+
 <!-- SDO FAST Custom Core Javascript Utility Files -->
 <script src="<?php echo env('APP_URL'); ?>/assets/js/api.js?v=<?php echo time(); ?>"></script>
 <script src="<?php echo env('APP_URL'); ?>/assets/js/main.js?v=<?php echo time(); ?>"></script>

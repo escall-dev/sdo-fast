@@ -967,7 +967,7 @@ function getProjectTitle(PDO $fastPDO, ?PDO $bacPDO, $refNumber, $transactionId 
                                             <button type="button" class="btn btn-secondary btn-sm integrations-action-btn" onclick='openProjectModal(<?php echo json_encode(array_merge($row, ["title" => $projectTitle])); ?>, <?php echo json_encode($txDocs); ?>, true)'>
                                                 View
                                             </button>
-                                            <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this record? This cannot be undone.');">
+                                            <form method="POST" style="display: inline;" onsubmit="event.preventDefault(); const form = this; API.confirmAction('Confirm Deletion', 'Are you sure you want to delete this record? This cannot be undone.', 'Delete', 'error').then(res => { if(res) form.submit(); });">
                                                 <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                                                 <input type="hidden" name="action" value="delete_received_log">
                                                 <input type="hidden" name="log_id" value="<?php echo $row['id']; ?>">
@@ -1186,7 +1186,7 @@ function openProjectModal(row, docs, isHistory) {
                         <input type="hidden" name="category_slug" value="${key}">
                         <input type="hidden" name="tracking_number" value="${escapeHTML(trackingNo)}">
                         <input type="hidden" name="active_tab" value="send">
-                        <button type="submit" class="btn btn-sm btn-outline-danger border-0 py-0 px-2" onclick="return confirm('Delete this checklist file?');" title="Delete Document">Delete</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger border-0 py-0 px-2" onclick="API.confirmAction('Confirm Deletion', 'Delete this checklist file?', 'Delete').then(res => { if(res) this.closest('form').submit(); });" title="Delete Document">Delete</button>
                     </form>
                 `;
             }

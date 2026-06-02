@@ -278,7 +278,7 @@ function showSyncPayload(log) {
 }
 
 async function triggerManualRetry(logId) {
-    if (!confirm("Are you sure you want to retry this failed synchronization request?")) return;
+    if (!await API.confirmAction("Confirm Retry", "Are you sure you want to retry this failed synchronization request?", "Yes, Retry")) return;
 
     const btn = document.getElementById('retry_btn_' + logId);
     btn.disabled = true;

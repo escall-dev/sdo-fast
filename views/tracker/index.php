@@ -466,7 +466,7 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                                                                         <input type="hidden" name="transaction_id" value="<?php echo $transaction['id']; ?>">
                                                                         <input type="hidden" name="category_slug" value="<?php echo $slug; ?>">
                                                                         <input type="hidden" name="tracking_number" value="<?php echo htmlspecialchars($transaction['tracking_number']); ?>">
-                                                                        <button type="submit" class="btn btn-sm btn-outline-danger border-0 py-1 px-2" onclick="return confirm('Delete this checklist file?');" title="Delete Document">
+                                                                        <button type="button" class="btn btn-sm btn-outline-danger border-0 py-1 px-2" onclick="API.confirmAction('Confirm Deletion', 'Delete this checklist file?', 'Delete').then(res => { if(res) this.closest('form').submit(); });" title="Delete Document">
                                                                             <i class="bi bi-trash"></i>
                                                                         </button>
                                                                     </form>
