@@ -11,27 +11,42 @@ require_once __DIR__ . '/../config/env.php';
 
 class MailService {
     public static function sendOTP($toEmail, $fullName, $otp) {
-        // Also log to scratch/otp_log.txt for local testing convenience
+        $mailEnabled = env('MAIL_ENABLED', true);
+        // Handle string booleans from .env
+        if ($mailEnabled === 'false' || $mailEnabled === false || $mailEnabled === '0') {
+            $mailEnabled = false;
+        } else {
+            $mailEnabled = true;
+        }
+
         $logDir = __DIR__ . '/../scratch';
         if (!is_dir($logDir)) {
             mkdir($logDir, 0755, true);
         }
+        
+        if (!$mailEnabled) {
+            file_put_contents($logDir . '/otp_log.txt', "[" . date('Y-m-d H:i:s') . "] (MOCK) OTP for {$toEmail} ({$fullName}): {$otp}\n", FILE_APPEND);
+            error_log("SDO FAST - Registration OTP for {$toEmail}: {$otp}");
+            return true;
+        }
+
+        // Also log to scratch/otp_log.txt for local testing convenience
         file_put_contents($logDir . '/otp_log.txt', "[" . date('Y-m-d H:i:s') . "] OTP for {$toEmail} ({$fullName}): {$otp}\n", FILE_APPEND);
 
         $mail = new PHPMailer(true);
         try {
             // Server settings
             $mail->isSMTP();
-            $mail->Host       = env('MAIL_HOST', 'localhost');
-            $mail->Port       = env('MAIL_PORT', 1025);
-            $mail->SMTPAuth   = !empty(env('MAIL_USERNAME'));
-            $mail->Username   = env('MAIL_USERNAME', '');
-            $mail->Password   = env('MAIL_PASSWORD', '');
+            $mail->Host       = env('SMTP_HOST', env('MAIL_HOST', 'localhost'));
+            $mail->Port       = env('SMTP_PORT', env('MAIL_PORT', 1025));
+            $mail->SMTPAuth   = filter_var(env('SMTP_AUTH', !empty(env('MAIL_USERNAME'))), FILTER_VALIDATE_BOOLEAN);
+            $mail->Username   = env('SMTP_USERNAME', env('MAIL_USERNAME', ''));
+            $mail->Password   = env('SMTP_PASSWORD', env('MAIL_PASSWORD', ''));
             
-            // Set TLS/SSL if port is 465 or 587
-            if (env('MAIL_PORT') == 587) {
+            $encryption = env('SMTP_ENCRYPTION', '');
+            if ($encryption === 'tls' || $mail->Port == 587) {
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            } elseif (env('MAIL_PORT') == 465) {
+            } elseif ($encryption === 'ssl' || $mail->Port == 465) {
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
             }
 

@@ -25,118 +25,307 @@ if (empty($_SESSION['csrf_token'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Account | SDO FAST</title>
     
-    <!-- Bootstrap 5 CSS CDN -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    
-    <!-- Bootstrap Icons CDN -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    
-    <!-- Custom Theme Variables -->
-    <link rel="stylesheet" href="<?php echo env('APP_URL'); ?>/assets/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <style>
+        :root {
+            --primary: #1b4a9a;
+            --primary-light: #1b4a9a;
+            --primary-dark: #1b4a9a;
+            --accent: #1b4a9a;
+            --gold: #d4af37;
+            --bg-dark: #0a1628;
+            --bg-card: #111d2e;
+            --text: #e8f1f8;
+            --text-muted: #7a9bb8;
+            --border: rgba(27, 74, 154, 0.12);
+            --error: #ef4444;
+            --success: #10b981;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            background-color: #081121; /* Matches ALPAS background */
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 2rem 1.5rem;
+            padding: 20px;
         }
-        .register-card {
-            max-width: 650px;
+        
+        .register-container {
             width: 100%;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 18px;
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.35);
-            background: #0c1524; /* Deep navy card background matching ALPAS */
-            overflow: hidden;
-            color: #f8fafc;
+            max-width: 420px;
         }
-        .register-body {
-            padding: 3rem 2.5rem;
+        
+        .register-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px 24px;
+            backdrop-filter: blur(20px);
         }
-        .form-label {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #94a3b8;
-            margin-bottom: 0.5rem;
-        }
-        .text-danger-asterisk {
-            color: #ef4444;
-            margin-left: 2px;
-        }
-        /* Custom Dark Inputs styling */
-        .dark-input {
-            background-color: #070c17 !important;
-            border: 1px solid #121b2d !important;
-            color: #f8fafc !important;
-            height: 48px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
-        }
-        .dark-input::placeholder {
-            color: #4b5563 !important;
-            opacity: 1;
-        }
-        .dark-input:focus {
-            background-color: #0c1524 !important;
-            border-color: #214da2 !important;
-            box-shadow: 0 0 0 3px rgba(33, 77, 162, 0.25) !important;
-            color: #ffffff !important;
-        }
-        select.dark-input {
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
-            background-repeat: no-repeat !important;
-            background-position: right 0.75rem center !important;
-            background-size: 16px 12px !important;
-            appearance: none !important;
-        }
-        select.dark-input option {
-            background-color: #0c1524;
-            color: #f8fafc;
-        }
-        .input-subtext {
-            font-size: 0.75rem;
-            color: #475569;
-            margin-top: 4px;
-        }
-        .btn-action {
-            background-color: #214da2;
-            border-color: #214da2;
-            color: #ffffff;
-            height: 48px;
-            font-weight: 600;
-            border-radius: 8px;
-            transition: all 0.2s ease;
-        }
-        .btn-action:hover, .btn-action:focus {
-            background-color: #1a3d82;
-            border-color: #1a3d82;
-            transform: translateY(-1px);
-        }
-        .btn-back {
-            background-color: #182335;
-            border: 1px solid #25344c;
-            color: #f8fafc;
-            height: 48px;
-            font-weight: 500;
-            border-radius: 8px;
-            transition: all 0.2s ease;
-        }
-        .btn-back:hover {
-            background-color: #202e45;
-            color: #ffffff;
-            border-color: #384c6c;
-        }
-        .page-footer {
-            margin-top: 1.5rem;
+        
+        .register-header {
             text-align: center;
-            color: rgba(255, 255, 255, 0.4);
-            font-size: 0.75rem;
+            margin-bottom: 24px;
         }
+
+        .logo-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 76px;
+            height: 76px;
+            background: transparent;
+            border-radius: 50%;
+            margin-bottom: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .logo-badge img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        
+        .register-header h1 {
+            color: var(--text);
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        
+        .register-header p {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            line-height: 1.5;
+        }
+        
+        .form-group {
+            margin-bottom: 14px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .form-label {
+            display: block;
+            color: var(--text);
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .form-label .required {
+            color: var(--error);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 8px 10px;
+            font-size: 0.85rem;
+            font-family: inherit;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            transition: all 0.2s ease;
+        }
+        
+        .form-control::placeholder {
+            color: var(--text-muted);
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-light);
+            background: rgba(0, 0, 0, 0.4);
+        }
+        
+        select.form-control {
+            cursor: pointer;
+        }
+        
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .info-box {
+            background: rgba(27, 74, 154, 0.12);
+            border: 1px solid rgba(27, 74, 154, 0.28);
+            color: rgba(255, 255, 255, 0.9);
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 0.8rem;
+        }
+        
+        .info-box i {
+            margin-right: 8px;
+        }
+        
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            font-family: inherit;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            text-decoration: none;
+            margin-top: 6px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(27, 74, 154, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            border: 1px solid var(--border);
+            margin-top: 12px;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .form-hint {
+            display: block;
+            font-size: 0.75rem;
+            color: #9cb4c9;
+            margin-top: 6px;
+        }
+        
+        @media (max-width: 640px) {
+            body {
+                padding: 14px;
+                align-items: flex-start;
+            }
+
+            .register-container {
+                max-width: 380px;
+            }
+
+            .register-card {
+                border-radius: 16px;
+                padding: 20px 16px;
+            }
+
+            .register-header {
+                margin-bottom: 16px;
+            }
+
+            .register-header h1 {
+                font-size: 1.2rem;
+                margin-bottom: 6px;
+            }
+
+            .register-header p {
+                font-size: 0.77rem;
+            }
+
+            .form-row {
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                gap: 10px;
+            }
+
+            .form-group {
+                margin-bottom: 12px;
+            }
+
+            .form-label {
+                font-size: 0.75rem;
+                margin-bottom: 5px;
+            }
+
+            .form-control {
+                padding: 9px 10px;
+                font-size: 0.85rem;
+                border-radius: 8px;
+            }
+
+            .form-hint {
+                font-size: 0.68rem;
+            }
+
+            .info-box,
+            .error-message {
+                padding: 10px 12px;
+                border-radius: 8px;
+                margin-bottom: 14px;
+                font-size: 0.74rem;
+            }
+
+            .btn {
+                margin-top: 6px;
+                padding: 10px 12px;
+                font-size: 0.9rem;
+                border-radius: 9px;
+            }
+
+            .btn-secondary {
+                margin-top: 10px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .register-card {
+                padding: 18px 14px;
+            }
+
+            .form-row {
+                gap: 8px;
+            }
+
+            .register-header h1 {
+                font-size: 1.1rem;
+            }
+
+            .form-control,
+            .btn {
+                font-size: 0.82rem;
+            }
+        }
+
         .otp-display-banner {
             background-color: rgba(33, 77, 162, 0.15);
             border: 1px dashed rgba(33, 77, 162, 0.4);
@@ -144,175 +333,151 @@ if (empty($_SESSION['csrf_token'])) {
             color: #93c5fd;
             font-size: 0.85rem;
             padding: 10px 15px;
-            margin-bottom: 1.5rem;
+            margin-bottom: 20px;
             text-align: center;
+        }
+
+        .page-footer {
+            margin-top: 1.5rem;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.75rem;
         }
     </style>
 </head>
 <body>
 
-<div class="register-card shadow-lg">
-    <div class="register-body">
+<div class="register-container">
+    <div class="register-card">
         
         <!-- STEP 1: Registration Form -->
         <div id="registerStep">
-            <!-- Header -->
-            <div class="text-center mb-4">
-                <div class="d-flex align-items-center justify-content-center gap-2 mb-1 text-white">
-                    <i class="bi bi-person-plus-fill fs-3"></i>
-                    <h3 class="fw-bold mb-0">Create Account</h3>
-                </div>
-                <div style="font-size: 0.85rem; color: #526685;">Register as an SDO Employee to file travel requests</div>
+            <div class="register-header">
+                <h1>SDO FAST</h1>
+                <p>Create Account</p>
+                <p style="margin-top: 6px;">Register as an SDO Employee to file travel requests</p>
             </div>
 
-            <!-- OTP Note Alert Box -->
-            <div class="alert border-0 d-flex gap-3 align-items-start mb-4" role="alert" style="background-color: #0d213f; border: 1px solid rgba(33, 77, 162, 0.2) !important; color: #93c5fd; border-radius: 12px; padding: 1rem 1.25rem;">
-                <i class="bi bi-info-circle-fill fs-5 mt-0.5 text-info"></i>
-                <div style="font-size: 0.82rem; line-height: 1.45;">
-                    An OTP will be sent to your email for verification. After verifying, your account will be created and ready to use immediately.
-                </div>
+            <div class="info-box">
+                <i class="fas fa-info-circle"></i>
+                An OTP will be sent to your email for verification. After verifying, your account will be created and ready to use immediately.
             </div>
 
-            <!-- Form Validation Alerts -->
-            <div id="registerAlert" class="alert alert-danger border-0 d-none align-items-center gap-2 mb-4" role="alert" style="background-color: #2a1b22; color: #f87171; border-radius: 8px;">
-                <i class="bi bi-exclamation-triangle-fill fs-5"></i>
-                <small id="registerAlertText" class="fw-semibold"></small>
+            <div id="registerAlert" class="error-message" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span id="registerAlertText"></span>
             </div>
 
             <form id="registrationForm" onsubmit="handleRegisterSubmit(event)">
                 <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 
-                <div class="row g-3 mb-3">
-                    <!-- Full Name -->
-                    <div class="col-md-6">
-                        <label for="fullNameInput" class="form-label">Full Name <span class="text-danger-asterisk">*</span></label>
-                        <input type="text" name="full_name" class="form-control dark-input" id="fullNameInput" placeholder="Juan Dela Cruz" required>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="fullNameInput" class="form-label">Full Name <span class="required">*</span></label>
+                        <input type="text" name="full_name" class="form-control" id="fullNameInput" placeholder="Juan Dela Cruz" required>
                     </div>
                     
-                    <!-- Email -->
-                    <div class="col-md-6">
-                        <label for="emailInput" class="form-label">Email <span class="text-danger-asterisk">*</span></label>
-                        <input type="email" name="email" class="form-control dark-input" id="emailInput" placeholder="user@deped.gov.ph" required>
+                    <div class="form-group">
+                        <label for="emailInput" class="form-label">Email <span class="required">*</span></label>
+                        <input type="email" name="email" class="form-control" id="emailInput" placeholder="user@deped.gov.ph" required>
                     </div>
                 </div>
 
-                <div class="row g-3 mb-3">
-                    <!-- Office -->
-                    <div class="col-md-6">
-                        <label for="officeSelect" class="form-label">Office <span class="text-danger-asterisk">*</span></label>
-                        <select name="office" class="form-select dark-input" id="officeSelect" onchange="handleOfficeChange()" required>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="officeSelect" class="form-label">Office <span class="required">*</span></label>
+                        <select name="office" class="form-control" id="officeSelect" onchange="handleOfficeChange()" required>
                             <option value="">-- Select Office --</option>
                             <option value="OSDS">OSDS (Office of the SDS Staff)</option>
                             <option value="SGOD">SGOD (School Governance and Operations Division)</option>
                             <option value="CID">CID (Curriculum Implementation Division)</option>
                         </select>
-                        <div class="input-subtext text-muted">OSDS, SGOD, or CID</div>
+                        <span class="form-hint">OSDS, SGOD, or CID</span>
                     </div>
                     
-                    <!-- Unit / Section -->
-                    <div class="col-md-6">
-                        <label for="unitSelect" class="form-label">Unit/Section <span class="text-danger-asterisk">*</span></label>
-                        <select name="unit_section" class="form-select dark-input" id="unitSelect" required disabled>
+                    <div class="form-group">
+                        <label for="unitSelect" class="form-label">Unit/Section <span class="required">*</span></label>
+                        <select name="unit_section" class="form-control" id="unitSelect" required disabled>
                             <option value="">-- Select Unit/Section --</option>
                         </select>
-                        <div id="unitSubtext" class="input-subtext text-muted">Select an Office first</div>
+                        <span id="unitSubtext" class="form-hint">Select an Office first</span>
                     </div>
                 </div>
 
-                <div class="row g-3 mb-3">
-                    <!-- Password -->
-                    <div class="col-md-6">
-                        <label for="passwordInput" class="form-label">Password <span class="text-danger-asterisk">*</span></label>
-                        <input type="password" name="password" class="form-control dark-input" id="passwordInput" placeholder="Min. 8 characters" required minlength="8">
-                        <div class="input-subtext text-muted">Minimum 8 characters</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="passwordInput" class="form-label">Password <span class="required">*</span></label>
+                        <input type="password" name="password" class="form-control" id="passwordInput" placeholder="Min. 8 characters" required minlength="8">
+                        <span class="form-hint">Minimum 8 characters</span>
                     </div>
                     
-                    <!-- Confirm Password -->
-                    <div class="col-md-6">
-                        <label for="confirmPasswordInput" class="form-label">Confirm Password <span class="text-danger-asterisk">*</span></label>
-                        <input type="password" name="confirm_password" class="form-control dark-input" id="confirmPasswordInput" placeholder="Re-enter password" required minlength="8">
+                    <div class="form-group">
+                        <label for="confirmPasswordInput" class="form-label">Confirm Password <span class="required">*</span></label>
+                        <input type="password" name="confirm_password" class="form-control" id="confirmPasswordInput" placeholder="Re-enter password" required minlength="8">
                     </div>
                 </div>
 
-                <div class="row g-3 mb-4">
-                    <!-- Employee No -->
-                    <div class="col-md-6">
-                        <label for="employeeNoInput" class="form-label">Employee No. <span class="text-danger-asterisk">*</span></label>
-                        <input type="text" name="employee_no" class="form-control dark-input" id="employeeNoInput" placeholder="E-12345" required>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="employeeNoInput" class="form-label">Employee No. <span class="required">*</span></label>
+                        <input type="text" name="employee_no" class="form-control" id="employeeNoInput" placeholder="E-12345" required>
                     </div>
                     
-                    <!-- Position -->
-                    <div class="col-md-6">
-                        <label for="positionInput" class="form-label">Position <span class="text-danger-asterisk">*</span></label>
-                        <input type="text" name="position" class="form-control dark-input" id="positionInput" placeholder="Teacher I" required>
+                    <div class="form-group">
+                        <label for="positionInput" class="form-label">Position <span class="required">*</span></label>
+                        <input type="text" name="position" class="form-control" id="positionInput" placeholder="Teacher I" required>
                     </div>
                 </div>
 
-                <!-- Action Buttons -->
-                <div class="d-flex flex-column gap-2">
-                    <button type="submit" id="btnRegisterSubmit" class="btn btn-action w-100 d-flex align-items-center justify-content-center gap-2">
-                        <i class="bi bi-envelope-fill"></i>
-                        <span>Verify Email & Register</span>
-                    </button>
-                    
-                    <a href="login.php" class="btn btn-back w-100 d-flex align-items-center justify-content-center gap-2">
-                        <i class="bi bi-arrow-left"></i>
-                        <span>Back to Login</span>
-                    </a>
-                </div>
+                <button type="submit" id="btnRegisterSubmit" class="btn btn-primary">
+                    <i class="fas fa-envelope"></i> <span>Verify Email &amp; Register</span>
+                </button>
+                
+                <a href="login.php" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Login
+                </a>
             </form>
         </div>
 
         <!-- STEP 2: OTP Verification Card (Initially Hidden) -->
-        <div id="otpStep" class="d-none">
-            <!-- Header -->
-            <div class="text-center mb-4">
-                <div class="d-flex align-items-center justify-content-center gap-2 mb-1 text-white">
-                    <i class="bi bi-shield-lock-fill fs-3 text-warning"></i>
-                    <h3 class="fw-bold mb-0">Email Verification</h3>
-                </div>
-                <div style="font-size: 0.85rem; color: #526685;">Enter the One-Time Password (OTP) sent to your email</div>
+        <div id="otpStep" style="display: none;">
+            <div class="register-header">
+                <h1><i class="fas fa-shield-alt" style="color: var(--gold);"></i> Email Verification</h1>
+                <p>Enter the One-Time Password (OTP) sent to your email</p>
             </div>
 
             <!-- Dev OTP Display (Shows up for local testing convenience) -->
-            <div id="devOtpBanner" class="otp-display-banner d-none"></div>
+            <div id="devOtpBanner" class="otp-display-banner" style="display: none;"></div>
 
-            <!-- Verification Alert Box -->
-            <div id="otpAlert" class="alert alert-danger border-0 d-none align-items-center gap-2 mb-4" role="alert" style="background-color: #2a1b22; color: #f87171; border-radius: 8px;">
-                <i class="bi bi-exclamation-triangle-fill fs-5"></i>
-                <small id="otpAlertText" class="fw-semibold"></small>
+            <div id="otpAlert" class="error-message" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span id="otpAlertText"></span>
             </div>
 
             <form id="otpForm" onsubmit="handleOtpSubmit(event)">
-                <!-- OTP Entry Code -->
-                <div class="mb-4 text-center">
-                    <label for="otpCodeInput" class="form-label d-block text-center">Enter Verification Code</label>
-                    <input type="text" class="form-control dark-input text-center fw-bold" id="otpCodeInput" placeholder="123456" maxlength="6" pattern="\d{6}" required style="font-size: 1.5rem; letter-spacing: 0.4rem; max-width: 260px; margin: 0 auto; height: 56px;">
-                    <div class="input-subtext text-center mt-2">Check your email client or look for <code>otp_log.txt</code> inside the scratch directory.</div>
+                <div class="form-group" style="text-align: center; margin-bottom: 24px;">
+                    <label for="otpCodeInput" class="form-label" style="text-align: center;">Enter Verification Code</label>
+                    <input type="text" class="form-control" id="otpCodeInput" placeholder="123456" maxlength="6" pattern="\d{6}" required style="font-size: 1.5rem; letter-spacing: 0.4rem; text-align: center; max-width: 200px; margin: 0 auto;">
+                    <span class="form-hint" style="text-align: center;">Check your email client or look for <code>otp_log.txt</code> inside the scratch directory.</span>
                 </div>
 
-                <!-- Action Buttons -->
-                <div class="d-flex flex-column gap-2">
-                    <button type="submit" id="btnOtpSubmit" class="btn btn-action w-100 d-flex align-items-center justify-content-center gap-2">
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>Verify & Complete Registration</span>
-                    </button>
-                    
-                    <button type="button" class="btn btn-back w-100 d-flex align-items-center justify-content-center gap-2" onclick="goBackToRegister()">
-                        <i class="bi bi-arrow-left"></i>
-                        <span>Cancel & Back</span>
-                    </button>
-                </div>
+                <button type="submit" id="btnOtpSubmit" class="btn btn-primary">
+                    <i class="fas fa-check-circle"></i> <span>Verify &amp; Complete Registration</span>
+                </button>
+                
+                <button type="button" class="btn btn-secondary" onclick="goBackToRegister()">
+                    <i class="fas fa-arrow-left"></i> Cancel &amp; Back
+                </button>
             </form>
         </div>
 
     </div>
-</div>
-
-<!-- Footer -->
-<div class="page-footer">
-    <div>DepEd — Schools Division Office of San San Pedro City</div>
-    <div style="opacity: 0.5; font-size: 0.7rem; margin-top: 4px;">© 2026 ICT Unit</div>
+    
+    <!-- Footer -->
+    <div class="page-footer">
+        <div>DepEd — Schools Division Office of San San Pedro City</div>
+        <div style="opacity: 0.5; font-size: 0.7rem; margin-top: 4px;">© 2026 ICT Unit</div>
+    </div>
 </div>
 
 <script>
@@ -390,7 +555,7 @@ function handleRegisterSubmit(event) {
     const submitBtn = document.getElementById('btnRegisterSubmit');
     
     // Hide alert
-    alertBox.classList.add('d-none');
+    alertBox.style.display = 'none';
     
     // Validate passwords matching
     const pass = document.getElementById('passwordInput').value;
@@ -398,13 +563,13 @@ function handleRegisterSubmit(event) {
     
     if (pass !== confirmPass) {
         alertText.textContent = "Passwords do not match.";
-        alertBox.classList.remove('d-none');
+        alertBox.style.display = 'flex';
         return;
     }
     
     if (pass.length < 8) {
         alertText.textContent = "Password must be at least 8 characters.";
-        alertBox.classList.remove('d-none');
+        alertBox.style.display = 'flex';
         return;
     }
     
@@ -426,28 +591,28 @@ function handleRegisterSubmit(event) {
         
         if (data.success) {
             // Success, transfer view to OTP verification step
-            document.getElementById('registerStep').classList.add('d-none');
-            document.getElementById('otpStep').classList.remove('d-none');
+            document.getElementById('registerStep').style.display = 'none';
+            document.getElementById('otpStep').style.display = 'block';
             
             // Show dev OTP banner if local env output it
             const devBanner = document.getElementById('devOtpBanner');
             if (data.dev_otp) {
-                devBanner.innerHTML = `<i class="bi bi-bug-fill me-1"></i><strong>[Local Dev Mode]</strong> Generated verification OTP: <code>${data.dev_otp}</code>`;
-                devBanner.classList.remove('d-none');
+                devBanner.innerHTML = `<i class="fas fa-bug" style="margin-right: 6px;"></i><strong>[Local Dev Mode]</strong> Generated verification OTP: <code>${data.dev_otp}</code>`;
+                devBanner.style.display = 'block';
             } else {
-                devBanner.classList.add('d-none');
+                devBanner.style.display = 'none';
             }
         } else {
             // Show error message
             alertText.textContent = data.message || "An error occurred. Please try again.";
-            alertBox.classList.remove('d-none');
+            alertBox.style.display = 'flex';
         }
     })
     .catch(err => {
         submitBtn.removeAttribute('disabled');
         submitBtn.querySelector('span').textContent = 'Verify Email & Register';
         alertText.textContent = "Unable to connect to registration server.";
-        alertBox.classList.remove('d-none');
+        alertBox.style.display = 'flex';
         console.error(err);
     });
 }
@@ -461,11 +626,11 @@ function handleOtpSubmit(event) {
     const submitBtn = document.getElementById('btnOtpSubmit');
     const otpCode = document.getElementById('otpCodeInput').value;
     
-    alertBox.classList.add('d-none');
+    alertBox.style.display = 'none';
     
     if (otpCode.length !== 6 || isNaN(otpCode)) {
         alertText.textContent = "Please enter a valid 6-digit OTP code.";
-        alertBox.classList.remove('d-none');
+        alertBox.style.display = 'flex';
         return;
     }
     
@@ -490,21 +655,21 @@ function handleOtpSubmit(event) {
         } else {
             // Show verification error
             alertText.textContent = data.message || "Verification failed.";
-            alertBox.classList.remove('d-none');
+            alertBox.style.display = 'flex';
         }
     })
     .catch(err => {
         submitBtn.removeAttribute('disabled');
         submitBtn.querySelector('span').textContent = 'Verify & Complete Registration';
         alertText.textContent = "Unable to connect to verification server.";
-        alertBox.classList.remove('d-none');
+        alertBox.style.display = 'flex';
         console.error(err);
     });
 }
 
 function goBackToRegister() {
-    document.getElementById('otpStep').classList.add('d-none');
-    document.getElementById('registerStep').classList.remove('d-none');
+    document.getElementById('otpStep').style.display = 'none';
+    document.getElementById('registerStep').style.display = 'block';
 }
 </script>
 
