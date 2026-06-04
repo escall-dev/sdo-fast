@@ -35,6 +35,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Auto-expand sidebar and show submenu when clicking Transactions while collapsed
+    const transToggle = document.querySelector('.sidebar a[href="#transactionsCollapse"]');
+    if (transToggle) {
+        transToggle.addEventListener('click', function(e) {
+            if (document.body.classList.contains('sidebar-collapsed')) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Expand sidebar
+                document.body.classList.remove('sidebar-collapsed');
+                try { localStorage.setItem('sidebar-collapsed', 'false'); } catch(err) {}
+                
+                // Show transactions collapse menu
+                const collapseEl = document.getElementById('transactionsCollapse');
+                if (collapseEl && typeof bootstrap !== 'undefined') {
+                    const bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapseEl);
+                    bsCollapse.show();
+                }
+            }
+        });
+    }
+
     // 4. Live Date & Clock
     function updateDatetime() {
         var now = new Date();
