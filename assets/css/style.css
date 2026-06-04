@@ -86,9 +86,8 @@ body {
 
 /* Layout Architecture */
 .wrapper {
-    display: flex;
+    display: block;
     width: 100%;
-    align-items: stretch;
 }
 
 /* Fixed Desktop Sidebar */
@@ -97,7 +96,7 @@ body {
     min-width: var(--sidebar-width);
     background-color: var(--color-primary);
     color: #ffffff;
-    min-height: 100vh;
+    height: 100vh;
     position: fixed;
     top: 0;
     left: 0;
@@ -119,6 +118,33 @@ body {
     margin: 0;
     flex-grow: 1;
     overflow-y: auto;
+}
+
+.sidebar-menu-wrapper {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-menu-wrapper::-webkit-scrollbar,
+.sidebar-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-menu-wrapper::-webkit-scrollbar-track,
+.sidebar-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-menu-wrapper::-webkit-scrollbar-thumb,
+.sidebar-menu::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+}
+
+.sidebar-menu-wrapper::-webkit-scrollbar-thumb:hover,
+.sidebar-menu::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 .sidebar-menu li {
