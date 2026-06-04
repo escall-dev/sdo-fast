@@ -152,8 +152,8 @@ try {
 
     // Insert Transaction
     $insertTxSql = "
-        INSERT INTO transactions (uuid, tracking_number, requestor_id, transaction_type, event_name, amount, tax_amount, net_amount, target_date, current_status, remarks) 
-        VALUES (:uuid, :tracking_number, :requestor_id, :transaction_type, :event_name, :amount, :tax_amount, :net_amount, :target_date, :current_status, :remarks)
+        INSERT INTO transactions (uuid, tracking_number, requestor_id, created_by, division_id, transaction_type, event_name, amount, tax_amount, net_amount, target_date, current_status, remarks) 
+        VALUES (:uuid, :tracking_number, :requestor_id, :created_by, :division_id, :transaction_type, :event_name, :amount, :tax_amount, :net_amount, :target_date, :current_status, :remarks)
     ";
     
     $txStmt = $fastPDO->prepare($insertTxSql);
@@ -161,6 +161,8 @@ try {
         'uuid' => $uuid,
         'tracking_number' => $trackingNumber,
         'requestor_id' => $userId,
+        'created_by' => $userId,
+        'division_id' => null, // Nullable, default references user's office/division
         'transaction_type' => $type,
         'event_name' => $eventName,
         'amount' => $amount,

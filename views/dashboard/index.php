@@ -30,9 +30,10 @@ $monthlyData = array_fill(1, 12, ['amount' => 0.0, 'tax' => 0.0, 'net' => 0.0]);
 
 if ($fastPDO !== null) {
     try {
-        // Role-based query helper
-        $roleFilter = ($userRole === 'Requestor') ? " AND requestor_id = :id" : "";
-        $roleParams = ($userRole === 'Requestor') ? ['id' => $userId] : [];
+        // Role-based query helper utilizing new data visibility scope
+        $scopeFilter = get_data_scope_filter($userRole, $userId, null);
+        $roleFilter = " AND " . $scopeFilter;
+        $roleParams = [];
 
         // 1. Total Transactions count
         $stmt = $fastPDO->prepare("SELECT COUNT(*) FROM transactions WHERE 1=1" . $roleFilter);
@@ -74,7 +75,7 @@ if ($fastPDO !== null) {
             SELECT t.*, u.full_name as requestor_name 
             FROM transactions t 
             LEFT JOIN users u ON t.requestor_id = u.id
-            WHERE 1=1" . ($userRole === 'Requestor' ? " AND t.requestor_id = :id" : "") . "
+            WHERE 1=1 AND " . get_data_scope_filter($userRole, $userId, 't') . "
             ORDER BY t.created_at DESC LIMIT 10
         ";
         $stmt = $fastPDO->prepare($recentQuery);

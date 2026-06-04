@@ -27,6 +27,107 @@ function isPublicRoute() {
     return false;
 }
 
+// Load database connection
+require_once __DIR__ . '/database.php';
+
+if (!function_exists('hasPermission')) {
+    function hasPermission($permissionKey) {
+        if (!isLoggedIn()) {
+            return false;
+        }
+
+        static $permissions = null;
+        
+        if ($permissions === null) {
+            $permissions = [];
+            $userId = $_SESSION['user_id'] ?? null;
+            $userRole = $_SESSION['user_role'] ?? 'User';
+            
+            // 1. Get default permissions based on role
+            $defaults = [
+                'view' => 0,
+                'encode' => 0,
+                'edit' => 0,
+                'approve' => 0,
+                'delete' => 0,
+                'manage_users' => 0,
+                'configure_system' => 0
+            ];
+            
+            if ($userRole === 'Super Admin') {
+                foreach ($defaults as $k => $v) {
+                    $defaults[$k] = 1;
+                }
+            } elseif ($userRole === 'Admin') {
+                $defaults['view'] = 1;
+                $defaults['encode'] = 1;
+                $defaults['edit'] = 1;
+                $defaults['approve'] = 1;
+            } elseif ($userRole === 'Accounting Staff') {
+                $defaults['view'] = 1;
+                $defaults['encode'] = 1;
+                $defaults['approve'] = 1;
+            } else {
+                $defaults['view'] = 1; // User or other roles default to view checked only
+            }
+            
+            $permissions = $defaults;
+            
+            // 2. Query overrides if user is logged in
+            if ($userId) {
+                global $fastPDO;
+                if ($fastPDO !== null) {
+                    try {
+                        $stmt = $fastPDO->prepare("SELECT permission_key, is_enabled FROM user_permissions WHERE user_id = :user_id");
+                        $stmt->execute(['user_id' => $userId]);
+                        $overrides = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+                        foreach ($overrides as $k => $v) {
+                            $permissions[$k] = (int)$v;
+                        }
+                    } catch (PDOException $e) {
+                        error_log("Failed to query user_permissions: " . $e->getMessage());
+                    }
+                }
+            }
+        }
+        
+        return isset($permissions[$permissionKey]) && $permissions[$permissionKey] == 1;
+    }
+}
+
+if (!function_exists('get_data_scope_filter')) {
+    function get_data_scope_filter($userRole, $userId, $tableAlias = 't') {
+        global $fastPDO;
+        
+        $scope = 'own'; // default fallback
+        
+        if ($fastPDO !== null) {
+            try {
+                $stmt = $fastPDO->prepare("SELECT scope FROM role_data_scope WHERE role = :role LIMIT 1");
+                $stmt->execute(['role' => $userRole]);
+                $res = $stmt->fetchColumn();
+                if ($res) {
+                    $scope = $res;
+                }
+            } catch (PDOException $e) {
+                error_log("Failed to fetch role data scope: " . $e->getMessage());
+            }
+        }
+        
+        $prefix = $tableAlias ? $tableAlias . '.' : '';
+        $userIdInt = (int)$userId;
+        
+        if ($scope === 'all') {
+            return "1=1";
+        } elseif ($scope === 'assigned') {
+            return "({$prefix}created_by = {$userIdInt} OR {$prefix}assigned_to = {$userIdInt})";
+        } else {
+            // scope = own
+            return "{$prefix}created_by = {$userIdInt}";
+        }
+    }
+}
+
 // 1. Enforce Authentication Check
 if (!isPublicRoute()) {
     if (!isLoggedIn()) {
@@ -52,69 +153,6 @@ if (!isPublicRoute()) {
     $currentUri = $_SERVER['REQUEST_URI'];
     $allowed = true;
 
-    // Load database connection
-    require_once __DIR__ . '/database.php';
-
-    if (!function_exists('hasPermission')) {
-        function hasPermission($permissionKey) {
-            static $permissions = null;
-            
-            if ($permissions === null) {
-                $permissions = [];
-                $userId = $_SESSION['user_id'] ?? null;
-                $userRole = $_SESSION['user_role'] ?? 'User';
-                
-                // 1. Get default permissions based on role
-                $defaults = [
-                    'view' => 0,
-                    'encode' => 0,
-                    'edit' => 0,
-                    'approve' => 0,
-                    'delete' => 0,
-                    'manage_users' => 0,
-                    'configure_system' => 0
-                ];
-                
-                if ($userRole === 'Super Admin') {
-                    foreach ($defaults as $k => $v) {
-                        $defaults[$k] = 1;
-                    }
-                } elseif ($userRole === 'Admin') {
-                    $defaults['view'] = 1;
-                    $defaults['encode'] = 1;
-                    $defaults['edit'] = 1;
-                    $defaults['approve'] = 1;
-                } elseif ($userRole === 'Accounting Staff') {
-                    $defaults['view'] = 1;
-                    $defaults['encode'] = 1;
-                    $defaults['approve'] = 1;
-                } else {
-                    $defaults['view'] = 1; // User or other roles default to view checked only
-                }
-                
-                $permissions = $defaults;
-                
-                // 2. Query overrides if user is logged in
-                if ($userId) {
-                    global $fastPDO;
-                    if ($fastPDO !== null) {
-                        try {
-                            $stmt = $fastPDO->prepare("SELECT permission_key, is_enabled FROM user_permissions WHERE user_id = :user_id");
-                            $stmt->execute(['user_id' => $userId]);
-                            $overrides = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
-                            foreach ($overrides as $k => $v) {
-                                $permissions[$k] = (int)$v;
-                            }
-                        } catch (PDOException $e) {
-                            error_log("Failed to query user_permissions: " . $e->getMessage());
-                        }
-                    }
-                }
-            }
-            
-            return isset($permissions[$permissionKey]) && $permissions[$permissionKey] == 1;
-        }
-    }
 
     // Define restricted path checks
     if (strpos($currentUri, '/views/users/') !== false || strpos($currentUri, '/api/users/') !== false) {

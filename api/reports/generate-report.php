@@ -87,6 +87,9 @@ if ($requestorId > 0) {
     $params['requestor_id'] = $requestorId;
 }
 
+// Apply role-based data visibility scope filter
+$whereClauses[] = get_data_scope_filter($userRole, $userId, 't');
+
 $whereSql = implode(' AND ', $whereClauses);
 
 // 3. Execute queries based on Report Type

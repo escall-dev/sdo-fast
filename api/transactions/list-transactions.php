@@ -46,17 +46,12 @@ $sortCol = $allowedSortColumns[$sortBy] ?? 't.created_at';
 $whereClauses = [];
 $params = [];
 
-// 1. Role-based restrictions
-if ($userRole === 'Requestor') {
-    // Requestors can only view their own transactions
-    $whereClauses[] = "t.requestor_id = :role_req_id";
-    $params['role_req_id'] = $userId;
-} else {
-    // Admins/Staff/Budget/Approver can filter by requestor
-    if ($requestorId > 0) {
-        $whereClauses[] = "t.requestor_id = :filter_req_id";
-        $params['filter_req_id'] = $requestorId;
-    }
+// 1. Data visibility scope filter
+$whereClauses[] = get_data_scope_filter($userRole, $userId, 't');
+
+if ($requestorId > 0) {
+    $whereClauses[] = "t.requestor_id = :filter_req_id";
+    $params['filter_req_id'] = $requestorId;
 }
 
 // 2. Transaction Type Filter
