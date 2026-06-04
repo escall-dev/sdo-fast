@@ -21,10 +21,10 @@ if ($fastPDO === null) {
 $userRole = $_SESSION['user_role'] ?? '';
 $adminId = $_SESSION['user_id'];
 
-// Restrict to Super Admin only
-if ($userRole !== 'Super Admin') {
+// Restrict to users with manage_users permission
+if (!hasPermission('manage_users')) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Forbidden: Only Super Admins can manage users.']);
+    echo json_encode(['success' => false, 'message' => 'Forbidden: You do not have permissions to manage users.']);
     exit;
 }
 

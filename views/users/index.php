@@ -17,9 +17,9 @@ require_once __DIR__ . '/../../config/database.php';
 $userRole = $_SESSION['user_role'] ?? '';
 $adminId = $_SESSION['user_id'] ?? 0;
 
-// Double check permission (Super Admin only)
-if ($userRole !== 'Super Admin') {
-    $_SESSION['flash_error'] = 'Access denied: User Management is restricted to Super Admin.';
+// Double check permission (Super Admin or allowed users only)
+if (!hasPermission('manage_users')) {
+    $_SESSION['flash_error'] = 'Access denied: User Management is restricted to authorized personnel.';
     header('Location: ' . env('APP_URL') . '/views/dashboard/index.php');
     exit;
 }

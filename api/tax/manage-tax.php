@@ -24,9 +24,9 @@ if ($fastPDO === null) {
 $userRole = $_SESSION['user_role'] ?? '';
 $adminId = $_SESSION['user_id'];
 
-if ($userRole !== 'Super Admin') {
+if (!hasPermission('configure_system')) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Forbidden: Only Super Admins can modify settings.']);
+    echo json_encode(['success' => false, 'message' => 'Forbidden: Only users with configure_system permission can modify settings.']);
     exit;
 }
 

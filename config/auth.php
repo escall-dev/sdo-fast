@@ -52,46 +52,106 @@ if (!isPublicRoute()) {
     $currentUri = $_SERVER['REQUEST_URI'];
     $allowed = true;
 
+    // Load database connection
+    require_once __DIR__ . '/database.php';
+
+    if (!function_exists('hasPermission')) {
+        function hasPermission($permissionKey) {
+            static $permissions = null;
+            
+            if ($permissions === null) {
+                $permissions = [];
+                $userId = $_SESSION['user_id'] ?? null;
+                $userRole = $_SESSION['user_role'] ?? 'User';
+                
+                // 1. Get default permissions based on role
+                $defaults = [
+                    'view' => 0,
+                    'encode' => 0,
+                    'edit' => 0,
+                    'approve' => 0,
+                    'delete' => 0,
+                    'manage_users' => 0,
+                    'configure_system' => 0
+                ];
+                
+                if ($userRole === 'Super Admin') {
+                    foreach ($defaults as $k => $v) {
+                        $defaults[$k] = 1;
+                    }
+                } elseif ($userRole === 'Admin') {
+                    $defaults['view'] = 1;
+                    $defaults['encode'] = 1;
+                    $defaults['edit'] = 1;
+                    $defaults['approve'] = 1;
+                } elseif ($userRole === 'Accounting Staff') {
+                    $defaults['view'] = 1;
+                    $defaults['encode'] = 1;
+                    $defaults['approve'] = 1;
+                } else {
+                    $defaults['view'] = 1; // User or other roles default to view checked only
+                }
+                
+                $permissions = $defaults;
+                
+                // 2. Query overrides if user is logged in
+                if ($userId) {
+                    global $fastPDO;
+                    if ($fastPDO !== null) {
+                        try {
+                            $stmt = $fastPDO->prepare("SELECT permission_key, is_enabled FROM user_permissions WHERE user_id = :user_id");
+                            $stmt->execute(['user_id' => $userId]);
+                            $overrides = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+                            foreach ($overrides as $k => $v) {
+                                $permissions[$k] = (int)$v;
+                            }
+                        } catch (PDOException $e) {
+                            error_log("Failed to query user_permissions: " . $e->getMessage());
+                        }
+                    }
+                }
+            }
+            
+            return isset($permissions[$permissionKey]) && $permissions[$permissionKey] == 1;
+        }
+    }
+
     // Define restricted path checks
     if (strpos($currentUri, '/views/users/') !== false || strpos($currentUri, '/api/users/') !== false) {
-        if ($userRole !== 'Super Admin') {
+        if (!hasPermission('manage_users')) {
             $allowed = false;
         }
     }
     
     if (strpos($currentUri, '/views/settings/') !== false) {
-        if ($userRole !== 'Super Admin') {
+        if (!hasPermission('configure_system')) {
             $allowed = false;
         }
     }
 
     if (strpos($currentUri, '/views/integrations/') !== false || strpos($currentUri, '/api/integrations/') !== false) {
-        if (!in_array($userRole, ['Super Admin', 'Admin', 'Accounting Staff']) &&
-            !in_array($userPosition, ['Accounting Support', 'Accountant'])) {
-            // Note: API receive-bac and send-to-bac are public routes because they authorize via bearer token, which is skipped above.
-            if (strpos($currentUri, '/receive-bac.php') === false && strpos($currentUri, '/send-to-bac.php') === false) {
+        // Exclude public integration routes
+        if (strpos($currentUri, '/receive-bac.php') === false && strpos($currentUri, '/send-to-bac.php') === false) {
+            if (!hasPermission('configure_system')) {
                 $allowed = false;
             }
         }
     }
 
     if (strpos($currentUri, '/views/reports/') !== false || strpos($currentUri, '/api/reports/') !== false) {
-        if (!in_array($userRole, ['Super Admin', 'Admin', 'Accounting Staff', 'Budget Officer', 'Approver']) &&
-            !in_array($userPosition, ['Accounting Support', 'Accountant', 'Budget Officer', 'ASDS', 'SDS'])) {
+        if (!hasPermission('view')) {
             $allowed = false;
         }
     }
 
     if (strpos($currentUri, '/views/transactions/submit.php') !== false || strpos($currentUri, '/api/transactions/submit-transaction.php') !== false) {
-        if (!in_array($userRole, ['Super Admin', 'Admin', 'User', 'Requestor']) &&
-            !in_array($userPosition, ['Personnel'])) {
+        if (!hasPermission('encode')) {
             $allowed = false;
         }
     }
 
     if (strpos($currentUri, '/api/transactions/update-status.php') !== false) {
-        if (!in_array($userRole, ['Super Admin', 'Admin', 'Accounting Staff', 'Budget Officer', 'Approver']) &&
-            !in_array($userPosition, ['Accounting Support', 'Accountant', 'Budget Officer', 'ASDS', 'SDS'])) {
+        if (!hasPermission('approve')) {
             $allowed = false;
         }
     }

@@ -21,13 +21,11 @@ $userPosition = $_SESSION['user_position'] ?? '';
 $showDashboard = true;
 $showTransactions = true;
 $showTracker = true;
-$showReports = in_array($userRole, ['Super Admin', 'Admin', 'Accounting Staff', 'Budget Officer', 'Approver']) || 
-               in_array($userPosition, ['Accounting Support', 'Accountant', 'Budget Officer', 'ASDS', 'SDS']);
-$showAuditLogs = ($userRole === 'Super Admin');
-$showUserManagement = ($userRole === 'Super Admin');
-$showIntegrationMonitor = in_array($userRole, ['Super Admin', 'Admin', 'Accounting Staff']) || 
-                         in_array($userPosition, ['Accounting Support', 'Accountant']);
-$showSettings = ($userRole === 'Super Admin');
+$showReports = hasPermission('view');
+$showAuditLogs = hasPermission('configure_system');
+$showUserManagement = hasPermission('manage_users');
+$showIntegrationMonitor = hasPermission('configure_system');
+$showSettings = hasPermission('configure_system');
 
 // User Profile Section HTML content generator
 $renderUserProfileSection = function() {
@@ -107,8 +105,7 @@ $renderSidebarMenu = function($isMobile = false) use (
                 </a>
                 <div class="collapse <?php echo isPageActive(['all_transactions', 'cash_advance', 'reimbursement', 'payroll', 'bactrack', 'submit_transaction']) ? 'show' : ''; ?>" id="transactionsCollapse<?php echo $isMobile ? 'Mobile' : ''; ?>">
                     <ul class="list-unstyled ps-4 py-1" style="background-color: rgba(0, 0, 0, 0.1); border-radius: 6px; margin: 2px 8px;">
-                        <?php if (in_array($userRole, ['Super Admin', 'Admin', 'Accounting Staff', 'Budget Officer', 'Approver']) || 
-                                  in_array($userPosition, ['Accounting Support', 'Accountant', 'Budget Officer', 'ASDS', 'SDS'])): ?>
+                        <?php if (hasPermission('view')): ?>
                             <li class="<?php echo isPageActive('all_transactions'); ?>"><a class="py-2" href="<?php echo $baseUrl; ?>/views/transactions/index.php"><i class="bi bi-list-ul me-2 fs-9"></i>All Transactions</a></li>
                         <?php endif; ?>
                         
@@ -117,7 +114,7 @@ $renderSidebarMenu = function($isMobile = false) use (
                         <li class="<?php echo isPageActive('bactrack'); ?>"><a class="py-2" href="<?php echo $baseUrl; ?>/views/transactions/index.php?type=BACtrack"><i class="bi bi-cloud-arrow-down me-2 fs-9"></i>BACtrack</a></li>
                         <li class="<?php echo isPageActive('payroll'); ?>"><a class="py-2" href="<?php echo $baseUrl; ?>/views/transactions/index.php?type=Payroll"><i class="bi bi-people-fill me-2 fs-9"></i>Payroll</a></li>
                         
-                        <?php if (in_array($userRole, ['Super Admin', 'Admin', 'User'])): ?>
+                        <?php if (hasPermission('encode')): ?>
                             <li class="<?php echo isPageActive('submit_transaction'); ?>"><a class="py-2 text-warning fw-semibold" href="<?php echo $baseUrl; ?>/views/transactions/submit.php"><i class="bi bi-plus-circle-fill me-2 fs-9"></i>Submit Transaction</a></li>
                         <?php endif; ?>
                     </ul>
