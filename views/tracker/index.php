@@ -210,27 +210,32 @@ if (!empty($searchQuery) && $fastPDO !== null) {
         $transaction = $stmt->fetch();
 
         if ($transaction) {
-            // Fetch checklist documents for this transaction
-            $stmtDocs = $fastPDO->prepare("SELECT * FROM transaction_documents WHERE transaction_id = ?");
-            $stmtDocs->execute([$transaction['id']]);
-            $uploadedDocs = $stmtDocs->fetchAll(PDO::FETCH_ASSOC);
-            $uploadedByCat = [];
-            foreach ($uploadedDocs as $doc) {
-                $uploadedByCat[$doc['category']] = $doc;
-            }
+            if ($transaction['transaction_type'] === 'BACtrack' && !hasPermission('view_bactrack')) {
+                $transaction = null;
+                $errorMsg = "Access denied: Your role does not permit viewing BACtrack Transactions.";
+            } else {
+                // Fetch checklist documents for this transaction
+                $stmtDocs = $fastPDO->prepare("SELECT * FROM transaction_documents WHERE transaction_id = ?");
+                $stmtDocs->execute([$transaction['id']]);
+                $uploadedDocs = $stmtDocs->fetchAll(PDO::FETCH_ASSOC);
+                $uploadedByCat = [];
+                foreach ($uploadedDocs as $doc) {
+                    $uploadedByCat[$doc['category']] = $doc;
+                }
 
-            // Fetch status logs
-            $logStmt = $fastPDO->prepare("
-                SELECT l.*, u.full_name as changer_name, u.email as changer_email, r.role_name as changer_role
-                FROM transaction_status_logs l
-                LEFT JOIN users u ON l.changed_by = u.id
-                LEFT JOIN user_roles ur ON u.id = ur.user_id
-                LEFT JOIN roles r ON ur.role_id = r.id
-                WHERE l.transaction_id = :id
-                ORDER BY l.created_at ASC
-            ");
-            $logStmt->execute(['id' => $transaction['id']]);
-            $logs = $logStmt->fetchAll();
+                // Fetch status logs
+                $logStmt = $fastPDO->prepare("
+                    SELECT l.*, u.full_name as changer_name, u.email as changer_email, r.role_name as changer_role
+                    FROM transaction_status_logs l
+                    LEFT JOIN users u ON l.changed_by = u.id
+                    LEFT JOIN user_roles ur ON u.id = ur.user_id
+                    LEFT JOIN roles r ON ur.role_id = r.id
+                    WHERE l.transaction_id = :id
+                    ORDER BY l.created_at ASC
+                ");
+                $logStmt->execute(['id' => $transaction['id']]);
+                $logs = $logStmt->fetchAll();
+            }
         } else {
             $errorMsg = "No transaction record matches tracking number: '" . htmlspecialchars($searchQuery) . "'.";
         }

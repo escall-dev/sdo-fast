@@ -30,6 +30,12 @@ require_once __DIR__ . '/../../includes/navbar.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
 require_once __DIR__ . '/../../config/database.php';
 
+if ($userTypeFilter === 'BACtrack' && !hasPermission('view_bactrack')) {
+    $_SESSION['flash_error'] = 'Access denied: Your role does not permit access to BACtrack Transactions.';
+    header('Location: ' . env('APP_URL') . '/views/dashboard/index.php');
+    exit;
+}
+
 $userRole = $_SESSION['user_role'] ?? '';
 $userPosition = $_SESSION['user_position'] ?? '';
 

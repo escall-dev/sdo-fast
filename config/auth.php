@@ -51,7 +51,8 @@ if (!function_exists('hasPermission')) {
                 'approve' => 0,
                 'delete' => 0,
                 'manage_users' => 0,
-                'configure_system' => 0
+                'configure_system' => 0,
+                'view_bactrack' => 0
             ];
             
             if ($userRole === 'Super Admin') {
@@ -73,19 +74,28 @@ if (!function_exists('hasPermission')) {
             
             $permissions = $defaults;
             
-            // 2. Query overrides if user is logged in
+            // 2. Query role permissions if user is logged in
             if ($userId) {
                 global $fastPDO;
                 if ($fastPDO !== null) {
                     try {
-                        $stmt = $fastPDO->prepare("SELECT permission_key, is_enabled FROM user_permissions WHERE user_id = :user_id");
+                        $stmt = $fastPDO->prepare("
+                            SELECT rp.permission_key, rp.is_enabled 
+                            FROM role_permissions rp
+                            JOIN roles r ON rp.role_id = r.id
+                            JOIN user_roles ur ON r.id = ur.role_id
+                            WHERE ur.user_id = :user_id
+                        ");
                         $stmt->execute(['user_id' => $userId]);
-                        $overrides = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
-                        foreach ($overrides as $k => $v) {
-                            $permissions[$k] = (int)$v;
+                        $rolePermissions = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+                        if (!empty($rolePermissions)) {
+                            // If role_permissions contains records, override the defaults
+                            foreach ($rolePermissions as $k => $v) {
+                                $permissions[$k] = (int)$v;
+                            }
                         }
                     } catch (PDOException $e) {
-                        error_log("Failed to query user_permissions: " . $e->getMessage());
+                        error_log("Failed to query role_permissions: " . $e->getMessage());
                     }
                 }
             }

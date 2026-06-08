@@ -90,7 +90,9 @@ if (in_array($userRole, ['Super Admin', 'Accounting Staff']) && $fastPDO !== nul
                                 <option value="">All Types</option>
                                 <option value="Cash Advance">Cash Advance</option>
                                 <option value="Reimbursement">Reimbursement</option>
-                                <option value="BACtrack">BACtrack</option>
+                                <?php if (hasPermission('view_bactrack')): ?>
+                                    <option value="BACtrack">BACtrack</option>
+                                <?php endif; ?>
                                 <option value="Payroll">Payroll</option>
                             </select>
                         </div>

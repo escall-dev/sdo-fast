@@ -219,8 +219,7 @@ if (!hasPermission('manage_users')) {
                             <div style="min-width: 140px;">
                                 <label class="form-label fs-8 mb-1">Maps to Role</label>
                                 <select name="mapped_role" class="form-select form-select-sm" id="newPositionRole" required>
-                                    <option value="Admin">Admin</option>
-                                    <option value="User">User</option>
+                                    <!-- Populated via JS -->
                                 </select>
                             </div>
                             <button type="submit" class="btn btn-sm btn-primary d-flex align-items-center gap-1" style="height: 31px;">
@@ -389,6 +388,16 @@ function populatePositionDropdowns() {
         regRoleSelect.insertAdjacentHTML('beforeend', optionHTML);
         editRoleSelect.insertAdjacentHTML('beforeend', optionHTML);
     });
+
+    // Also populate new position mapped role select dynamically
+    const newPositionRoleSelect = document.getElementById('newPositionRole');
+    if (newPositionRoleSelect) {
+        newPositionRoleSelect.innerHTML = '<option value="" disabled selected>Choose Role</option>';
+        cachedRoles.forEach(role => {
+            const optionHTML = `<option value="${role.role_name}">${role.role_name}</option>`;
+            newPositionRoleSelect.insertAdjacentHTML('beforeend', optionHTML);
+        });
+    }
 }
 
 async function fetchUsers(page) {
@@ -458,6 +467,12 @@ function renderUsersTable(users) {
             roleBadgeClass = 'bg-warning text-dark';
         } else if (user.role_name === 'Admin') {
             roleBadgeClass = 'bg-primary text-white';
+        } else if (user.role_name === 'Accounting Staff') {
+            roleBadgeClass = 'bg-info text-white';
+        } else if (user.role_name === 'Budget Officer') {
+            roleBadgeClass = 'bg-success text-white';
+        } else if (user.role_name === 'Approver') {
+            roleBadgeClass = 'bg-dark text-white';
         }
 
         const rowHTML = `
@@ -721,7 +736,18 @@ function renderPositionsTable(positions) {
     
     positions.forEach(pos => {
         const isDefault = parseInt(pos.is_default) === 1;
-        const roleBadgeClass = pos.mapped_role === 'Admin' ? 'bg-primary text-white' : 'bg-secondary text-white';
+        let roleBadgeClass = 'bg-light text-dark border';
+        if (pos.mapped_role === 'Super Admin') {
+            roleBadgeClass = 'bg-warning text-dark';
+        } else if (pos.mapped_role === 'Admin') {
+            roleBadgeClass = 'bg-primary text-white';
+        } else if (pos.mapped_role === 'Accounting Staff') {
+            roleBadgeClass = 'bg-info text-white';
+        } else if (pos.mapped_role === 'Budget Officer') {
+            roleBadgeClass = 'bg-success text-white';
+        } else if (pos.mapped_role === 'Approver') {
+            roleBadgeClass = 'bg-dark text-white';
+        }
         const typeBadge = isDefault 
             ? '<span class="badge bg-light text-dark border">Default</span>' 
             : '<span class="badge bg-info text-white">Custom</span>';
