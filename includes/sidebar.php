@@ -180,6 +180,14 @@ $renderSidebarMenu = function($isMobile = false) use (
             </li>
         <?php endif; ?>
 
+        <!-- Contact Us (all users) -->
+        <li class="<?php echo isPageActive('contact'); ?>">
+            <a href="<?php echo $baseUrl; ?>/views/contact.php">
+                <i class="fas fa-envelope-open-text"></i>
+                <span>Contact Us</span>
+            </a>
+        </li>
+
         <!-- My Profile (all users) -->
         <li class="<?php echo isPageActive('profile'); ?>">
             <a href="<?php echo $baseUrl; ?>/views/profile.php">
