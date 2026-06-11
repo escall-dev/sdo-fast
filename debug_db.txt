@@ -1,19 +1,39 @@
-MySQL NOW: 2026-06-02 09:44:52
-PHP NOW: 2026-06-02 03:44:52
+MySQL NOW: 2026-06-11 12:08:59
+PHP NOW: 2026-06-11 06:08:59
 Tokens:
 Array
 (
     [0] => Array
         (
+            [id] => 4
+            [user_id] => 9
+            [token] => b0c6ad17c9a80ff09e53fe9a9a868537b50cb5ce994b0a9d7a8f80ad952a4f39
+            [expires_at] => 2026-06-02 10:16:16
+            [used_at] => 
+            [created_at] => 2026-06-02 09:46:16
+        )
+
+    [1] => Array
+        (
+            [id] => 3
+            [user_id] => 9
+            [token] => $2y$12$tcF4ipMngr/Bj337dbu7mO2h0tH4xJwISTqqDCbzyNjOBzoyr7qV.
+            [expires_at] => 2026-06-02 09:51:00
+            [used_at] => 2026-06-02 09:46:15
+            [created_at] => 2026-06-02 09:46:00
+        )
+
+    [2] => Array
+        (
             [id] => 2
             [user_id] => 9
             [token] => $2y$12$XH1n2O6yBlVYRjtjsXRqLeZOzGq/f.hn6XBrLYnd.yMw/4F4tl94C
             [expires_at] => 2026-06-02 03:44:32
-            [used_at] => 
+            [used_at] => 2026-06-02 09:46:00
             [created_at] => 2026-06-02 09:39:32
         )
 
-    [1] => Array
+    [3] => Array
         (
             [id] => 1
             [user_id] => 9

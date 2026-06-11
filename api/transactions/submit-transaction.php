@@ -44,6 +44,10 @@ $mooeEndDate = trim($_POST['mooe_end_date'] ?? '');
 $fundSource = trim($_POST['fund_source'] ?? '');
 $venue = trim($_POST['venue'] ?? '');
 
+// Reimbursement specific fields
+$reimbursementCategory = trim($_POST['reimbursement_category'] ?? '');
+$reimbursementMonth = trim($_POST['reimbursement_month'] ?? '');
+
 // 2. Validate Inputs
 if (empty($type) || empty($eventName) || $amount <= 0 || empty($taxType)) {
     http_response_code(422);
@@ -80,6 +84,22 @@ if ($type === 'Cash Advance') {
         }
     }
     $inclusiveDates = $mooeStartDate . ' to ' . $mooeEndDate;
+}
+
+// Reimbursement validations
+if ($type === 'Reimbursement') {
+    if (empty($reimbursementCategory) || !in_array($reimbursementCategory, ['Travel', 'Communications Allowance', 'Procured Goods'])) {
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => 'Reimbursement Category (Travel, Communications Allowance, or Procured Goods) is required.']);
+        exit;
+    }
+    if ($reimbursementCategory === 'Communications Allowance') {
+        if (empty($reimbursementMonth)) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Month is required for Communications Allowance.']);
+            exit;
+        }
+    }
 }
 
 // Fetch active tax configurations to validate and calculate tax
@@ -171,6 +191,9 @@ $attachmentPaths = [];
 $approvedTaPath = null;
 $travelItineraryPath = null;
 $activityProposalPath = null;
+$dtrPath = null;
+$certificatePath = null;
+$billProofPath = null;
 
 // Enforce required uploads for Cash Advance MOOE & Activity
 if ($type === 'Cash Advance') {
@@ -194,6 +217,27 @@ if ($type === 'Cash Advance') {
             exit;
         }
         $activityProposalPath = handleSecureUpload('activity_proposal', $uploadDir);
+    }
+} elseif ($type === 'Reimbursement') {
+    if ($reimbursementCategory === 'Communications Allowance') {
+        if (!isset($_FILES['reimb_dtr']) || $_FILES['reimb_dtr']['error'] === UPLOAD_ERR_NO_FILE) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'DTR document is required for Communications Allowance.']);
+            exit;
+        }
+        if (!isset($_FILES['reimb_certificate']) || $_FILES['reimb_certificate']['error'] === UPLOAD_ERR_NO_FILE) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Certificate document is required for Communications Allowance.']);
+            exit;
+        }
+        if (!isset($_FILES['reimb_bill_proof']) || $_FILES['reimb_bill_proof']['error'] === UPLOAD_ERR_NO_FILE) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Bill / proof of payment document is required for Communications Allowance.']);
+            exit;
+        }
+        $dtrPath = handleSecureUpload('reimb_dtr', $uploadDir);
+        $certificatePath = handleSecureUpload('reimb_certificate', $uploadDir);
+        $billProofPath = handleSecureUpload('reimb_bill_proof', $uploadDir);
     }
 }
 
@@ -328,6 +372,23 @@ try {
         ]);
     }
 
+    // Insert Reimbursement Details
+    if ($type === 'Reimbursement') {
+        $insertReimbSql = "
+            INSERT INTO reimbursement_details (transaction_id, category, reimbursement_month, dtr_path, certificate_path, bill_proof_path) 
+            VALUES (:transaction_id, :category, :reimbursement_month, :dtr_path, :certificate_path, :bill_proof_path)
+        ";
+        $reimbStmt = $fastPDO->prepare($insertReimbSql);
+        $reimbStmt->execute([
+            'transaction_id' => $transactionDbId,
+            'category' => $reimbursementCategory,
+            'reimbursement_month' => $reimbursementCategory === 'Communications Allowance' ? $reimbursementMonth : null,
+            'dtr_path' => $dtrPath,
+            'certificate_path' => $certificatePath,
+            'bill_proof_path' => $billProofPath
+        ]);
+    }
+
     // Insert Workflow Log
     $logSql = "
         INSERT INTO transaction_status_logs (transaction_id, previous_status, new_status, changed_by, remarks) 
@@ -386,6 +447,15 @@ try {
     }
     if ($activityProposalPath && file_exists(dirname(dirname(__DIR__)) . '/' . $activityProposalPath)) {
         unlink(dirname(dirname(__DIR__)) . '/' . $activityProposalPath);
+    }
+    if ($dtrPath && file_exists(dirname(dirname(__DIR__)) . '/' . $dtrPath)) {
+        unlink(dirname(dirname(__DIR__)) . '/' . $dtrPath);
+    }
+    if ($certificatePath && file_exists(dirname(dirname(__DIR__)) . '/' . $certificatePath)) {
+        unlink(dirname(dirname(__DIR__)) . '/' . $certificatePath);
+    }
+    if ($billProofPath && file_exists(dirname(dirname(__DIR__)) . '/' . $billProofPath)) {
+        unlink(dirname(dirname(__DIR__)) . '/' . $billProofPath);
     }
     
     error_log("Transaction submission database failure: " . $e->getMessage());

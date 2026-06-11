@@ -152,6 +152,75 @@ if ($fastPDO !== null) {
                         </div>
                     </div>
 
+                    <!-- Reimbursement Sub-options (Hidden by default, shown when Reimbursement is selected) -->
+                    <div id="reimbursementCategorySection" class="mb-4 d-none p-3 rounded-3 border bg-light">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="reimbursementCategory" class="form-label fs-8 fw-semibold text-muted">Reimbursement Category <span class="text-danger">*</span></label>
+                                <select name="reimbursement_category" id="reimbursementCategory" class="form-select">
+                                    <option value="" disabled selected>Select Category</option>
+                                    <option value="Travel">Travel</option>
+                                    <option value="Communications Allowance">Communications Allowance</option>
+                                    <option value="Procured Goods">Procured Goods</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Communications Allowance Fields -->
+                        <div id="communicationsAllowanceFieldsContainer" class="d-none mt-3">
+                            <div class="border-top pt-3">
+                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-telephone-inbound me-1"></i>Communications Allowance Details</h6>
+                                
+                                <div class="alert alert-info border-0 shadow-sm d-flex align-items-center gap-2 mb-3 py-2 px-3" style="font-size: 0.8rem;">
+                                    <i class="bi bi-info-circle-fill fs-6 text-primary"></i>
+                                    <div><strong>Note:</strong> All three documents (DTR, Certificate, and Bill / Proof of Payment) are strictly required.</div>
+                                </div>
+                                
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12">
+                                        <label for="reimbursementMonth" class="form-label fs-8 fw-semibold text-muted">Select Month <span class="text-danger">*</span></label>
+                                        <select name="reimbursement_month" id="reimbursementMonth" class="form-select">
+                                            <option value="" disabled selected>Select Month</option>
+                                            <?php
+                                            $currentYear = (int)date('Y');
+                                            $prevYear = $currentYear - 1;
+                                            $monthsList = [
+                                                1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April', 
+                                                5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August', 
+                                                9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'
+                                            ];
+                                            for ($y = $currentYear; $y >= $prevYear; $y--) {
+                                                for ($m = 12; $m >= 1; $m--) {
+                                                    $mLabel = $monthsList[$m] . ' ' . $y;
+                                                    echo '<option value="' . htmlspecialchars($mLabel) . '">' . htmlspecialchars($mLabel) . '</option>';
+                                                }
+                                            }
+                                            ?>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-sm-4">
+                                        <label for="reimbDtr" class="form-label fs-8 fw-semibold text-muted">Upload DTR <span class="text-danger">*</span></label>
+                                        <input type="file" name="reimb_dtr" id="reimbDtr" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
+                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
+                                    </div>
+                                    <div class="col-12 col-sm-4">
+                                        <label for="reimbCertificate" class="form-label fs-8 fw-semibold text-muted">Upload Certificate <span class="text-danger">*</span></label>
+                                        <input type="file" name="reimb_certificate" id="reimbCertificate" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
+                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
+                                    </div>
+                                    <div class="col-12 col-sm-4">
+                                        <label for="reimbBillProof" class="form-label fs-8 fw-semibold text-muted">Upload Bill / Proof of Payment <span class="text-danger">*</span></label>
+                                        <input type="file" name="reimb_bill_proof" id="reimbBillProof" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
+                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Financial and Tax details -->
                     <div class="row g-3 mb-4">
                         <div class="col-12 col-sm-6">
@@ -244,11 +313,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const caSection = document.getElementById('cashAdvanceCategorySection');
     const mooeContainer = document.getElementById('mooeFieldsContainer');
     const activityContainer = document.getElementById('activityFieldsContainer');
+    const reimbCategorySelect = document.getElementById('reimbursementCategory');
+    const reimbSection = document.getElementById('reimbursementCategorySection');
+    const commAllowanceContainer = document.getElementById('communicationsAllowanceFieldsContainer');
 
     function toggleFormFields() {
         const txType = txTypeSelect.value;
         const caCat = caCategorySelect.value;
+        const reimbCat = reimbCategorySelect.value;
 
+        // Cash Advance toggle
         if (txType === 'Cash Advance') {
             caSection.classList.remove('d-none');
             caCategorySelect.disabled = false;
@@ -281,6 +355,27 @@ document.addEventListener('DOMContentLoaded', function() {
             setFieldsState(mooeContainer, false, false);
             setFieldsState(activityContainer, false, false);
         }
+
+        // Reimbursement toggle
+        if (txType === 'Reimbursement') {
+            reimbSection.classList.remove('d-none');
+            reimbCategorySelect.disabled = false;
+            reimbCategorySelect.required = true;
+
+            if (reimbCat === 'Communications Allowance') {
+                commAllowanceContainer.classList.remove('d-none');
+                setFieldsState(commAllowanceContainer, true, true);
+            } else {
+                commAllowanceContainer.classList.add('d-none');
+                setFieldsState(commAllowanceContainer, false, false);
+            }
+        } else {
+            reimbSection.classList.add('d-none');
+            reimbCategorySelect.disabled = true;
+            reimbCategorySelect.required = false;
+            commAllowanceContainer.classList.add('d-none');
+            setFieldsState(commAllowanceContainer, false, false);
+        }
     }
 
     function setFieldsState(container, enabled, required) {
@@ -293,6 +388,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     txTypeSelect.addEventListener('change', toggleFormFields);
     caCategorySelect.addEventListener('change', toggleFormFields);
+    reimbCategorySelect.addEventListener('change', toggleFormFields);
     
     // Initial call
     toggleFormFields();

@@ -130,7 +130,41 @@ if (!function_exists('get_data_scope_filter')) {
         if ($scope === 'all') {
             return "1=1";
         } elseif ($scope === 'assigned') {
-            return "({$prefix}created_by = {$userIdInt} OR {$prefix}current_status = 'Pending Support' OR {$prefix}id IN (SELECT DISTINCT transaction_id FROM transaction_status_logs WHERE changed_by = {$userIdInt}))";
+            // Determine the pending status(es) assigned to this user role or position dynamically
+            $userPosition = $_SESSION['user_position'] ?? '';
+            
+            // If user position is empty/not set in session (e.g. running in CLI or background sync), look it up in DB
+            if (empty($userPosition) && $fastPDO !== null) {
+                try {
+                    $posStmt = $fastPDO->prepare("
+                        SELECT p.position_name 
+                        FROM users u 
+                        LEFT JOIN positions p ON u.position_id = p.id 
+                        WHERE u.id = :id 
+                        LIMIT 1
+                    ");
+                    $posStmt->execute(['id' => $userIdInt]);
+                    $userPosition = $posStmt->fetchColumn() ?: '';
+                } catch (PDOException $e) {
+                    error_log("Failed to query user position in get_data_scope_filter: " . $e->getMessage());
+                }
+            }
+
+            $statuses = [];
+            if ($userRole === 'Budget Officer' || $userPosition === 'Budget Officer') {
+                $statuses[] = "'Pending Budget Check'";
+            } elseif ($userRole === 'Approver' || $userPosition === 'ASDS' || $userPosition === 'SDS') {
+                $statuses[] = "'Pending Final Approval'";
+            } elseif ($userPosition === 'Accountant') {
+                $statuses[] = "'Pending Accountant 1'";
+                $statuses[] = "'Pending Accountant 2'";
+            } else {
+                // Default to Accounting Support / Accounting Staff / other assigned roles
+                $statuses[] = "'Pending Support'";
+            }
+
+            $statusCondition = "{$prefix}current_status IN (" . implode(',', $statuses) . ")";
+            return "({$prefix}created_by = {$userIdInt} OR {$statusCondition} OR {$prefix}id IN (SELECT DISTINCT transaction_id FROM transaction_status_logs WHERE changed_by = {$userIdInt}))";
         } else {
             // scope = own
             return "{$prefix}created_by = {$userIdInt}";

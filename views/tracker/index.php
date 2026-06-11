@@ -201,11 +201,13 @@ if (!empty($searchQuery) && $fastPDO !== null) {
             SELECT t.*, u.full_name as requestor_name, u.email as requestor_email, 
                    d.dv_number, d.bir_2307_number, d.tax_type, d.attachment_path,
                    cad.category as cash_advance_category, cad.inclusive_dates, cad.fund_source, cad.venue,
-                   cad.approved_ta_path, cad.travel_itinerary_path, cad.activity_proposal_path
+                   cad.approved_ta_path, cad.travel_itinerary_path, cad.activity_proposal_path,
+                   rd.category as reimbursement_category, rd.reimbursement_month, rd.dtr_path, rd.certificate_path, rd.bill_proof_path
             FROM transactions t
             LEFT JOIN users u ON t.requestor_id = u.id
             LEFT JOIN document_details d ON t.id = d.transaction_id
             LEFT JOIN cash_advance_details cad ON t.id = cad.transaction_id
+            LEFT JOIN reimbursement_details rd ON t.id = rd.transaction_id
             WHERE t.tracking_number = :tracking
             LIMIT 1
         ");
@@ -334,6 +336,8 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                                     echo htmlspecialchars($transaction['transaction_type']); 
                                     if ($transaction['transaction_type'] === 'Cash Advance' && !empty($transaction['cash_advance_category'])) {
                                         echo ' (' . htmlspecialchars($transaction['cash_advance_category']) . ')';
+                                    } elseif ($transaction['transaction_type'] === 'Reimbursement' && !empty($transaction['reimbursement_category'])) {
+                                        echo ' (' . htmlspecialchars($transaction['reimbursement_category']) . ')';
                                     }
                                 ?>
                             </strong>
@@ -452,6 +456,61 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                                                 <?php else: ?>
                                                     <span class="text-muted fs-8">No document uploaded</span>
                                                 <?php endif; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- Reimbursement Subcategory Details -->
+                        <?php if ($transaction['transaction_type'] === 'Reimbursement' && !empty($transaction['reimbursement_category'])): ?>
+                            <div class="col-12 mt-3">
+                                <div class="p-3 rounded-3 bg-light border">
+                                    <h6 class="fw-bold text-primary-dark mb-3 fs-8 text-uppercase"><i class="bi bi-info-circle-fill me-1 text-primary"></i>Reimbursement Specifics (<?php echo htmlspecialchars($transaction['reimbursement_category']); ?>)</h6>
+                                    <div class="row g-3">
+                                        <?php if ($transaction['reimbursement_category'] === 'Communications Allowance'): ?>
+                                            <div class="col-12 mb-2">
+                                                <small class="text-muted d-block text-uppercase fw-semibold mb-1" style="font-size: 0.7rem;">Allowance Month</small>
+                                                <strong class="text-dark fs-8 d-block"><?php echo htmlspecialchars($transaction['reimbursement_month'] ?: 'N/A'); ?></strong>
+                                            </div>
+                                            
+                                            <div class="col-12 col-sm-4 mt-2">
+                                                <small class="text-muted d-block text-uppercase fw-semibold mb-1" style="font-size: 0.7rem;">DTR Document</small>
+                                                <?php if ($transaction['dtr_path']): ?>
+                                                    <a href="<?php echo env('APP_URL') . '/' . htmlspecialchars($transaction['dtr_path']); ?>" target="_blank" class="btn btn-sm btn-outline-success py-1 px-3 d-inline-flex align-items-center gap-2">
+                                                        <i class="bi bi-file-earmark-check-fill"></i>
+                                                        <span>View DTR</span>
+                                                    </a>
+                                                <?php else: ?>
+                                                    <span class="text-muted fs-8">No document uploaded</span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="col-12 col-sm-4 mt-2">
+                                                <small class="text-muted d-block text-uppercase fw-semibold mb-1" style="font-size: 0.7rem;">Certificate Document</small>
+                                                <?php if ($transaction['certificate_path']): ?>
+                                                    <a href="<?php echo env('APP_URL') . '/' . htmlspecialchars($transaction['certificate_path']); ?>" target="_blank" class="btn btn-sm btn-outline-success py-1 px-3 d-inline-flex align-items-center gap-2">
+                                                        <i class="bi bi-file-earmark-check-fill"></i>
+                                                        <span>View Certificate</span>
+                                                    </a>
+                                                <?php else: ?>
+                                                    <span class="text-muted fs-8">No document uploaded</span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="col-12 col-sm-4 mt-2">
+                                                <small class="text-muted d-block text-uppercase fw-semibold mb-1" style="font-size: 0.7rem;">Bill / Proof of Payment</small>
+                                                <?php if ($transaction['bill_proof_path']): ?>
+                                                    <a href="<?php echo env('APP_URL') . '/' . htmlspecialchars($transaction['bill_proof_path']); ?>" target="_blank" class="btn btn-sm btn-outline-success py-1 px-3 d-inline-flex align-items-center gap-2">
+                                                        <i class="bi bi-file-earmark-check-fill"></i>
+                                                        <span>View Bill / Proof</span>
+                                                    </a>
+                                                <?php else: ?>
+                                                    <span class="text-muted fs-8">No document uploaded</span>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php else: ?>
+                                            <div class="col-12">
+                                                <span class="text-muted fs-8">Standard Reimbursement Transaction. No additional fields required.</span>
                                             </div>
                                         <?php endif; ?>
                                     </div>

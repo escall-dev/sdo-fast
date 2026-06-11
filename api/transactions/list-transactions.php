@@ -115,11 +115,13 @@ try {
     $dataSql = "
         SELECT t.*, u.full_name as requestor_name, u.email as requestor_email, 
                d.dv_number, d.bir_2307_number, d.tax_type,
-               cad.category as cash_advance_category
+               cad.category as cash_advance_category,
+               rd.category as reimbursement_category
         FROM transactions t
         LEFT JOIN users u ON t.requestor_id = u.id
         LEFT JOIN document_details d ON t.id = d.transaction_id
         LEFT JOIN cash_advance_details cad ON t.id = cad.transaction_id
+        LEFT JOIN reimbursement_details rd ON t.id = rd.transaction_id
         " . $whereSql . "
         ORDER BY " . $sortCol . " " . $sortOrder . "
         LIMIT " . (int)$perPage . " OFFSET " . (int)$offset;

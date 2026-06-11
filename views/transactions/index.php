@@ -455,7 +455,7 @@ function renderTable(transactions) {
                     </a>
                 </td>
                 <td class="transactions-col-event" title="${row.event_name}">${row.event_name}</td>
-                <td title="${row.transaction_type}${row.cash_advance_category ? ' (' + row.cash_advance_category + ')' : ''}"><span class="badge bg-light text-dark border txn-type-badge">${row.transaction_type}${row.cash_advance_category ? ' (' + row.cash_advance_category + ')' : ''}</span></td>
+                <td title="${row.transaction_type}${row.cash_advance_category ? ' (' + row.cash_advance_category + ')' : ''}${row.reimbursement_category ? ' (' + row.reimbursement_category + ')' : ''}"><span class="badge bg-light text-dark border txn-type-badge">${row.transaction_type}${row.cash_advance_category ? ' (' + row.cash_advance_category + ')' : ''}${row.reimbursement_category ? ' (' + row.reimbursement_category + ')' : ''}</span></td>
                 <td class="transactions-col-requestor" title="${row.requestor_name} — ${row.requestor_email}">
                     <span class="txn-requestor-name fw-semibold">${row.requestor_name}</span>
                     <span class="txn-requestor-email text-muted">${row.requestor_email}</span>
@@ -560,7 +560,7 @@ function openWorkflowModal(row) {
     document.getElementById('modalTrackingNo').innerText = row.tracking_number;
     document.getElementById('modalNetAmount').innerText = '₱' + parseFloat(row.net_amount).toLocaleString('en-PH', { minimumFractionDigits: 2 });
     document.getElementById('modalEventName').innerText = row.event_name;
-    document.getElementById('modalTypeCategory').innerText = row.transaction_type + (row.cash_advance_category ? ' (' + row.cash_advance_category + ')' : '');
+    document.getElementById('modalTypeCategory').innerText = row.transaction_type + (row.cash_advance_category ? ' (' + row.cash_advance_category + ')' : '') + (row.reimbursement_category ? ' (' + row.reimbursement_category + ')' : '');
     document.getElementById('workflowRemarks').value = '';
 
     const actionSelect = document.getElementById('workflowAction');
