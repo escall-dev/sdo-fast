@@ -95,13 +95,14 @@ if (in_array($userRole, ['Super Admin', 'Accounting Staff']) && $fastPDO !== nul
                             </select>
                         </div>
 
-                        <!-- Status filter -->
                         <div class="mb-3 filter-group" id="filterStatusContainer">
                             <label for="filterStatus" class="form-label fs-8 fw-semibold text-muted">Workflow Status</label>
                             <select id="filterStatus" class="form-select">
                                 <option value="">All Statuses</option>
+                                <option value="Pending Accountant 1">Pending Accountant 1</option>
                                 <option value="Pending Support">Pending Support</option>
-                                <option value="Pending Accountant">Pending Accountant</option>
+                                <option value="Pending Budget Check">Pending Budget Check</option>
+                                <option value="Pending Accountant 2">Pending Accountant 2</option>
                                 <option value="Pending Final Approval">Pending Final Approval</option>
                                 <option value="Approved">Approved</option>
                                 <option value="Rejected">Rejected</option>

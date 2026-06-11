@@ -88,8 +88,10 @@ if (in_array($userRole, ['Super Admin', 'Accounting Staff']) && $fastPDO !== nul
                     <label for="filterStatus" class="form-label fs-8 fw-semibold text-muted">Current Status</label>
                     <select id="filterStatus" class="form-select">
                         <option value="">All Statuses</option>
+                        <option value="Pending Accountant 1">Pending Accountant 1</option>
                         <option value="Pending Support">Pending Support</option>
-                        <option value="Pending Accountant">Pending Accountant</option>
+                        <option value="Pending Budget Check">Pending Budget Check</option>
+                        <option value="Pending Accountant 2">Pending Accountant 2</option>
                         <option value="Pending Final Approval">Pending Final Approval</option>
                         <option value="Approved">Approved</option>
                         <option value="Rejected">Rejected</option>
@@ -153,18 +155,26 @@ if (in_array($userRole, ['Super Admin', 'Accounting Staff']) && $fastPDO !== nul
     
     <div class="card-body p-0">
         <div class="table-responsive border-0">
-            <table class="table align-middle table-hover">
+            <table class="table align-middle table-hover transactions-records-table">
+                <colgroup>
+                    <col style="width: 11%">
+                    <col style="width: 17%">
+                    <col style="width: 14%">
+                    <col style="width: 16%">
+                    <col style="width: 10%">
+                    <col style="width: 13%">
+                    <col style="width: 12%">
+                    <col style="width: 7%">
+                </colgroup>
                 <thead>
-                    <tr class="fs-8 text-uppercase text-muted">
-                        <th class="sortable" onclick="handleSort('tracking_number')">Tracking No. <span id="sort_icon_tracking_number"></span></th>
-                        <th>Event Name</th>
+                    <tr class="text-uppercase text-muted">
+                        <th class="sortable" onclick="handleSort('tracking_number')">Tracking <span id="sort_icon_tracking_number"></span></th>
+                        <th>Event</th>
                         <th>Type</th>
                         <th>Submitted By</th>
-                        <th class="sortable" onclick="handleSort('amount')">Gross Amount <span id="sort_icon_amount"></span></th>
-                        <th>Tax Deductions</th>
-                        <th>Net Amount</th>
-                        <th class="sortable" onclick="handleSort('status')">Workflow Status <span id="sort_icon_status"></span></th>
-                        <th class="sortable" onclick="handleSort('created_at')">Submission Date <span id="sort_icon_created_at"></span></th>
+                        <th class="sortable" onclick="handleSort('amount')">Gross <span id="sort_icon_amount"></span></th>
+                        <th class="sortable" onclick="handleSort('status')">Status <span id="sort_icon_status"></span></th>
+                        <th class="sortable" onclick="handleSort('created_at')">Submitted <span id="sort_icon_created_at"></span></th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
@@ -218,6 +228,10 @@ if (in_array($userRole, ['Super Admin', 'Accounting Staff']) && $fastPDO !== nul
                                 <div class="col-6 mb-2">
                                     <small class="text-muted d-block">Net Amount</small>
                                     <strong id="modalNetAmount" class="text-primary-dark">-</strong>
+                                </div>
+                                <div class="col-12 mb-2">
+                                    <small class="text-muted d-block">Type / Category</small>
+                                    <strong id="modalTypeCategory" class="fs-8">-</strong>
                                 </div>
                                 <div class="col-12">
                                     <small class="text-muted d-block">Event Name</small>
@@ -343,7 +357,7 @@ async function fetchTransactions(page) {
     });
 
     const tbody = document.getElementById('transactionsTableBody');
-    tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span> Loading transactions...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span> Loading transactions...</td></tr>';
 
     const response = await API.request('<?php echo env('APP_URL'); ?>/api/transactions/list-transactions.php?' + params.toString());
     
@@ -351,7 +365,7 @@ async function fetchTransactions(page) {
         renderTable(response.data.transactions);
         renderPagination(response.data.total_count, page, perPage);
     } else {
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle"></i> Failed to load transactions.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle"></i> Failed to load transactions.</td></tr>';
     }
 }
 
@@ -360,21 +374,27 @@ function renderTable(transactions) {
     tbody.innerHTML = '';
 
     if (transactions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">No matching transaction records found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No matching transaction records found.</td></tr>';
         return;
     }
 
     transactions.forEach(row => {
         let statusBadgeClass = 'bg-secondary';
         switch (row.current_status) {
-            case 'Pending Support':
+            case 'Pending Accountant 1':
                 statusBadgeClass = 'bg-warning text-dark';
                 break;
-            case 'Pending Accountant':
+            case 'Pending Support':
+                statusBadgeClass = 'bg-secondary';
+                break;
+            case 'Pending Budget Check':
                 statusBadgeClass = 'bg-info text-dark';
                 break;
+            case 'Pending Accountant 2':
+                statusBadgeClass = 'bg-primary text-white';
+                break;
             case 'Pending Final Approval':
-                statusBadgeClass = 'bg-primary';
+                statusBadgeClass = 'bg-danger text-white';
                 break;
             case 'Approved':
                 statusBadgeClass = 'bg-success';
@@ -390,7 +410,7 @@ function renderTable(transactions) {
         const dateFormatted = new Date(row.created_at).toLocaleString('en-US', {
             month: 'short',
             day: 'numeric',
-            year: 'numeric',
+            year: '2-digit',
             hour: '2-digit',
             minute: '2-digit',
             hour12: true
@@ -407,15 +427,16 @@ function renderTable(transactions) {
         
         // Show Workflow action button if role or position is authorized
         const showWorkflowAction = 
-            (userRole === 'Super Admin' && ['Pending Support', 'Pending Accountant', 'Pending Final Approval'].includes(row.current_status)) ||
+            (userRole === 'Super Admin' && ['Pending Accountant 1', 'Pending Support', 'Pending Budget Check', 'Pending Accountant 2', 'Pending Final Approval'].includes(row.current_status)) ||
+            (userPosition === 'Accountant' && ['Pending Accountant 1', 'Pending Accountant 2'].includes(row.current_status)) ||
             ((userRole === 'Accounting Staff' || userPosition === 'Accounting Support') && row.current_status === 'Pending Support') ||
-            ((userRole === 'Budget Officer' || userPosition === 'Budget Officer' || userPosition === 'Accountant') && row.current_status === 'Pending Accountant') ||
+            ((userRole === 'Budget Officer' || userPosition === 'Budget Officer') && row.current_status === 'Pending Budget Check') ||
             ((userRole === 'Approver' || userPosition === 'ASDS' || userPosition === 'SDS') && row.current_status === 'Pending Final Approval');
 
         if (showWorkflowAction) {
             actionBtn = `
-                <button class="btn btn-sm btn-primary py-1 px-2" onclick="openWorkflowModal(${JSON.stringify(row).replace(/"/g, '&quot;')})">
-                    Action
+                <button class="btn btn-sm btn-primary" onclick="openWorkflowModal(${JSON.stringify(row).replace(/"/g, '&quot;')})" title="Workflow Action">
+                    <i class="bi bi-lightning-fill"></i>
                 </button>
             `;
         }
@@ -423,29 +444,25 @@ function renderTable(transactions) {
         const rowHTML = `
             <tr>
                 <td>
-                    <a href="<?php echo env('APP_URL'); ?>/views/tracker/index.php?tracking=${encodeURIComponent(row.tracking_number)}" class="fw-bold text-decoration-none text-primary">
+                    <a href="<?php echo env('APP_URL'); ?>/views/tracker/index.php?tracking=${encodeURIComponent(row.tracking_number)}" class="fw-bold text-decoration-none text-primary" title="${row.tracking_number}">
                         ${row.tracking_number}
                     </a>
                 </td>
-                <td class="text-truncate" style="max-width: 180px;" title="${row.event_name}">${row.event_name}</td>
-                <td><small class="badge bg-light text-dark border">${row.transaction_type}</small></td>
-                <td>
-                    <div class="fw-semibold text-truncate" style="max-width: 130px;" title="${row.requestor_name}">${row.requestor_name}</div>
-                    <small class="text-muted d-block fs-8" style="max-width: 130px; overflow: hidden; text-overflow: ellipsis;">${row.requestor_email}</small>
+                <td class="transactions-col-event" title="${row.event_name}">${row.event_name}</td>
+                <td title="${row.transaction_type}${row.cash_advance_category ? ' (' + row.cash_advance_category + ')' : ''}"><span class="badge bg-light text-dark border txn-type-badge">${row.transaction_type}${row.cash_advance_category ? ' (' + row.cash_advance_category + ')' : ''}</span></td>
+                <td class="transactions-col-requestor" title="${row.requestor_name} — ${row.requestor_email}">
+                    <span class="txn-requestor-name fw-semibold">${row.requestor_name}</span>
+                    <span class="txn-requestor-email text-muted">${row.requestor_email}</span>
                 </td>
-                <td class="fw-semibold">₱${gross}</td>
-                <td class="text-muted">₱${tax}</td>
-                <td class="fw-bold text-primary">₱${net}</td>
-                <td>
-                    <span class="badge badge-status ${statusBadgeClass}">
-                        ${row.current_status}
-                    </span>
+                <td class="fw-semibold" title="₱${gross}">₱${gross}</td>
+                <td title="${row.current_status}">
+                    <span class="badge badge-status ${statusBadgeClass}">${row.current_status}</span>
                 </td>
-                <td class="text-muted fs-8">${dateFormatted}</td>
+                <td class="text-muted" title="${dateFormatted}">${dateFormatted}</td>
                 <td class="text-end">
-                    <div class="d-flex justify-content-end gap-1">
+                    <div class="d-flex justify-content-end gap-1 txn-actions">
                         ${actionBtn}
-                        <a href="<?php echo env('APP_URL'); ?>/views/tracker/index.php?tracking=${encodeURIComponent(row.tracking_number)}" class="btn btn-sm btn-light border py-1 px-2" title="Track Timeline">
+                        <a href="<?php echo env('APP_URL'); ?>/views/tracker/index.php?tracking=${encodeURIComponent(row.tracking_number)}" class="btn btn-sm btn-light border" title="Track Timeline">
                             <i class="bi bi-geo-alt"></i>
                         </a>
                     </div>
@@ -537,6 +554,7 @@ function openWorkflowModal(row) {
     document.getElementById('modalTrackingNo').innerText = row.tracking_number;
     document.getElementById('modalNetAmount').innerText = '₱' + parseFloat(row.net_amount).toLocaleString('en-PH', { minimumFractionDigits: 2 });
     document.getElementById('modalEventName').innerText = row.event_name;
+    document.getElementById('modalTypeCategory').innerText = row.transaction_type + (row.cash_advance_category ? ' (' + row.cash_advance_category + ')' : '');
     document.getElementById('workflowRemarks').value = '';
 
     const actionSelect = document.getElementById('workflowAction');
@@ -545,20 +563,37 @@ function openWorkflowModal(row) {
     const userRole = '<?php echo $userRole; ?>';
     const userPosition = '<?php echo $userPosition; ?>';
     
-    if (userRole === 'Super Admin' || userRole === 'Accounting Staff' || userPosition === 'Accounting Support') {
-        if (row.current_status === 'Pending Support') {
+    if (userRole === 'Super Admin' || userPosition === 'Accountant') {
+        if (row.current_status === 'Pending Accountant 1') {
             actionSelect.innerHTML += `
-                <option value="Pending Accountant">Route to Accountant (Staff Verification Approved)</option>
+                <option value="Pending Support">Route to Accounting Support (Accountant Initial Check Complete)</option>
+                <option value="Returned">Return to Requestor</option>
+                <option value="Rejected">Reject Transaction</option>
+            `;
+        }
+        if (row.current_status === 'Pending Accountant 2') {
+            actionSelect.innerHTML += `
+                <option value="Pending Final Approval">Route to Final Approver (Accountant Final Check Complete)</option>
                 <option value="Returned">Return to Requestor</option>
                 <option value="Rejected">Reject Transaction</option>
             `;
         }
     }
     
-    if (userRole === 'Super Admin' || userRole === 'Budget Officer' || userPosition === 'Budget Officer' || userPosition === 'Accountant') {
-        if (row.current_status === 'Pending Accountant') {
+    if (userRole === 'Super Admin' || userRole === 'Accounting Staff' || userPosition === 'Accounting Support') {
+        if (row.current_status === 'Pending Support') {
             actionSelect.innerHTML += `
-                <option value="Pending Final Approval">Route to Approver (Accountant Check Complete)</option>
+                <option value="Pending Budget Check">Route to Budget Officer (Support Verification Complete)</option>
+                <option value="Returned">Return to Requestor</option>
+                <option value="Rejected">Reject Transaction</option>
+            `;
+        }
+    }
+    
+    if (userRole === 'Super Admin' || userRole === 'Budget Officer' || userPosition === 'Budget Officer') {
+        if (row.current_status === 'Pending Budget Check') {
+            actionSelect.innerHTML += `
+                <option value="Pending Accountant 2">Route to Accountant (Budget Check Complete)</option>
                 <option value="Returned">Return to Requestor</option>
                 <option value="Rejected">Reject Transaction</option>
             `;

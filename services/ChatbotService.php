@@ -53,11 +53,12 @@ class ChatbotService
              . "- Claims can be submitted as Cash Advance, Reimbursement, or Payroll.\n"
              . "- Creation requirements: Requestor enters Event Name, Transaction Type, Amount, and attaches required documents. Max attachment size is 10MB (PDF, JPG, PNG, DOCX).\n\n"
              . "TRANSACTION WORKFLOW STAGES:\n"
-             . "1. Draft/Created: Transaction drafted by requestor.\n"
-             . "2. Pending Support: Sent to Accounting Support. They review attachments, assign the appropriate tax configuration type, and issue a Document Voucher (DV) number.\n"
-             . "3. Pending Accountant: Sent to the Accountant. The Accountant verifies computations, generates the BIR Form 2307 number if applicable, and passes it forward.\n"
-             . "4. Pending Final Approval: Sent to the final approver (ASDS, SDS, or designated Financial Approver) for sign-off.\n"
-             . "5. Final Statuses: Approved (funds released), Rejected (denied with remarks), or Returned (sent back to requestor for corrections).\n"
+             . "1. Pending Accountant 1: Initial check by the Accountant after being submitted by Personnel.\n"
+             . "2. Pending Support: Verified and assigned appropriate document details by Accounting Support.\n"
+             . "3. Pending Budget Check: Reviewed and budget checked by the Budget Officer.\n"
+             . "4. Pending Accountant 2: Sent back to Accountant for final checks and validation.\n"
+             . "5. Pending Final Approval: Passed to the final approver (ASDS or SDS) for sign-off.\n"
+             . "6. Final Statuses: Approved (funds released), Rejected (denied with remarks), or Returned (sent back to requestor for corrections).\n"
              . "- Tracking: Every transaction gets a unique code in the format: FAST-YYYY-000001 (e.g. FAST-2026-000045).\n\n"
              . "TAX COMPUTATION ENGINE:\n"
              . "- Active SDO Tax configurations are: Goods (5%), Foods (2%), and Services (10%).\n"
@@ -312,7 +313,13 @@ class ChatbotService
                               . "- DV (Document Voucher) Number: " . ($matchedTransaction['dv_number'] ?: 'Not assigned yet') . "\n"
                               . "- BIR 2307 Number: " . ($matchedTransaction['bir_2307_number'] ?: 'Not generated yet') . "\n"
                               . "- Tax Type Applied: " . ($matchedTransaction['tax_type'] ?: 'None') . "\n"
-                              . "- Attached File: " . ($matchedTransaction['attachment_path'] ? basename($matchedTransaction['attachment_path']) : 'No files attached') . "\n"
+                              . "- Attached File(s): " . (function() use ($matchedTransaction) {
+                                  $atts = json_decode($matchedTransaction['attachment_path'], true);
+                                  if (is_array($atts)) {
+                                      return implode(', ', array_map('basename', $atts));
+                                  }
+                                  return $matchedTransaction['attachment_path'] ? basename($matchedTransaction['attachment_path']) : 'No files attached';
+                              })() . "\n"
                               . "- BAC Project Ref: " . ($matchedTransaction['bac_project_number'] ?: 'None') . " (" . ($matchedTransaction['bac_procurement_type'] ?: 'N/A') . ")\n\n";
         }
 
@@ -320,8 +327,14 @@ class ChatbotService
             $realtimeContext .= "RECENT TRANSACTIONS VISIBLE TO THIS USER:\n";
             foreach ($recentTransactions as $index => $t) {
                 $num = $index + 1;
-                $fileName = $t['attachment_path'] ? basename($t['attachment_path']) : 'None';
-                $realtimeContext .= "{$num}. Tracking Number: {$t['tracking_number']} | Type: {$t['transaction_type']} | Event: {$t['event_name']} | Amount: PHP " . number_format($t['amount'], 2) . " | Net Amount: PHP " . number_format($t['net_amount'], 2) . " | Status: {$t['current_status']} | Attached File: {$fileName} | Date: {$t['created_at']} | Remarks: " . ($t['remarks'] ?: 'None') . "\n";
+                $fileName = (function() use ($t) {
+                    $atts = json_decode($t['attachment_path'], true);
+                    if (is_array($atts)) {
+                        return implode(', ', array_map('basename', $atts));
+                    }
+                    return $t['attachment_path'] ? basename($t['attachment_path']) : 'None';
+                })();
+                $realtimeContext .= "{$num}. Tracking Number: {$t['tracking_number']} | Type: {$t['transaction_type']} | Event: {$t['event_name']} | Amount: PHP " . number_format($t['amount'], 2) . " | Net Amount: PHP " . number_format($t['net_amount'], 2) . " | Status: {$t['current_status']} | Attached File(s): {$fileName} | Date: {$t['created_at']} | Remarks: " . ($t['remarks'] ?: 'None') . "\n";
             }
         } else {
             $realtimeContext .= "No transactions found in user scope.\n";

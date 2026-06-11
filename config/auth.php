@@ -120,7 +120,7 @@ if (!function_exists('get_data_scope_filter')) {
         if ($scope === 'all') {
             return "1=1";
         } elseif ($scope === 'assigned') {
-            return "({$prefix}created_by = {$userIdInt} OR {$prefix}assigned_to = {$userIdInt})";
+            return "({$prefix}created_by = {$userIdInt} OR {$prefix}current_status = 'Pending Support' OR {$prefix}id IN (SELECT DISTINCT transaction_id FROM transaction_status_logs WHERE changed_by = {$userIdInt}))";
         } else {
             // scope = own
             return "{$prefix}created_by = {$userIdInt}";

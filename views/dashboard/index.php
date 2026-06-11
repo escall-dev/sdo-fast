@@ -41,7 +41,7 @@ if ($fastPDO !== null) {
         $totalTransactions = (int)$stmt->fetchColumn();
 
         // 2. Pending Approvals count (all pending workflow stages)
-        $stmt = $fastPDO->prepare("SELECT COUNT(*) FROM transactions WHERE current_status IN ('Pending Support', 'Pending Accountant', 'Pending Final Approval')" . $roleFilter);
+        $stmt = $fastPDO->prepare("SELECT COUNT(*) FROM transactions WHERE current_status IN ('Pending Accountant 1', 'Pending Support', 'Pending Budget Check', 'Pending Accountant 2', 'Pending Final Approval')" . $roleFilter);
         $stmt->execute($roleParams);
         $pendingApprovals = (int)$stmt->fetchColumn();
 
@@ -279,8 +279,10 @@ for ($i = 1; $i <= 12; $i++) {
                         <?php foreach ($recentTransactions as $row): 
                             $statusBadgeClass = 'bg-secondary';
                             switch ($row['current_status']) {
+                                case 'Pending Accountant 1':
                                 case 'Pending Support':
-                                case 'Pending Accountant':
+                                case 'Pending Budget Check':
+                                case 'Pending Accountant 2':
                                 case 'Pending Final Approval':
                                     $statusBadgeClass = 'bg-warning text-dark';
                                     break;

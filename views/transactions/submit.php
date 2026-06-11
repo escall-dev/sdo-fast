@@ -57,6 +57,100 @@ if ($fastPDO !== null) {
                             <input type="text" name="event_name" id="eventName" class="form-control" placeholder="e.g. SDO Seminar Reimbursement for Math Teachers" required>
                         </div>
                     </div>
+                    
+                    <!-- Cash Advance Sub-options (Hidden by default, shown when Cash Advance is selected) -->
+                    <div id="cashAdvanceCategorySection" class="mb-4 d-none p-3 rounded-3 border bg-light">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="cashAdvanceCategory" class="form-label fs-8 fw-semibold text-muted">Cash Advance Category <span class="text-danger">*</span></label>
+                                <select name="cash_advance_category" id="cashAdvanceCategory" class="form-select">
+                                    <option value="" disabled selected>Select Category</option>
+                                    <option value="MOOE">MOOE (Travel Cash Advance)</option>
+                                    <option value="Activity">Activity (Seminar/Training Proposal)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- MOOE Form Fields -->
+                        <div id="mooeFieldsContainer" class="d-none mt-3">
+                            <div class="border-top pt-3">
+                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-airplane-engines me-1"></i>MOOE Travel Cash Advance Details</h6>
+                                
+                                <div class="alert alert-info border-0 shadow-sm d-flex align-items-center gap-2 mb-3 py-2 px-3" style="font-size: 0.8rem;">
+                                    <i class="bi bi-info-circle-fill fs-6 text-primary"></i>
+                                    <div><strong>Note:</strong> For Cash Advance (MOOE), the attached documents you must upload below are your <strong>Approved TA (Travel Authority)</strong> and <strong>Travel Itinerary</strong>.</div>
+                                </div>
+                                
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-sm-6">
+                                        <label for="mooeStartDate" class="form-label fs-8 fw-semibold text-muted">Inclusive Start Date <span class="text-danger">*</span></label>
+                                        <input type="date" name="mooe_start_date" id="mooeStartDate" class="form-control">
+                                    </div>
+                                    <div class="col-12 col-sm-6">
+                                        <label for="mooeEndDate" class="form-label fs-8 fw-semibold text-muted">Inclusive End Date <span class="text-danger">*</span></label>
+                                        <input type="date" name="mooe_end_date" id="mooeEndDate" class="form-control">
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-sm-6">
+                                        <label for="fundSource" class="form-label fs-8 fw-semibold text-muted">Fund Source <span class="text-danger">*</span></label>
+                                        <input type="text" name="fund_source" id="fundSource" class="form-control" placeholder="e.g. School MOOE, Division MOOE, SEF">
+                                    </div>
+                                    <div class="col-12 col-sm-6">
+                                        <label for="mooeVenue" class="form-label fs-8 fw-semibold text-muted">Venue <span class="text-danger">*</span></label>
+                                        <input type="text" name="venue" id="mooeVenue" class="form-control" placeholder="e.g. Regional Office, Hotel Venue Name">
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-sm-6">
+                                        <label for="approvedTa" class="form-label fs-8 fw-semibold text-muted">Upload Approved TA (Travel Authority) <span class="text-danger">*</span></label>
+                                        <input type="file" name="approved_ta" id="approvedTa" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
+                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
+                                    </div>
+                                    <div class="col-12 col-sm-6">
+                                        <label for="travelItinerary" class="form-label fs-8 fw-semibold text-muted">Upload Travel Itinerary <span class="text-danger">*</span></label>
+                                        <input type="file" name="travel_itinerary" id="travelItinerary" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
+                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Activity Form Fields -->
+                        <div id="activityFieldsContainer" class="d-none mt-3">
+                            <div class="border-top pt-3">
+                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-journal-check me-1"></i>Activity Seminar/Training Details</h6>
+                                
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-sm-6">
+                                        <label for="activityStartDate" class="form-label fs-8 fw-semibold text-muted">Activity Start Date <span class="text-danger">*</span></label>
+                                        <input type="date" name="activity_start_date" id="activityStartDate" class="form-control">
+                                    </div>
+                                    <div class="col-12 col-sm-6">
+                                        <label for="activityEndDate" class="form-label fs-8 fw-semibold text-muted">Activity End Date <span class="text-danger">*</span></label>
+                                        <input type="date" name="activity_end_date" id="activityEndDate" class="form-control">
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12">
+                                        <label for="activityVenue" class="form-label fs-8 fw-semibold text-muted">Activity Venue <span class="text-danger">*</span></label>
+                                        <input type="text" name="activity_venue" id="activityVenue" class="form-control" placeholder="e.g. SDO Conference Hall, School Gym">
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12">
+                                        <label for="activityProposal" class="form-label fs-8 fw-semibold text-muted">Upload Activity Proposal <span class="text-danger">*</span></label>
+                                        <input type="file" name="activity_proposal" id="activityProposal" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
+                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Financial and Tax details -->
                     <div class="row g-3 mb-4">
@@ -101,15 +195,33 @@ if ($fastPDO !== null) {
 
                     <!-- Upload attachment -->
                     <div class="mb-4">
-                        <label for="attachment" class="form-label fs-8 fw-semibold text-muted">Supporting Attachment Document (Optional)</label>
-                        <input type="file" name="attachment" id="attachment" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
-                        <small class="text-muted fs-9 d-block mt-1">Accepted formats: PDF, JPG, PNG, DOCX. Max file size: 10MB.</small>
+                        <label class="form-label fs-8 fw-semibold text-muted">Supporting Attachment Document(s) <span class="text-muted fw-normal">(Optional)</span></label>
+                        
+                        <!-- Drag and Drop Area -->
+                        <div id="dropzone" class="border border-2 border-dashed rounded-3 p-4 text-center bg-light position-relative" style="cursor: pointer; transition: background-color 0.2s, border-color 0.2s;">
+                            <input type="file" name="attachment[]" id="attachment" class="position-absolute top-0 start-0 w-100 h-100 opacity-0" accept=".pdf,.jpg,.jpeg,.png,.docx" multiple style="cursor: pointer; z-index: 10;">
+                            <div class="dz-message">
+                                <i class="bi bi-cloud-arrow-up-fill fs-2 text-primary mb-2 d-block"></i>
+                                <span class="fw-bold text-dark d-block">Drag & Drop files here or click to upload</span>
+                                <span class="text-muted fs-9">Accepts PDF, JPG, PNG, DOCX (Max 10MB per file)</span>
+                            </div>
+                        </div>
+
+                        <!-- Selected Files List -->
+                        <div id="fileListContainer" class="mt-3 d-none">
+                            <span class="fs-9 fw-semibold text-muted text-uppercase d-block mb-2">Selected Attachment(s):</span>
+                            <div class="list-group list-group-flush border rounded-3 overflow-hidden bg-white shadow-sm" id="selectedFilesList">
+                                <!-- Dynamically loaded files -->
+                            </div>
+                        </div>
+                        
+                        <small class="text-muted fs-9 d-block mt-1">Upload any general supporting document(s) if applicable.</small>
                     </div>
 
                     <!-- Remarks -->
                     <div class="mb-4">
-                        <label for="remarks" class="form-label fs-8 fw-semibold text-muted">Submission Remarks / Notes <span class="text-danger">*</span></label>
-                        <textarea name="remarks" id="remarks" class="form-control" rows="4" placeholder="Enter supporting statements, supplier specifics, or DV details..." required></textarea>
+                        <label for="remarks" class="form-label fs-8 fw-semibold text-muted">Submission Remarks / Notes (Optional)</label>
+                        <textarea name="remarks" id="remarks" class="form-control" rows="4" placeholder="Enter supporting statements, supplier specifics, or DV details..."></textarea>
                     </div>
 
                     <div class="d-flex gap-2 justify-content-end">
@@ -126,6 +238,153 @@ if ($fastPDO !== null) {
      JAVASCRIPT LOGIC
      ========================================================================= -->
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const txTypeSelect = document.getElementById('transactionType');
+    const caCategorySelect = document.getElementById('cashAdvanceCategory');
+    const caSection = document.getElementById('cashAdvanceCategorySection');
+    const mooeContainer = document.getElementById('mooeFieldsContainer');
+    const activityContainer = document.getElementById('activityFieldsContainer');
+
+    function toggleFormFields() {
+        const txType = txTypeSelect.value;
+        const caCat = caCategorySelect.value;
+
+        if (txType === 'Cash Advance') {
+            caSection.classList.remove('d-none');
+            caCategorySelect.disabled = false;
+            caCategorySelect.required = true;
+
+            if (caCat === 'MOOE') {
+                mooeContainer.classList.remove('d-none');
+                activityContainer.classList.add('d-none');
+
+                setFieldsState(mooeContainer, true, true);
+                setFieldsState(activityContainer, false, false);
+            } else if (caCat === 'Activity') {
+                activityContainer.classList.remove('d-none');
+                mooeContainer.classList.add('d-none');
+
+                setFieldsState(activityContainer, true, true);
+                setFieldsState(mooeContainer, false, false);
+            } else {
+                mooeContainer.classList.add('d-none');
+                activityContainer.classList.add('d-none');
+                setFieldsState(mooeContainer, false, false);
+                setFieldsState(activityContainer, false, false);
+            }
+        } else {
+            caSection.classList.add('d-none');
+            caCategorySelect.disabled = true;
+            caCategorySelect.required = false;
+            mooeContainer.classList.add('d-none');
+            activityContainer.classList.add('d-none');
+            setFieldsState(mooeContainer, false, false);
+            setFieldsState(activityContainer, false, false);
+        }
+    }
+
+    function setFieldsState(container, enabled, required) {
+        const inputs = container.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            input.disabled = !enabled;
+            input.required = required;
+        });
+    }
+
+    txTypeSelect.addEventListener('change', toggleFormFields);
+    caCategorySelect.addEventListener('change', toggleFormFields);
+    
+    // Initial call
+    toggleFormFields();
+
+    // Drag and drop dropzone handlers
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('attachment');
+    const fileListContainer = document.getElementById('fileListContainer');
+    const selectedFilesList = document.getElementById('selectedFilesList');
+    let selectedFiles = [];
+
+    if (dropzone && fileInput) {
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('bg-primary-subtle', 'border-primary');
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                dropzone.classList.remove('bg-primary-subtle', 'border-primary');
+            });
+        });
+
+        fileInput.addEventListener('change', updateFileList);
+    }
+
+    function updateFileList() {
+        const files = fileInput.files;
+        if (files.length > 0) {
+            Array.from(files).forEach(file => {
+                // Prevent duplicate files in the list
+                const isDuplicate = selectedFiles.some(f => f.name === file.name && f.size === file.size);
+                if (!isDuplicate) {
+                    selectedFiles.push(file);
+                }
+            });
+            // Clear input value so selecting the same file again triggers 'change'
+            fileInput.value = '';
+            syncFileInput();
+        }
+        renderSelectedFiles();
+    }
+
+    function syncFileInput() {
+        const dataTransfer = new DataTransfer();
+        selectedFiles.forEach(file => {
+            dataTransfer.items.add(file);
+        });
+        fileInput.files = dataTransfer.files;
+    }
+
+    window.removeFile = function(index) {
+        selectedFiles.splice(index, 1);
+        syncFileInput();
+        renderSelectedFiles();
+    };
+
+    function renderSelectedFiles() {
+        selectedFilesList.innerHTML = '';
+        
+        if (selectedFiles.length > 0) {
+            fileListContainer.classList.remove('d-none');
+            
+            selectedFiles.forEach((file, index) => {
+                const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+                let iconClass = 'bi-file-earmark-code';
+                if (file.type.includes('image')) iconClass = 'bi-file-earmark-image text-success';
+                else if (file.type.includes('pdf')) iconClass = 'bi-file-earmark-pdf text-danger';
+                else if (file.name.endsWith('.docx')) iconClass = 'bi-file-earmark-word text-primary';
+                
+                const fileItem = `
+                    <div class="list-group-item d-flex align-items-center justify-content-between p-2 fs-8 border-light">
+                        <div class="d-flex align-items-center gap-2 text-truncate" style="max-width: 70%;">
+                            <i class="bi ${iconClass} fs-5"></i>
+                            <span class="text-dark fw-medium text-truncate" title="${file.name}">${file.name}</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-light text-muted border py-1 px-2">${sizeInMB} MB</span>
+                            <button type="button" class="btn btn-sm btn-link text-danger p-0 border-0" onclick="removeFile(${index})" style="line-height: 1;">
+                                <i class="bi bi-x-circle-fill fs-6"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                selectedFilesList.insertAdjacentHTML('beforeend', fileItem);
+            });
+        } else {
+            fileListContainer.classList.add('d-none');
+        }
+    }
+});
+
 async function calculateTaxPreview() {
     const amount = parseFloat(document.getElementById('amount').value);
     const taxType = document.getElementById('taxType').value;

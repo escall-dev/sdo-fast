@@ -143,7 +143,7 @@ try {
                    DATEDIFF(NOW(), t.created_at) as aging_days
             FROM transactions t
             LEFT JOIN users u ON t.requestor_id = u.id
-            WHERE t.current_status IN ('Pending Support', 'Pending Accountant', 'Pending Final Approval')
+            WHERE t.current_status IN ('Pending Accountant 1', 'Pending Support', 'Pending Budget Check', 'Pending Accountant 2', 'Pending Final Approval')
               AND {$pendingWhereSql}
             ORDER BY aging_days DESC
         ";

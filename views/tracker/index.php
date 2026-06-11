@@ -199,10 +199,13 @@ if (!empty($searchQuery) && $fastPDO !== null) {
         // Fetch transaction details
         $stmt = $fastPDO->prepare("
             SELECT t.*, u.full_name as requestor_name, u.email as requestor_email, 
-                   d.dv_number, d.bir_2307_number, d.tax_type, d.attachment_path
+                   d.dv_number, d.bir_2307_number, d.tax_type, d.attachment_path,
+                   cad.category as cash_advance_category, cad.inclusive_dates, cad.fund_source, cad.venue,
+                   cad.approved_ta_path, cad.travel_itinerary_path, cad.activity_proposal_path
             FROM transactions t
             LEFT JOIN users u ON t.requestor_id = u.id
             LEFT JOIN document_details d ON t.id = d.transaction_id
+            LEFT JOIN cash_advance_details cad ON t.id = cad.transaction_id
             WHERE t.tracking_number = :tracking
             LIMIT 1
         ");
@@ -287,11 +290,11 @@ if (!empty($searchQuery) && $fastPDO !== null) {
 
         <?php if ($transaction): 
             // Determine active step index to highlight timeline
-            $statusList = ['Pending Support', 'Pending Accountant', 'Pending Final Approval', 'Approved'];
+            $statusList = ['Pending Accountant 1', 'Pending Support', 'Pending Budget Check', 'Pending Accountant 2', 'Pending Final Approval', 'Approved'];
             if ($transaction['current_status'] === 'Rejected') {
-                $statusList[3] = 'Rejected';
+                $statusList[5] = 'Rejected';
             } elseif ($transaction['current_status'] === 'Returned') {
-                $statusList[3] = 'Returned';
+                $statusList[5] = 'Returned';
             }
             
             $currentStatus = $transaction['current_status'];
@@ -321,7 +324,14 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                         </div>
                         <div class="col-12 col-sm-6 col-md-4">
                             <span class="text-muted d-block text-uppercase fw-semibold">Disbursement Type</span>
-                            <strong class="text-dark"><?php echo htmlspecialchars($transaction['transaction_type']); ?></strong>
+                            <strong class="text-dark">
+                                <?php 
+                                    echo htmlspecialchars($transaction['transaction_type']); 
+                                    if ($transaction['transaction_type'] === 'Cash Advance' && !empty($transaction['cash_advance_category'])) {
+                                        echo ' (' . htmlspecialchars($transaction['cash_advance_category']) . ')';
+                                    }
+                                ?>
+                            </strong>
                         </div>
                         <div class="col-12 col-sm-6 col-md-4">
                             <span class="text-muted d-block text-uppercase fw-semibold">Submitted By</span>
@@ -353,16 +363,96 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                             <strong class="text-dark"><?php echo htmlspecialchars($transaction['bir_2307_number'] ?: 'Not Assigned'); ?></strong>
                         </div>
                         <div class="col-12 col-sm-6 col-md-4">
-                            <span class="text-muted d-block text-uppercase fw-semibold">Supporting Attachment</span>
-                            <?php if ($transaction['attachment_path']): ?>
-                                <a href="<?php echo env('APP_URL') . '/' . htmlspecialchars($transaction['attachment_path']); ?>" target="_blank" class="btn btn-sm btn-outline-primary py-1 px-3 mt-1 d-inline-flex align-items-center gap-2">
+                            <span class="text-muted d-block text-uppercase fw-semibold">Supporting Attachment(s)</span>
+                            <?php 
+                            if ($transaction['attachment_path']): 
+                                $attachments = json_decode($transaction['attachment_path'], true);
+                                if (!is_array($attachments)) {
+                                    $attachments = [$transaction['attachment_path']];
+                                }
+                                foreach ($attachments as $att):
+                                    $fileName = basename($att);
+                            ?>
+                                <a href="<?php echo env('APP_URL') . '/' . htmlspecialchars($att); ?>" target="_blank" class="btn btn-sm btn-outline-primary py-1 px-3 mt-1 d-inline-flex align-items-center gap-2 me-1 mb-1">
                                     <i class="bi bi-file-earmark-arrow-down-fill"></i>
-                                    <span>Download Attachment</span>
+                                    <span>Download <?php echo htmlspecialchars($fileName); ?></span>
                                 </a>
-                            <?php else: ?>
+                            <?php 
+                                endforeach;
+                            else: 
+                            ?>
                                 <span class="text-muted d-block fs-8 mt-1"><i class="bi bi-file-earmark-excel"></i> No files uploaded</span>
                             <?php endif; ?>
                         </div>
+
+                        <!-- Cash Advance Subcategory Details -->
+                        <?php if ($transaction['transaction_type'] === 'Cash Advance' && !empty($transaction['cash_advance_category'])): ?>
+                            <div class="col-12 mt-3">
+                                <div class="p-3 rounded-3 bg-light border">
+                                    <h6 class="fw-bold text-primary-dark mb-3 fs-8 text-uppercase"><i class="bi bi-info-circle-fill me-1 text-primary"></i>Cash Advance Specifics (<?php echo htmlspecialchars($transaction['cash_advance_category']); ?>)</h6>
+                                    <div class="row g-3">
+                                        <?php if ($transaction['cash_advance_category'] === 'MOOE'): ?>
+                                            <div class="col-12 col-sm-4">
+                                                <small class="text-muted d-block text-uppercase fw-semibold mb-1" style="font-size: 0.7rem;">Inclusive Travel Dates</small>
+                                                <strong class="text-dark fs-8 d-block"><?php echo htmlspecialchars($transaction['inclusive_dates'] ?: 'N/A'); ?></strong>
+                                            </div>
+                                            <div class="col-12 col-sm-4">
+                                                <small class="text-muted d-block text-uppercase fw-semibold mb-1" style="font-size: 0.7rem;">Fund Source</small>
+                                                <strong class="text-dark fs-8 d-block"><?php echo htmlspecialchars($transaction['fund_source'] ?: 'N/A'); ?></strong>
+                                            </div>
+                                            <div class="col-12 col-sm-4">
+                                                <small class="text-muted d-block text-uppercase fw-semibold mb-1" style="font-size: 0.7rem;">Travel Venue</small>
+                                                <strong class="text-dark fs-8 d-block"><?php echo htmlspecialchars($transaction['venue'] ?: 'N/A'); ?></strong>
+                                            </div>
+                                            
+                                            <div class="col-12 col-sm-6 mt-3">
+                                                <small class="text-muted d-block text-uppercase fw-semibold mb-1" style="font-size: 0.7rem;">Approved TA (Travel Authority)</small>
+                                                <?php if ($transaction['approved_ta_path']): ?>
+                                                    <a href="<?php echo env('APP_URL') . '/' . htmlspecialchars($transaction['approved_ta_path']); ?>" target="_blank" class="btn btn-sm btn-outline-success py-1 px-3 d-inline-flex align-items-center gap-2">
+                                                        <i class="bi bi-file-earmark-check-fill"></i>
+                                                        <span>View Approved TA</span>
+                                                    </a>
+                                                <?php else: ?>
+                                                    <span class="text-muted fs-8">No document uploaded</span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="col-12 col-sm-6 mt-3">
+                                                <small class="text-muted d-block text-uppercase fw-semibold mb-1" style="font-size: 0.7rem;">Travel Itinerary</small>
+                                                <?php if ($transaction['travel_itinerary_path']): ?>
+                                                    <a href="<?php echo env('APP_URL') . '/' . htmlspecialchars($transaction['travel_itinerary_path']); ?>" target="_blank" class="btn btn-sm btn-outline-success py-1 px-3 d-inline-flex align-items-center gap-2">
+                                                        <i class="bi bi-file-earmark-check-fill"></i>
+                                                        <span>View Travel Itinerary</span>
+                                                    </a>
+                                                <?php else: ?>
+                                                    <span class="text-muted fs-8">No document uploaded</span>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php elseif ($transaction['cash_advance_category'] === 'Activity'): ?>
+                                            <div class="col-12 col-sm-6">
+                                                <small class="text-muted d-block text-uppercase fw-semibold mb-1" style="font-size: 0.7rem;">Activity Dates</small>
+                                                <strong class="text-dark fs-8 d-block"><?php echo htmlspecialchars($transaction['inclusive_dates'] ?: 'N/A'); ?></strong>
+                                            </div>
+                                            <div class="col-12 col-sm-6">
+                                                <small class="text-muted d-block text-uppercase fw-semibold mb-1" style="font-size: 0.7rem;">Activity Venue</small>
+                                                <strong class="text-dark fs-8 d-block"><?php echo htmlspecialchars($transaction['venue'] ?: 'N/A'); ?></strong>
+                                            </div>
+                                            
+                                            <div class="col-12 mt-3">
+                                                <small class="text-muted d-block text-uppercase fw-semibold mb-1" style="font-size: 0.7rem;">Activity Proposal</small>
+                                                <?php if ($transaction['activity_proposal_path']): ?>
+                                                    <a href="<?php echo env('APP_URL') . '/' . htmlspecialchars($transaction['activity_proposal_path']); ?>" target="_blank" class="btn btn-sm btn-outline-success py-1 px-3 d-inline-flex align-items-center gap-2">
+                                                        <i class="bi bi-file-earmark-check-fill"></i>
+                                                        <span>View Activity Proposal</span>
+                                                    </a>
+                                                <?php else: ?>
+                                                    <span class="text-muted fs-8">No document uploaded</span>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
 
                         <!-- BAC Reference info if synched -->
                         <?php if ($transaction['bac_reference_number']): ?>
@@ -536,19 +626,29 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                         <!-- Timeline items loop -->
                         <?php 
                         $knownSteps = [
+                            'Pending Accountant 1' => [
+                                'title' => 'Disbursement Request Submitted',
+                                'subtitle' => 'Disbursement request submitted, pending Accountant initial check',
+                                'role' => 'Personnel'
+                            ],
                             'Pending Support' => [
                                 'title' => 'Accountant Initial Check Completed',
-                                'subtitle' => 'Initial accounting review completed and endorsed to Accounting Support',
+                                'subtitle' => 'Initial review completed, endorsed to Accounting Support',
                                 'role' => 'Accountant'
                             ],
-                            'Pending Accountant' => [
-                                'title' => 'Accounting Support Verified',
-                                'subtitle' => 'Support verification completed and endorsed to Budget Officer',
+                            'Pending Budget Check' => [
+                                'title' => 'Accounting Support Verification Completed',
+                                'subtitle' => 'Support verification completed, endorsed to Budget Officer',
                                 'role' => 'Accounting Support'
+                            ],
+                            'Pending Accountant 2' => [
+                                'title' => 'Budget Check Completed',
+                                'subtitle' => 'Budget checks completed, endorsed back to Accountant for final check',
+                                'role' => 'Budget Officer'
                             ],
                             'Pending Final Approval' => [
                                 'title' => 'Accountant Final Check Completed',
-                                'subtitle' => 'Final accounting review completed and endorsed for approval',
+                                'subtitle' => 'Final review completed, endorsed for final sign-off',
                                 'role' => 'Accountant'
                             ],
                             'Approved' => [
@@ -626,7 +726,7 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                         <?php 
                         if (!in_array($currentStatus, ['Approved', 'Rejected', 'Returned'])) {
                             // Find which steps are still pending
-                            $allExpectedSteps = ['Pending Support', 'Pending Accountant', 'Pending Final Approval', 'Approved'];
+                            $allExpectedSteps = ['Pending Accountant 1', 'Pending Support', 'Pending Budget Check', 'Pending Accountant 2', 'Pending Final Approval', 'Approved'];
                             
                             // Find index of current state
                             $currIdx = array_search($currentStatus, $allExpectedSteps);

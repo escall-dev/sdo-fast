@@ -179,14 +179,16 @@ body {
     font-weight: 600;
 }
 
-/* Main Content Area */
+/* Main Content Area – sized to viewport minus fixed sidebar */
 .main-content {
-    width: 100%;
-    padding-left: var(--sidebar-width);
+    margin-left: var(--sidebar-width);
+    width: calc(100% - var(--sidebar-width));
     min-height: 100vh;
-    transition: all var(--transition-speed) ease;
+    min-width: 0;
+    transition: margin-left var(--transition-speed) ease, width var(--transition-speed) ease;
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
 }
 
 .top-navbar {
@@ -202,6 +204,14 @@ body {
 .content-container {
     flex-grow: 1;
     padding: 2rem 1.5rem;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+.content-container > .card {
+    min-width: 0;
+    max-width: 100%;
 }
 
 /* Footer Section */
@@ -253,6 +263,84 @@ body {
 .table-responsive {
     border-radius: 8px;
     border: 1px solid #e2e8f0;
+}
+
+/* Sortable columns – keep natural width; scroll instead of compressing */
+.table th.sortable {
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+}
+
+.table th.sortable:hover {
+    color: var(--color-primary);
+}
+
+/* Transactions table – compact, fits all columns with sidebar open */
+.transactions-records-table {
+    width: 100%;
+    table-layout: fixed;
+    font-size: 0.78rem;
+}
+
+.transactions-records-table th,
+.transactions-records-table td {
+    padding: 0.45rem 0.35rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.transactions-records-table th {
+    font-size: 0.68rem;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+}
+
+.transactions-records-table .badge-status {
+    padding: 0.25em 0.45em;
+    font-size: 0.68rem;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.transactions-records-table .txn-type-badge {
+    font-size: 0.65rem;
+    padding: 0.2em 0.4em;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.transactions-records-table .txn-actions .btn {
+    min-height: 28px;
+    padding: 0.15rem 0.35rem;
+    font-size: 0.7rem;
+    line-height: 1.2;
+}
+
+.transactions-col-requestor {
+    white-space: normal;
+    line-height: 1.15;
+}
+
+.transactions-col-requestor .txn-requestor-name,
+.transactions-col-requestor .txn-requestor-email {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.transactions-col-requestor .txn-requestor-email {
+    font-size: 0.65rem;
 }
 
 /* Integrations page (BACtrack-style layout) */
@@ -672,7 +760,8 @@ body {
     }
     
     .main-content {
-        padding-left: 0;
+        margin-left: 0;
+        width: 100%;
     }
     
     .chatbot-window {
@@ -690,7 +779,8 @@ body {
     }
 
     body.sidebar-collapsed .main-content {
-        padding-left: var(--sidebar-collapsed-width);
+        margin-left: var(--sidebar-collapsed-width);
+        width: calc(100% - var(--sidebar-collapsed-width));
     }
 
     /* Header: hide text, center logo icon */

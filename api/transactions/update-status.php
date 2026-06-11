@@ -51,7 +51,7 @@ $userRole = $_SESSION['user_role'];
 $userPosition = $_SESSION['user_position'] ?? '';
 
 // Valid Status List
-$allowedStatuses = ['Pending Support', 'Pending Accountant', 'Pending Final Approval', 'Approved', 'Rejected', 'Returned'];
+$allowedStatuses = ['Pending Accountant 1', 'Pending Support', 'Pending Budget Check', 'Pending Accountant 2', 'Pending Final Approval', 'Approved', 'Rejected', 'Returned'];
 if (!in_array($newStatus, $allowedStatuses)) {
     http_response_code(422);
     echo json_encode([
@@ -82,19 +82,28 @@ try {
     $authorized = false;
     if ($userRole === 'Super Admin') {
         $authorized = true;
-    } elseif ($userRole === 'Accounting Staff' || $userPosition === 'Accounting Support') {
-        // Accounting staff/support can verify Pending Support
-        if ($oldStatus === 'Pending Support' && in_array($newStatus, ['Pending Accountant', 'Returned', 'Rejected'])) {
+    } elseif ($userPosition === 'Accountant') {
+        // Accountant checks first (Pending Accountant 1 -> Pending Support)
+        if ($oldStatus === 'Pending Accountant 1' && in_array($newStatus, ['Pending Support', 'Returned', 'Rejected'])) {
             $authorized = true;
         }
-    } elseif ($userRole === 'Budget Officer' || $userPosition === 'Budget Officer' || $userPosition === 'Accountant') {
-        // Budget Officer or Accountant can verify Pending Accountant
-        if ($oldStatus === 'Pending Accountant' && in_array($newStatus, ['Pending Final Approval', 'Returned', 'Rejected'])) {
+        // Accountant checks second (Pending Accountant 2 -> Pending Final Approval)
+        elseif ($oldStatus === 'Pending Accountant 2' && in_array($newStatus, ['Pending Final Approval', 'Returned', 'Rejected'])) {
+            $authorized = true;
+        }
+    } elseif ($userRole === 'Accounting Staff' || $userPosition === 'Accounting Support') {
+        // Accounting Support checks (Pending Support -> Pending Budget Check)
+        if ($oldStatus === 'Pending Support' && in_array($newStatus, ['Pending Budget Check', 'Returned', 'Rejected'])) {
+            $authorized = true;
+        }
+    } elseif ($userRole === 'Budget Officer' || $userPosition === 'Budget Officer') {
+        // Budget Officer checks (Pending Budget Check -> Pending Accountant 2)
+        if ($oldStatus === 'Pending Budget Check' && in_array($newStatus, ['Pending Accountant 2', 'Returned', 'Rejected'])) {
             $authorized = true;
         }
     } elseif ($userRole === 'Approver' || $userPosition === 'ASDS' || $userPosition === 'SDS') {
-        // Approver or ASDS/SDS can process Pending Final Approval
-        if ($oldStatus === 'Pending Final Approval' && in_array($newStatus, ['Approved', 'Rejected', 'Returned'])) {
+        // Final Approver (ASDS/SDS) signs off (Pending Final Approval -> Approved)
+        if ($oldStatus === 'Pending Final Approval' && in_array($newStatus, ['Approved', 'Returned', 'Rejected'])) {
             $authorized = true;
         }
     }
