@@ -111,7 +111,9 @@ $renderSidebarMenu = function($isMobile = false) use (
                         
                         <li class="<?php echo isPageActive('cash_advance'); ?>"><a class="py-2" href="<?php echo $baseUrl; ?>/views/transactions/index.php?type=Cash Advance"><i class="bi bi-cash me-2 fs-9"></i>Cash Advance</a></li>
                         <li class="<?php echo isPageActive('reimbursement'); ?>"><a class="py-2" href="<?php echo $baseUrl; ?>/views/transactions/index.php?type=Reimbursement"><i class="bi bi-arrow-repeat me-2 fs-9"></i>Reimbursement</a></li>
-                        <li class="<?php echo isPageActive('bactrack'); ?>"><a class="py-2" href="<?php echo $baseUrl; ?>/views/transactions/index.php?type=BACtrack"><i class="bi bi-cloud-arrow-down me-2 fs-9"></i>BACtrack</a></li>
+                        <?php if (hasPermission('view_bactrack')): ?>
+                            <li class="<?php echo isPageActive('bactrack'); ?>"><a class="py-2" href="<?php echo $baseUrl; ?>/views/transactions/index.php?type=BACtrack"><i class="bi bi-cloud-arrow-down me-2 fs-9"></i>BACtrack</a></li>
+                        <?php endif; ?>
                         <li class="<?php echo isPageActive('payroll'); ?>"><a class="py-2" href="<?php echo $baseUrl; ?>/views/transactions/index.php?type=Payroll"><i class="bi bi-people-fill me-2 fs-9"></i>Payroll</a></li>
                         
                         <?php if (hasPermission('encode')): ?>
@@ -177,6 +179,14 @@ $renderSidebarMenu = function($isMobile = false) use (
                 </a>
             </li>
         <?php endif; ?>
+
+        <!-- Contact Us (all users) -->
+        <li class="<?php echo isPageActive('contact'); ?>">
+            <a href="<?php echo $baseUrl; ?>/views/contact.php">
+                <i class="fas fa-envelope-open-text"></i>
+                <span>Contact Us</span>
+            </a>
+        </li>
 
         <!-- My Profile (all users) -->
         <li class="<?php echo isPageActive('profile'); ?>">

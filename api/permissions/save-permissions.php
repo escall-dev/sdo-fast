@@ -1,6 +1,6 @@
 <?php
 /**
- * Save User Permissions API for SDO FAST.
+ * Save Role Permissions API for SDO FAST.
  * Restricts updates to Super Admin and audits mutations.
  */
 
@@ -28,18 +28,18 @@ $adminId = $_SESSION['user_id'] ?? null;
 
 if ($userRole !== 'Super Admin') {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Forbidden: Only Super Admins can save user permissions.']);
+    echo json_encode(['success' => false, 'message' => 'Forbidden: Only Super Admins can save role permissions.']);
     exit;
 }
 
-$userId = isset($_POST['user_id']) ? (int)$_POST['user_id'] : 0;
-if ($userId <= 0) {
+$roleId = isset($_POST['role_id']) ? (int)$_POST['role_id'] : 0;
+if ($roleId <= 0) {
     http_response_code(422);
-    echo json_encode(['success' => false, 'message' => 'Invalid user ID.']);
+    echo json_encode(['success' => false, 'message' => 'Invalid role ID.']);
     exit;
 }
 
-// Allowed permission keys
+// Allowed permission keys (now including view_bactrack)
 $allowedKeys = [
     'view',
     'encode',
@@ -47,30 +47,61 @@ $allowedKeys = [
     'approve',
     'delete',
     'manage_users',
-    'configure_system'
+    'configure_system',
+    'view_bactrack'
 ];
 
 try {
-    // 1. Fetch user to verify they exist and get details for logging
-    $userStmt = $fastPDO->prepare("SELECT full_name FROM users WHERE id = :id LIMIT 1");
-    $userStmt->execute(['id' => $userId]);
-    $user = $userStmt->fetch();
+    // 1. Fetch role to verify it exists and get details for logging
+    $roleStmt = $fastPDO->prepare("SELECT role_name FROM roles WHERE id = :id LIMIT 1");
+    $roleStmt->execute(['id' => $roleId]);
+    $role = $roleStmt->fetch();
 
-    if (!$user) {
+    if (!$role) {
         http_response_code(404);
-        echo json_encode(['success' => false, 'message' => 'User not found.']);
+        echo json_encode(['success' => false, 'message' => 'Role not found.']);
         exit;
     }
 
+    $roleName = $role['role_name'];
+
     // 2. Fetch old permissions for auditing
-    $oldStmt = $fastPDO->prepare("SELECT permission_key, is_enabled FROM user_permissions WHERE user_id = :user_id");
-    $oldStmt->execute(['user_id' => $userId]);
+    $oldStmt = $fastPDO->prepare("SELECT permission_key, is_enabled FROM role_permissions WHERE role_id = :role_id");
+    $oldStmt->execute(['role_id' => $roleId]);
     $oldPermissions = $oldStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
-    // Fill missing defaults for old permissions representation
+    // Default permissions mapping fallback for old permissions representation if no entries exist yet
+    $defaults = [
+        'view' => 0,
+        'encode' => 0,
+        'edit' => 0,
+        'approve' => 0,
+        'delete' => 0,
+        'manage_users' => 0,
+        'configure_system' => 0,
+        'view_bactrack' => 0
+    ];
+    
+    if ($roleName === 'Super Admin') {
+        foreach ($defaults as $k => $v) {
+            $defaults[$k] = 1;
+        }
+    } elseif ($roleName === 'Admin') {
+        $defaults['view'] = 1;
+        $defaults['encode'] = 1;
+        $defaults['edit'] = 1;
+        $defaults['approve'] = 1;
+    } elseif ($roleName === 'Accounting Staff') {
+        $defaults['view'] = 1;
+        $defaults['encode'] = 1;
+        $defaults['approve'] = 1;
+    } else {
+        $defaults['view'] = 1;
+    }
+
     $oldFormatted = [];
     foreach ($allowedKeys as $key) {
-        $oldFormatted[$key] = isset($oldPermissions[$key]) ? (int)$oldPermissions[$key] : 0;
+        $oldFormatted[$key] = isset($oldPermissions[$key]) ? (int)$oldPermissions[$key] : (int)$defaults[$key];
     }
 
     // 3. Process new permissions from POST
@@ -78,18 +109,18 @@ try {
     $fastPDO->beginTransaction();
 
     $stmt = $fastPDO->prepare("
-        INSERT INTO user_permissions (user_id, permission_key, is_enabled) 
-        VALUES (:user_id, :permission_key, :is_enabled)
+        INSERT INTO role_permissions (role_id, permission_key, is_enabled) 
+        VALUES (:role_id, :permission_key, :is_enabled)
         ON DUPLICATE KEY UPDATE is_enabled = VALUES(is_enabled)
     ");
 
     foreach ($allowedKeys as $key) {
-        // In checkbox submissions, we can send them as permissions[key] = 1 or 0
+        // In checkbox submissions, we send them as permissions[key] = 1 or 0
         $isEnabled = isset($_POST['permissions'][$key]) && $_POST['permissions'][$key] == 1 ? 1 : 0;
         $newFormatted[$key] = $isEnabled;
 
         $stmt->execute([
-            'user_id' => $userId,
+            'role_id' => $roleId,
             'permission_key' => $key,
             'is_enabled' => $isEnabled
         ]);
@@ -99,19 +130,19 @@ try {
     AuditLogService::log(
         $fastPDO,
         $adminId,
-        "Updated permissions override for user: " . $user['full_name'],
+        "Updated permissions for role: " . $roleName,
         $oldFormatted,
         $newFormatted
     );
 
     $fastPDO->commit();
-    echo json_encode(['success' => true, 'message' => 'Permissions updated successfully.']);
+    echo json_encode(['success' => true, 'message' => 'Role permissions updated successfully.']);
 
 } catch (PDOException $e) {
     if ($fastPDO->inTransaction()) {
         $fastPDO->rollBack();
     }
-    error_log("Save permissions failed: " . $e->getMessage());
+    error_log("Save role permissions failed: " . $e->getMessage());
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Database error occurred while saving.']);
 }

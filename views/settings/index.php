@@ -25,8 +25,9 @@ $goodsPercentage = 5.00;
 $foodsPercentage = 2.00;
 $servicesPercentage = 10.00;
 
-// Fetch users with positions and roles
-$users = [];
+// Fetch roles with user count
+$roles = [];
+$roleUsers = [];
 
 if ($fastPDO !== null) {
     try {
@@ -36,14 +37,25 @@ if ($fastPDO !== null) {
         $servicesPercentage = $configs['Services'] ?? 10.00;
 
         $stmt = $fastPDO->query("
-            SELECT u.id, u.full_name, u.position_id, p.position_name, r.role_name 
-            FROM users u 
-            LEFT JOIN positions p ON u.position_id = p.id 
-            LEFT JOIN user_roles ur ON u.id = ur.user_id 
-            LEFT JOIN roles r ON ur.role_id = r.id 
+            SELECT r.id, r.role_name, COUNT(ur.user_id) as user_count 
+            FROM roles r
+            LEFT JOIN user_roles ur ON r.id = ur.role_id
+            GROUP BY r.id, r.role_name
+            ORDER BY r.role_name ASC
+        ");
+        $roles = $stmt->fetchAll();
+
+        // Fetch users assigned to each role with their positions
+        $usersStmt = $fastPDO->query("
+            SELECT ur.role_id, u.full_name, p.position_name 
+            FROM user_roles ur
+            JOIN users u ON ur.user_id = u.id
+            LEFT JOIN positions p ON u.position_id = p.id
             ORDER BY u.full_name ASC
         ");
-        $users = $stmt->fetchAll();
+        foreach ($usersStmt->fetchAll() as $row) {
+            $roleUsers[$row['role_id']][] = $row;
+        }
     } catch (PDOException $e) {
         error_log("Failed to load settings data: " . $e->getMessage());
     }
@@ -61,7 +73,7 @@ if ($fastPDO !== null) {
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link fw-semibold" id="access-tab" data-bs-toggle="tab" data-bs-target="#accessContent" type="button" role="tab" aria-controls="accessContent" aria-selected="false">
-                    <i class="bi bi-shield-lock me-2"></i>User Access Control
+                    <i class="bi bi-shield-lock me-2"></i>Role Access Control
                 </button>
             </li>
         </ul>
@@ -124,58 +136,68 @@ if ($fastPDO !== null) {
         </div>
     </div>
     
-    <!-- Tab 2: User Access Control -->
+    <!-- Tab 2: Role Access Control -->
     <div class="tab-pane fade" id="accessContent" role="tabpanel" aria-labelledby="access-tab">
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold text-primary-dark">User Access Control</h5>
+                <h5 class="mb-0 fw-bold text-primary-dark">Role Access Control</h5>
                 <span class="badge bg-light text-muted border">Manage permissions</span>
             </div>
             <div class="card-body">
-                <p class="text-muted fs-8 mb-4">Override default role-based permissions on a per-user basis. Saved permissions will apply across all system modules immediately.</p>
+                <p class="text-muted fs-8 mb-4">Define and manage permissions per system role. Saved permissions will apply across all system modules immediately for all users assigned to that role.</p>
                 
                 <div class="table-responsive">
                     <table class="table table-hover align-middle border-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Name</th>
-                                <th>Position</th>
-                                <th>System Role</th>
+                                <th>Role Name</th>
+                                <th>Assigned Users Count</th>
                                 <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (empty($users)): ?>
+                            <?php if (empty($roles)): ?>
                                 <tr>
-                                    <td colspan="4" class="text-center py-4 text-muted">No registered users found.</td>
+                                    <td colspan="3" class="text-center py-4 text-muted">No system roles found.</td>
                                 </tr>
                             <?php else: ?>
-                                <?php foreach ($users as $user): ?>
+                                <?php foreach ($roles as $role): ?>
                                     <tr>
-                                        <td class="fw-semibold text-primary-dark"><?php echo htmlspecialchars($user['full_name']); ?></td>
-                                        <td><?php echo htmlspecialchars($user['position_name'] ?? 'N/A'); ?></td>
                                         <td>
                                             <?php 
                                             $roleBadgeClass = 'bg-light text-dark border';
-                                            if ($user['role_name'] === 'Super Admin') {
+                                            if ($role['role_name'] === 'Super Admin') {
                                                 $roleBadgeClass = 'bg-warning text-dark';
-                                            } else if ($user['role_name'] === 'Admin') {
+                                            } else if ($role['role_name'] === 'Admin') {
                                                 $roleBadgeClass = 'bg-primary text-white';
-                                            } else if ($user['role_name'] === 'Accounting Staff') {
+                                            } else if ($role['role_name'] === 'Accounting Staff') {
                                                 $roleBadgeClass = 'bg-info text-white';
                                             }
                                             ?>
-                                            <span class="badge <?php echo $roleBadgeClass; ?>">
-                                                <?php echo htmlspecialchars($user['role_name'] ?? 'User'); ?>
+                                            <span class="badge <?php echo $roleBadgeClass; ?> fs-7 py-2 px-3">
+                                                <?php echo htmlspecialchars($role['role_name']); ?>
                                             </span>
+                                        </td>
+                                        <td class="ps-3">
+                                            <div class="fw-semibold text-dark mb-1"><?php echo htmlspecialchars($role['user_count']); ?> user(s)</div>
+                                            <?php if (!empty($roleUsers[$role['id']])): ?>
+                                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                                    <?php foreach ($roleUsers[$role['id']] as $u): ?>
+                                                        <span class="badge bg-light text-secondary border fs-9" style="font-size: 0.75rem;" title="Position: <?php echo htmlspecialchars($u['position_name'] ?? 'None'); ?>">
+                                                            <?php echo htmlspecialchars($u['full_name']); ?> 
+                                                            <span class="text-muted" style="font-size: 0.65rem;">(<?php echo htmlspecialchars($u['position_name'] ?? 'No Position'); ?>)</span>
+                                                        </span>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            <?php else: ?>
+                                                <small class="text-muted fst-italic">No users assigned</small>
+                                            <?php endif; ?>
                                         </td>
                                         <td class="text-end">
                                             <button type="button" class="btn btn-sm btn-outline-primary px-3" 
                                                     onclick="openEditPermissionsModal(
-                                                        <?php echo $user['id']; ?>, 
-                                                        '<?php echo addslashes(htmlspecialchars($user['full_name'])); ?>', 
-                                                        '<?php echo addslashes(htmlspecialchars($user['position_name'] ?? 'N/A')); ?>', 
-                                                        '<?php echo addslashes(htmlspecialchars($user['role_name'] ?? 'User')); ?>'
+                                                        <?php echo $role['id']; ?>, 
+                                                        '<?php echo addslashes(htmlspecialchars($role['role_name'])); ?>'
                                                     )">
                                                 <i class="bi bi-shield-check me-1"></i> Edit Permissions
                                             </button>
@@ -198,22 +220,18 @@ if ($fastPDO !== null) {
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow">
             <div class="modal-header">
-                <h5 class="modal-title fw-bold text-primary-dark" id="editPermissionsModalLabel">Edit User Permissions</h5>
+                <h5 class="modal-title fw-bold text-primary-dark" id="editPermissionsModalLabel">Edit Role Permissions</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="editPermissionsForm" onsubmit="handlePermissionsSubmit(event)">
-                <input type="hidden" name="user_id" id="permUserId">
+                <input type="hidden" name="role_id" id="permRoleId">
                 <div class="modal-body py-3">
-                    <!-- User details block -->
+                    <!-- Role details block -->
                     <div class="p-3 bg-light rounded-3 mb-4">
                         <div class="row">
-                            <div class="col-6">
-                                <span class="fs-8 text-muted d-block">User Name</span>
-                                <strong id="permUserName" class="text-primary-dark">Name</strong>
-                            </div>
-                            <div class="col-6">
-                                <span class="fs-8 text-muted d-block">Position & Role</span>
-                                <strong id="permUserRole" class="text-primary-dark">Position / Role</strong>
+                            <div class="col-12">
+                                <span class="fs-8 text-muted d-block">System Role Name</span>
+                                <strong id="permRoleName" class="text-primary-dark fs-7">Role Name</strong>
                             </div>
                         </div>
                     </div>
@@ -229,7 +247,8 @@ if ($fastPDO !== null) {
                             'approve' => 'approve (Approve or route transaction status)',
                             'delete' => 'delete (Permanently remove records)',
                             'manage_users' => 'manage_users (Create, edit, suspend users)',
-                            'configure_system' => 'configure_system (Manage taxes, settings, integrations)'
+                            'configure_system' => 'configure_system (Manage taxes, settings, integrations)',
+                            'view_bactrack' => 'view_bactrack (Access and view BACtrack Transactions)'
                         ];
                         foreach ($permissionsList as $key => $desc):
                         ?>
@@ -289,7 +308,8 @@ function getDefaultPermissions(role) {
         approve: false,
         delete: false,
         manage_users: false,
-        configure_system: false
+        configure_system: false,
+        view_bactrack: false
     };
     
     if (role === 'Super Admin') {
@@ -311,14 +331,13 @@ function getDefaultPermissions(role) {
 }
 
 // Function to open permissions modal
-async function openEditPermissionsModal(userId, fullName, position, role) {
-    // Fill user info
-    document.getElementById('permUserId').value = userId;
-    document.getElementById('permUserName').innerText = fullName;
-    document.getElementById('permUserRole').innerText = position + ' (' + role + ')';
+async function openEditPermissionsModal(roleId, roleName) {
+    // Fill role info
+    document.getElementById('permRoleId').value = roleId;
+    document.getElementById('permRoleName').innerText = roleName;
     
     // Pre-check base role default matrix
-    const defaults = getDefaultPermissions(role);
+    const defaults = getDefaultPermissions(roleName);
     Object.keys(defaults).forEach(key => {
         const checkbox = document.getElementById('switch-' + key);
         if (checkbox) {
@@ -328,12 +347,12 @@ async function openEditPermissionsModal(userId, fullName, position, role) {
     
     API.showSpinner();
     try {
-        // Fetch any overrides from database
-        const response = await fetch('<?php echo env('APP_URL'); ?>/api/permissions/get-permissions.php?user_id=' + userId);
+        // Fetch any permissions from database
+        const response = await fetch('<?php echo env('APP_URL'); ?>/api/permissions/get-permissions.php?role_id=' + roleId);
         const data = await response.json();
         
         if (data.success && data.permissions) {
-            // Apply override settings if they exist
+            // Apply role settings if they exist in DB
             Object.keys(data.permissions).forEach(key => {
                 const checkbox = document.getElementById('switch-' + key);
                 if (checkbox) {
@@ -342,7 +361,7 @@ async function openEditPermissionsModal(userId, fullName, position, role) {
             });
         }
     } catch (err) {
-        console.error("Failed to load permissions override:", err);
+        console.error("Failed to load role permissions:", err);
     } finally {
         API.hideSpinner();
     }
@@ -353,14 +372,14 @@ async function openEditPermissionsModal(userId, fullName, position, role) {
     modal.show();
 }
 
-// Handle save permission overrides
+// Handle save permissions
 async function handlePermissionsSubmit(e) {
     e.preventDefault();
     const form = document.getElementById('editPermissionsForm');
     const formData = new FormData(form);
     
     // Checkbox values not checked are not sent in FormData by default,
-    const permissionKeys = ['view', 'encode', 'edit', 'approve', 'delete', 'manage_users', 'configure_system'];
+    const permissionKeys = ['view', 'encode', 'edit', 'approve', 'delete', 'manage_users', 'configure_system', 'view_bactrack'];
     permissionKeys.forEach(key => {
         const checkbox = document.getElementById('switch-' + key);
         if (checkbox) {
@@ -387,7 +406,7 @@ async function handlePermissionsSubmit(e) {
             modal.hide();
         }
     } else {
-        API.showToast(data.message || 'Failed to save user permissions.', 'danger');
+        API.showToast(data.message || 'Failed to save role permissions.', 'danger');
     }
 }
 </script>

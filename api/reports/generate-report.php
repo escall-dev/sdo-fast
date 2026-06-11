@@ -74,6 +74,22 @@ $params['date_start'] = $dateStart . ' 00:00:00';
 $params['date_end'] = $dateEnd . ' 23:59:59';
 
 // Apply optional filters
+if ($transactionType === 'BACtrack' && !hasPermission('view_bactrack')) {
+    if ($format === 'screen') {
+        header('Content-Type: application/json');
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Forbidden: Your role does not permit access to BACtrack reports.']);
+    } else {
+        http_response_code(403);
+        echo "Forbidden: Your role does not permit access to BACtrack reports.";
+    }
+    exit;
+}
+
+if (!hasPermission('view_bactrack')) {
+    $whereClauses[] = "t.transaction_type != 'BACtrack'";
+}
+
 if (!empty($transactionType)) {
     $whereClauses[] = "t.transaction_type = :type";
     $params['type'] = $transactionType;

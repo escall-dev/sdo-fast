@@ -33,6 +33,9 @@ if ($fastPDO !== null) {
         // Role-based query helper utilizing new data visibility scope
         $scopeFilter = get_data_scope_filter($userRole, $userId, null);
         $roleFilter = " AND " . $scopeFilter;
+        if (!hasPermission('view_bactrack')) {
+            $roleFilter .= " AND transaction_type != 'BACtrack'";
+        }
         $roleParams = [];
 
         // 1. Total Transactions count
@@ -71,11 +74,12 @@ if ($fastPDO !== null) {
         $totalTaxDeducted = (float)$stmt->fetchColumn();
 
         // 8. Recent Transactions table (Latest 10)
+        $bactrackFilter = !hasPermission('view_bactrack') ? " AND t.transaction_type != 'BACtrack'" : "";
         $recentQuery = "
             SELECT t.*, u.full_name as requestor_name 
             FROM transactions t 
             LEFT JOIN users u ON t.requestor_id = u.id
-            WHERE 1=1 AND " . get_data_scope_filter($userRole, $userId, 't') . "
+            WHERE 1=1 AND " . get_data_scope_filter($userRole, $userId, 't') . $bactrackFilter . "
             ORDER BY t.created_at DESC LIMIT 10
         ";
         $stmt = $fastPDO->prepare($recentQuery);

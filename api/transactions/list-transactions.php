@@ -47,8 +47,22 @@ $sortCol = $allowedSortColumns[$sortBy] ?? 't.created_at';
 $whereClauses = [];
 $params = [];
 
+// Enforce view_bactrack permission check
+if ($type === 'BACtrack' && !hasPermission('view_bactrack')) {
+    http_response_code(403);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Forbidden: Your role does not permit access to BACtrack Transactions.'
+    ]);
+    exit;
+}
+
 // 1. Data visibility scope filter
 $whereClauses[] = get_data_scope_filter($userRole, $userId, 't');
+
+if (!hasPermission('view_bactrack')) {
+    $whereClauses[] = "t.transaction_type != 'BACtrack'";
+}
 
 if ($requestorId > 0) {
     $whereClauses[] = "t.requestor_id = :filter_req_id";

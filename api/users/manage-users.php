@@ -403,9 +403,12 @@ try {
         $positionName = trim($_POST['position_name'] ?? '');
         $mappedRole = trim($_POST['mapped_role'] ?? '');
 
-        if (empty($positionName) || !in_array($mappedRole, ['Admin', 'User'])) {
+        // Fetch valid roles from DB dynamically
+        $validRoles = $fastPDO->query("SELECT role_name FROM roles")->fetchAll(PDO::FETCH_COLUMN);
+
+        if (empty($positionName) || !in_array($mappedRole, $validRoles)) {
             http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Position name and a valid mapped role (Admin or User) are required.']);
+            echo json_encode(['success' => false, 'message' => 'Position name and a valid system role are required.']);
             exit;
         }
 
