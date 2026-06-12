@@ -58,51 +58,74 @@ if ($fastPDO !== null) {
                         </div>
                     </div>
                     
-                    <!-- Cash Advance Sub-options (Hidden by default, shown when Cash Advance is selected) -->
+                    <!-- ====================================================================
+                         CASH ADVANCE COVERAGE SECTION
+                         ==================================================================== -->
                     <div id="cashAdvanceCategorySection" class="mb-4 d-none p-3 rounded-3 border bg-light">
                         <div class="row g-3">
                             <div class="col-12">
-                                <label for="cashAdvanceCategory" class="form-label fs-8 fw-semibold text-muted">Cash Advance Category <span class="text-danger">*</span></label>
+                                <label for="cashAdvanceCategory" class="form-label fs-8 fw-semibold text-muted">Cash Advance Coverage Type <span class="text-danger">*</span></label>
                                 <select name="cash_advance_category" id="cashAdvanceCategory" class="form-select">
-                                    <option value="" disabled selected>Select Category</option>
-                                    <option value="MOOE">MOOE (Travel Cash Advance)</option>
-                                    <option value="Activity">Activity (Seminar/Training Proposal)</option>
+                                    <option value="" disabled selected>Select Coverage Type</option>
+                                    <option value="Travel">Travel (land transpo excluded)</option>
+                                    <option value="School MOOE">School MOOE</option>
+                                    <option value="SBFP">SBFP (School Based Feeding Program)</option>
+                                    <option value="Training">Training</option>
+                                    <option value="Meals">Meals</option>
+                                    <option value="Accommodation">Accommodation</option>
+                                    <option value="Meals and Accommodation">Meals and Accommodation</option>
+                                    <option value="Honorarium">Honorarium</option>
+                                    <option value="Supplies and Materials">Supplies and Materials</option>
+                                    <option value="Communication Expenses">Communication Expenses</option>
+                                    <option value="SLAC / Moving-Up / Graduation / GAWAD">SLAC / Moving-Up / Graduation / GAWAD and similar events</option>
                                 </select>
                             </div>
                         </div>
 
-                        <!-- MOOE Form Fields -->
-                        <div id="mooeFieldsContainer" class="d-none mt-3">
+                        <!-- CA: Date & Venue Fields (Travel, Training, Meals, Accommodation, M&A, SLAC/GAWAD) -->
+                        <div id="caDateVenueContainer" class="d-none mt-3">
                             <div class="border-top pt-3">
-                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-airplane-engines me-1"></i>MOOE Travel Cash Advance Details</h6>
-                                
+                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-calendar-event me-1"></i>Schedule & Venue Details</h6>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-sm-6">
+                                        <label for="caStartDate" class="form-label fs-8 fw-semibold text-muted">Inclusive Start Date <span class="text-danger">*</span></label>
+                                        <input type="date" name="mooe_start_date" id="caStartDate" class="form-control">
+                                    </div>
+                                    <div class="col-12 col-sm-6">
+                                        <label for="caEndDate" class="form-label fs-8 fw-semibold text-muted">Inclusive End Date <span class="text-danger">*</span></label>
+                                        <input type="date" name="mooe_end_date" id="caEndDate" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12">
+                                        <label for="caVenue" class="form-label fs-8 fw-semibold text-muted">Venue <span class="text-danger">*</span></label>
+                                        <input type="text" name="venue" id="caVenue" class="form-control" placeholder="e.g. Regional Office, Hotel Venue Name">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CA: Fund Source Field (Travel, School MOOE, SBFP) -->
+                        <div id="caFundSourceContainer" class="d-none mt-3">
+                            <div class="border-top pt-3">
+                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-wallet2 me-1"></i>Fund Source</h6>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12">
+                                        <label for="caFundSource" class="form-label fs-8 fw-semibold text-muted">Fund Source <span class="text-danger">*</span></label>
+                                        <input type="text" name="fund_source" id="caFundSource" class="form-control" placeholder="e.g. School MOOE, Division MOOE, SEF">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CA: TA + Itinerary Uploads (Travel only) -->
+                        <div id="caTaItineraryContainer" class="d-none mt-3">
+                            <div class="border-top pt-3">
+                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-airplane-engines me-1"></i>Travel Documents</h6>
                                 <div class="alert alert-info border-0 shadow-sm d-flex align-items-center gap-2 mb-3 py-2 px-3" style="font-size: 0.8rem;">
                                     <i class="bi bi-info-circle-fill fs-6 text-primary"></i>
-                                    <div><strong>Note:</strong> For Cash Advance (MOOE), the attached documents you must upload below are your <strong>Approved TA (Travel Authority)</strong> and <strong>Travel Itinerary</strong>.</div>
+                                    <div><strong>Note:</strong> For Travel Cash Advance, the attached documents you must upload below are your <strong>Approved TA (Travel Authority)</strong> and <strong>Travel Itinerary</strong>.</div>
                                 </div>
-                                
-                                <div class="row g-3 mb-3">
-                                    <div class="col-12 col-sm-6">
-                                        <label for="mooeStartDate" class="form-label fs-8 fw-semibold text-muted">Inclusive Start Date <span class="text-danger">*</span></label>
-                                        <input type="date" name="mooe_start_date" id="mooeStartDate" class="form-control">
-                                    </div>
-                                    <div class="col-12 col-sm-6">
-                                        <label for="mooeEndDate" class="form-label fs-8 fw-semibold text-muted">Inclusive End Date <span class="text-danger">*</span></label>
-                                        <input type="date" name="mooe_end_date" id="mooeEndDate" class="form-control">
-                                    </div>
-                                </div>
-
-                                <div class="row g-3 mb-3">
-                                    <div class="col-12 col-sm-6">
-                                        <label for="fundSource" class="form-label fs-8 fw-semibold text-muted">Fund Source <span class="text-danger">*</span></label>
-                                        <input type="text" name="fund_source" id="fundSource" class="form-control" placeholder="e.g. School MOOE, Division MOOE, SEF">
-                                    </div>
-                                    <div class="col-12 col-sm-6">
-                                        <label for="mooeVenue" class="form-label fs-8 fw-semibold text-muted">Venue <span class="text-danger">*</span></label>
-                                        <input type="text" name="venue" id="mooeVenue" class="form-control" placeholder="e.g. Regional Office, Hotel Venue Name">
-                                    </div>
-                                </div>
-
                                 <div class="row g-3 mb-3">
                                     <div class="col-12 col-sm-6">
                                         <label for="approvedTa" class="form-label fs-8 fw-semibold text-muted">Upload Approved TA (Travel Authority) <span class="text-danger">*</span></label>
@@ -118,58 +141,144 @@ if ($fastPDO !== null) {
                             </div>
                         </div>
 
-                        <!-- Activity Form Fields -->
-                        <div id="activityFieldsContainer" class="d-none mt-3">
+                        <!-- CA: Activity Proposal Upload (Training, SLAC/GAWAD) -->
+                        <div id="caActivityProposalContainer" class="d-none mt-3">
                             <div class="border-top pt-3">
-                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-journal-check me-1"></i>Activity Seminar/Training Details</h6>
-                                
-                                <div class="row g-3 mb-3">
-                                    <div class="col-12 col-sm-6">
-                                        <label for="activityStartDate" class="form-label fs-8 fw-semibold text-muted">Activity Start Date <span class="text-danger">*</span></label>
-                                        <input type="date" name="activity_start_date" id="activityStartDate" class="form-control">
-                                    </div>
-                                    <div class="col-12 col-sm-6">
-                                        <label for="activityEndDate" class="form-label fs-8 fw-semibold text-muted">Activity End Date <span class="text-danger">*</span></label>
-                                        <input type="date" name="activity_end_date" id="activityEndDate" class="form-control">
-                                    </div>
-                                </div>
-
+                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-journal-check me-1"></i>Activity Proposal</h6>
                                 <div class="row g-3 mb-3">
                                     <div class="col-12">
-                                        <label for="activityVenue" class="form-label fs-8 fw-semibold text-muted">Activity Venue <span class="text-danger">*</span></label>
-                                        <input type="text" name="activity_venue" id="activityVenue" class="form-control" placeholder="e.g. SDO Conference Hall, School Gym">
-                                    </div>
-                                </div>
-
-                                <div class="row g-3 mb-3">
-                                    <div class="col-12">
-                                        <label for="activityProposal" class="form-label fs-8 fw-semibold text-muted">Upload Activity Proposal <span class="text-danger">*</span></label>
-                                        <input type="file" name="activity_proposal" id="activityProposal" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
+                                        <label for="caActivityProposal" class="form-label fs-8 fw-semibold text-muted">Upload Activity Proposal <span class="text-danger">*</span></label>
+                                        <input type="file" name="activity_proposal" id="caActivityProposal" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
                                         <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CA: Month Selector (Communication Expenses) -->
+                        <div id="caMonthContainer" class="d-none mt-3">
+                            <div class="border-top pt-3">
+                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-telephone-inbound me-1"></i>Communication Period</h6>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12">
+                                        <label for="caMonth" class="form-label fs-8 fw-semibold text-muted">Select Month <span class="text-danger">*</span></label>
+                                        <select name="ca_month" id="caMonth" class="form-select">
+                                            <option value="" disabled selected>Select Month</option>
+                                            <?php
+                                            $currentYear = (int)date('Y');
+                                            $prevYear = $currentYear - 1;
+                                            $monthsList = [
+                                                1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April', 
+                                                5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August', 
+                                                9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'
+                                            ];
+                                            for ($y = $currentYear; $y >= $prevYear; $y--) {
+                                                for ($m = 12; $m >= 1; $m--) {
+                                                    $mLabel = $monthsList[$m] . ' ' . $y;
+                                                    echo '<option value="' . htmlspecialchars($mLabel) . '">' . htmlspecialchars($mLabel) . '</option>';
+                                                }
+                                            }
+                                            ?>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Reimbursement Sub-options (Hidden by default, shown when Reimbursement is selected) -->
+                    <!-- ====================================================================
+                         REIMBURSEMENT COVERAGE SECTION
+                         ==================================================================== -->
                     <div id="reimbursementCategorySection" class="mb-4 d-none p-3 rounded-3 border bg-light">
                         <div class="row g-3">
                             <div class="col-12">
-                                <label for="reimbursementCategory" class="form-label fs-8 fw-semibold text-muted">Reimbursement Category <span class="text-danger">*</span></label>
+                                <label for="reimbursementCategory" class="form-label fs-8 fw-semibold text-muted">Reimbursement Coverage Type <span class="text-danger">*</span></label>
                                 <select name="reimbursement_category" id="reimbursementCategory" class="form-select">
-                                    <option value="" disabled selected>Select Category</option>
+                                    <option value="" disabled selected>Select Coverage Type</option>
                                     <option value="Travel">Travel</option>
-                                    <option value="Communications Allowance">Communications Allowance</option>
-                                    <option value="Procured Goods">Procured Goods</option>
+                                    <option value="Supplies and Materials">Supplies and Materials</option>
+                                    <option value="Meals">Meals</option>
+                                    <option value="Accommodation">Accommodation</option>
+                                    <option value="Meals and Accommodation">Meals and Accommodation</option>
+                                    <option value="Honorarium">Honorarium</option>
+                                    <option value="Communication Load">Communication Load</option>
+                                    <option value="Utility Bills">Utility Bills (Electricity, Water, Telephone, Internet)</option>
+                                    <option value="Repair, Repaint, Improvement">Repair, Repaint, Improvement</option>
+                                    <option value="Installation of Electricity and Water">Installation of Electricity and Water</option>
+                                    <option value="Installation of Internet / Telephone">Installation of Internet / Telephone</option>
+                                    <option value="Seminars / Trainings">Seminars / Trainings (from Enclosure 12)</option>
+                                    <option value="GAD Documents / SLAC Session">GAD Documents / SLAC Session</option>
+                                    <option value="Job Order">Job Order</option>
+                                    <option value="Fidelity Bond">Fidelity Bond</option>
+                                    <option value="Immersion and Insurance for SHS">Immersion and Insurance for SHS</option>
                                 </select>
                             </div>
                         </div>
 
-                        <!-- Communications Allowance Fields -->
-                        <div id="communicationsAllowanceFieldsContainer" class="d-none mt-3">
+                        <!-- Reimb: Date & Venue Fields (Travel, Meals, Accommodation, M&A, Seminars/Trainings, GAD/SLAC) -->
+                        <div id="reimbDateVenueContainer" class="d-none mt-3">
                             <div class="border-top pt-3">
-                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-telephone-inbound me-1"></i>Communications Allowance Details</h6>
+                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-calendar-event me-1"></i>Schedule & Venue Details</h6>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-sm-6">
+                                        <label for="reimbStartDate" class="form-label fs-8 fw-semibold text-muted">Inclusive Start Date <span class="text-danger">*</span></label>
+                                        <input type="date" name="reimb_start_date" id="reimbStartDate" class="form-control">
+                                    </div>
+                                    <div class="col-12 col-sm-6">
+                                        <label for="reimbEndDate" class="form-label fs-8 fw-semibold text-muted">Inclusive End Date <span class="text-danger">*</span></label>
+                                        <input type="date" name="reimb_end_date" id="reimbEndDate" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12">
+                                        <label for="reimbVenue" class="form-label fs-8 fw-semibold text-muted">Venue <span class="text-danger">*</span></label>
+                                        <input type="text" name="reimb_venue" id="reimbVenue" class="form-control" placeholder="e.g. SDO Conference Hall, School Gym">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reimb: TA + Itinerary Uploads (Travel only) -->
+                        <div id="reimbTaItineraryContainer" class="d-none mt-3">
+                            <div class="border-top pt-3">
+                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-airplane-engines me-1"></i>Travel Documents</h6>
+                                <div class="alert alert-info border-0 shadow-sm d-flex align-items-center gap-2 mb-3 py-2 px-3" style="font-size: 0.8rem;">
+                                    <i class="bi bi-info-circle-fill fs-6 text-primary"></i>
+                                    <div><strong>Note:</strong> For Travel Reimbursement, please upload your <strong>Approved TA (Travel Authority)</strong> and <strong>Travel Itinerary</strong>.</div>
+                                </div>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-sm-6">
+                                        <label for="reimbApprovedTa" class="form-label fs-8 fw-semibold text-muted">Upload Approved TA (Travel Authority) <span class="text-danger">*</span></label>
+                                        <input type="file" name="reimb_approved_ta" id="reimbApprovedTa" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
+                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
+                                    </div>
+                                    <div class="col-12 col-sm-6">
+                                        <label for="reimbTravelItinerary" class="form-label fs-8 fw-semibold text-muted">Upload Travel Itinerary <span class="text-danger">*</span></label>
+                                        <input type="file" name="reimb_travel_itinerary" id="reimbTravelItinerary" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
+                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reimb: Activity Proposal Upload (Seminars/Trainings) -->
+                        <div id="reimbActivityProposalContainer" class="d-none mt-3">
+                            <div class="border-top pt-3">
+                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-journal-check me-1"></i>Activity Proposal</h6>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12">
+                                        <label for="reimbActivityProposal" class="form-label fs-8 fw-semibold text-muted">Upload Activity Proposal <span class="text-danger">*</span></label>
+                                        <input type="file" name="reimb_activity_proposal" id="reimbActivityProposal" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
+                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reimb: Communications Load Fields (Month, DTR, Certificate, Bill/Proof) -->
+                        <div id="reimbCommunicationsContainer" class="d-none mt-3">
+                            <div class="border-top pt-3">
+                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-telephone-inbound me-1"></i>Communications Load Details</h6>
                                 
                                 <div class="alert alert-info border-0 shadow-sm d-flex align-items-center gap-2 mb-3 py-2 px-3" style="font-size: 0.8rem;">
                                     <i class="bi bi-info-circle-fill fs-6 text-primary"></i>
@@ -182,13 +291,6 @@ if ($fastPDO !== null) {
                                         <select name="reimbursement_month" id="reimbursementMonth" class="form-select">
                                             <option value="" disabled selected>Select Month</option>
                                             <?php
-                                            $currentYear = (int)date('Y');
-                                            $prevYear = $currentYear - 1;
-                                            $monthsList = [
-                                                1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April', 
-                                                5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August', 
-                                                9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'
-                                            ];
                                             for ($y = $currentYear; $y >= $prevYear; $y--) {
                                                 for ($m = 12; $m >= 1; $m--) {
                                                     $mLabel = $monthsList[$m] . ' ' . $y;
@@ -214,6 +316,34 @@ if ($fastPDO !== null) {
                                     <div class="col-12 col-sm-4">
                                         <label for="reimbBillProof" class="form-label fs-8 fw-semibold text-muted">Upload Bill / Proof of Payment <span class="text-danger">*</span></label>
                                         <input type="file" name="reimb_bill_proof" id="reimbBillProof" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
+                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reimb: Utility Bills Fields (Month + Bill/Proof only) -->
+                        <div id="reimbUtilityBillsContainer" class="d-none mt-3">
+                            <div class="border-top pt-3">
+                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-lightning-charge me-1"></i>Utility Bill Details</h6>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-sm-6">
+                                        <label for="utilityMonth" class="form-label fs-8 fw-semibold text-muted">Select Month <span class="text-danger">*</span></label>
+                                        <select name="utility_month" id="utilityMonth" class="form-select">
+                                            <option value="" disabled selected>Select Month</option>
+                                            <?php
+                                            for ($y = $currentYear; $y >= $prevYear; $y--) {
+                                                for ($m = 12; $m >= 1; $m--) {
+                                                    $mLabel = $monthsList[$m] . ' ' . $y;
+                                                    echo '<option value="' . htmlspecialchars($mLabel) . '">' . htmlspecialchars($mLabel) . '</option>';
+                                                }
+                                            }
+                                            ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-sm-6">
+                                        <label for="utilityBillProof" class="form-label fs-8 fw-semibold text-muted">Upload Bill / Proof of Payment <span class="text-danger">*</span></label>
+                                        <input type="file" name="utility_bill_proof" id="utilityBillProof" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
                                         <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
                                     </div>
                                 </div>
@@ -311,79 +441,136 @@ document.addEventListener('DOMContentLoaded', function() {
     const txTypeSelect = document.getElementById('transactionType');
     const caCategorySelect = document.getElementById('cashAdvanceCategory');
     const caSection = document.getElementById('cashAdvanceCategorySection');
-    const mooeContainer = document.getElementById('mooeFieldsContainer');
-    const activityContainer = document.getElementById('activityFieldsContainer');
     const reimbCategorySelect = document.getElementById('reimbursementCategory');
     const reimbSection = document.getElementById('reimbursementCategorySection');
-    const commAllowanceContainer = document.getElementById('communicationsAllowanceFieldsContainer');
+
+    // CA sub-field containers
+    const caDateVenue = document.getElementById('caDateVenueContainer');
+    const caFundSource = document.getElementById('caFundSourceContainer');
+    const caTaItinerary = document.getElementById('caTaItineraryContainer');
+    const caActivityProposal = document.getElementById('caActivityProposalContainer');
+    const caMonth = document.getElementById('caMonthContainer');
+
+    // Reimb sub-field containers
+    const reimbDateVenue = document.getElementById('reimbDateVenueContainer');
+    const reimbTaItinerary = document.getElementById('reimbTaItineraryContainer');
+    const reimbActivityProposal = document.getElementById('reimbActivityProposalContainer');
+    const reimbCommunications = document.getElementById('reimbCommunicationsContainer');
+    const reimbUtilityBills = document.getElementById('reimbUtilityBillsContainer');
+
+    // Coverage type → sub-field mapping
+    const caFieldMap = {
+        'Travel':           { dateVenue: true, fundSource: true, taItinerary: true, activityProposal: false, month: false },
+        'School MOOE':      { dateVenue: false, fundSource: true, taItinerary: false, activityProposal: false, month: false },
+        'SBFP':             { dateVenue: false, fundSource: true, taItinerary: false, activityProposal: false, month: false },
+        'Training':         { dateVenue: true, fundSource: false, taItinerary: false, activityProposal: true, month: false },
+        'Meals':            { dateVenue: true, fundSource: false, taItinerary: false, activityProposal: false, month: false },
+        'Accommodation':    { dateVenue: true, fundSource: false, taItinerary: false, activityProposal: false, month: false },
+        'Meals and Accommodation': { dateVenue: true, fundSource: false, taItinerary: false, activityProposal: false, month: false },
+        'Honorarium':       { dateVenue: false, fundSource: false, taItinerary: false, activityProposal: false, month: false },
+        'Supplies and Materials': { dateVenue: false, fundSource: false, taItinerary: false, activityProposal: false, month: false },
+        'Communication Expenses': { dateVenue: false, fundSource: false, taItinerary: false, activityProposal: false, month: true },
+        'SLAC / Moving-Up / Graduation / GAWAD': { dateVenue: true, fundSource: false, taItinerary: false, activityProposal: true, month: false }
+    };
+
+    const reimbFieldMap = {
+        'Travel':           { dateVenue: true, taItinerary: true, activityProposal: false, communications: false, utilityBills: false },
+        'Supplies and Materials': { dateVenue: false, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
+        'Meals':            { dateVenue: true, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
+        'Accommodation':    { dateVenue: true, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
+        'Meals and Accommodation': { dateVenue: true, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
+        'Honorarium':       { dateVenue: false, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
+        'Communication Load': { dateVenue: false, taItinerary: false, activityProposal: false, communications: true, utilityBills: false },
+        'Utility Bills':    { dateVenue: false, taItinerary: false, activityProposal: false, communications: false, utilityBills: true },
+        'Repair, Repaint, Improvement': { dateVenue: false, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
+        'Installation of Electricity and Water': { dateVenue: false, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
+        'Installation of Internet / Telephone': { dateVenue: false, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
+        'Seminars / Trainings': { dateVenue: true, taItinerary: false, activityProposal: true, communications: false, utilityBills: false },
+        'GAD Documents / SLAC Session': { dateVenue: true, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
+        'Job Order':        { dateVenue: false, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
+        'Fidelity Bond':    { dateVenue: false, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
+        'Immersion and Insurance for SHS': { dateVenue: false, taItinerary: false, activityProposal: false, communications: false, utilityBills: false }
+    };
+
+    function setFieldsState(container, enabled, required) {
+        if (!container) return;
+        const inputs = container.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            input.disabled = !enabled;
+            // Only set required on non-file inputs or file inputs when explicitly needed
+            if (input.type !== 'file') {
+                input.required = required;
+            } else {
+                input.required = required;
+            }
+        });
+    }
+
+    function hideAndDisable(container) {
+        if (!container) return;
+        container.classList.add('d-none');
+        setFieldsState(container, false, false);
+    }
+
+    function showAndEnable(container) {
+        if (!container) return;
+        container.classList.remove('d-none');
+        setFieldsState(container, true, true);
+    }
 
     function toggleFormFields() {
         const txType = txTypeSelect.value;
-        const caCat = caCategorySelect.value;
-        const reimbCat = reimbCategorySelect.value;
 
-        // Cash Advance toggle
+        // ── CASH ADVANCE ──
         if (txType === 'Cash Advance') {
             caSection.classList.remove('d-none');
             caCategorySelect.disabled = false;
             caCategorySelect.required = true;
 
-            if (caCat === 'MOOE') {
-                mooeContainer.classList.remove('d-none');
-                activityContainer.classList.add('d-none');
+            const caCat = caCategorySelect.value;
+            const cfg = caFieldMap[caCat] || {};
 
-                setFieldsState(mooeContainer, true, true);
-                setFieldsState(activityContainer, false, false);
-            } else if (caCat === 'Activity') {
-                activityContainer.classList.remove('d-none');
-                mooeContainer.classList.add('d-none');
-
-                setFieldsState(activityContainer, true, true);
-                setFieldsState(mooeContainer, false, false);
-            } else {
-                mooeContainer.classList.add('d-none');
-                activityContainer.classList.add('d-none');
-                setFieldsState(mooeContainer, false, false);
-                setFieldsState(activityContainer, false, false);
-            }
+            // Toggle each sub-field group
+            cfg.dateVenue ? showAndEnable(caDateVenue) : hideAndDisable(caDateVenue);
+            cfg.fundSource ? showAndEnable(caFundSource) : hideAndDisable(caFundSource);
+            cfg.taItinerary ? showAndEnable(caTaItinerary) : hideAndDisable(caTaItinerary);
+            cfg.activityProposal ? showAndEnable(caActivityProposal) : hideAndDisable(caActivityProposal);
+            cfg.month ? showAndEnable(caMonth) : hideAndDisable(caMonth);
         } else {
             caSection.classList.add('d-none');
             caCategorySelect.disabled = true;
             caCategorySelect.required = false;
-            mooeContainer.classList.add('d-none');
-            activityContainer.classList.add('d-none');
-            setFieldsState(mooeContainer, false, false);
-            setFieldsState(activityContainer, false, false);
+            hideAndDisable(caDateVenue);
+            hideAndDisable(caFundSource);
+            hideAndDisable(caTaItinerary);
+            hideAndDisable(caActivityProposal);
+            hideAndDisable(caMonth);
         }
 
-        // Reimbursement toggle
+        // ── REIMBURSEMENT ──
         if (txType === 'Reimbursement') {
             reimbSection.classList.remove('d-none');
             reimbCategorySelect.disabled = false;
             reimbCategorySelect.required = true;
 
-            if (reimbCat === 'Communications Allowance') {
-                commAllowanceContainer.classList.remove('d-none');
-                setFieldsState(commAllowanceContainer, true, true);
-            } else {
-                commAllowanceContainer.classList.add('d-none');
-                setFieldsState(commAllowanceContainer, false, false);
-            }
+            const reimbCat = reimbCategorySelect.value;
+            const cfg = reimbFieldMap[reimbCat] || {};
+
+            cfg.dateVenue ? showAndEnable(reimbDateVenue) : hideAndDisable(reimbDateVenue);
+            cfg.taItinerary ? showAndEnable(reimbTaItinerary) : hideAndDisable(reimbTaItinerary);
+            cfg.activityProposal ? showAndEnable(reimbActivityProposal) : hideAndDisable(reimbActivityProposal);
+            cfg.communications ? showAndEnable(reimbCommunications) : hideAndDisable(reimbCommunications);
+            cfg.utilityBills ? showAndEnable(reimbUtilityBills) : hideAndDisable(reimbUtilityBills);
         } else {
             reimbSection.classList.add('d-none');
             reimbCategorySelect.disabled = true;
             reimbCategorySelect.required = false;
-            commAllowanceContainer.classList.add('d-none');
-            setFieldsState(commAllowanceContainer, false, false);
+            hideAndDisable(reimbDateVenue);
+            hideAndDisable(reimbTaItinerary);
+            hideAndDisable(reimbActivityProposal);
+            hideAndDisable(reimbCommunications);
+            hideAndDisable(reimbUtilityBills);
         }
-    }
-
-    function setFieldsState(container, enabled, required) {
-        const inputs = container.querySelectorAll('input, select, textarea');
-        inputs.forEach(input => {
-            input.disabled = !enabled;
-            input.required = required;
-        });
     }
 
     txTypeSelect.addEventListener('change', toggleFormFields);

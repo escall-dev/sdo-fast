@@ -43,10 +43,15 @@ $mooeStartDate = trim($_POST['mooe_start_date'] ?? '');
 $mooeEndDate = trim($_POST['mooe_end_date'] ?? '');
 $fundSource = trim($_POST['fund_source'] ?? '');
 $venue = trim($_POST['venue'] ?? '');
+$caMonthValue = trim($_POST['ca_month'] ?? '');
 
 // Reimbursement specific fields
 $reimbursementCategory = trim($_POST['reimbursement_category'] ?? '');
 $reimbursementMonth = trim($_POST['reimbursement_month'] ?? '');
+$reimbStartDate = trim($_POST['reimb_start_date'] ?? '');
+$reimbEndDate = trim($_POST['reimb_end_date'] ?? '');
+$reimbVenue = trim($_POST['reimb_venue'] ?? '');
+$utilityMonth = trim($_POST['utility_month'] ?? '');
 
 // 2. Validate Inputs
 if (empty($type) || empty($eventName) || $amount <= 0 || empty($taxType)) {
@@ -62,43 +67,109 @@ if (!in_array($type, $allowedTypes)) {
     exit;
 }
 
+// Allowed coverage types
+$allowedCaCategories = [
+    'Travel', 'School MOOE', 'SBFP', 'Training', 'Meals', 'Accommodation',
+    'Meals and Accommodation', 'Honorarium', 'Supplies and Materials',
+    'Communication Expenses', 'SLAC / Moving-Up / Graduation / GAWAD'
+];
+$allowedReimbCategories = [
+    'Travel', 'Supplies and Materials', 'Meals', 'Accommodation',
+    'Meals and Accommodation', 'Honorarium', 'Communication Load',
+    'Utility Bills', 'Repair, Repaint, Improvement',
+    'Installation of Electricity and Water', 'Installation of Internet / Telephone',
+    'Seminars / Trainings', 'GAD Documents / SLAC Session',
+    'Job Order', 'Fidelity Bond', 'Immersion and Insurance for SHS'
+];
+
+// Coverage types that require date/venue
+$caDateVenueTypes = ['Travel', 'Training', 'Meals', 'Accommodation', 'Meals and Accommodation', 'SLAC / Moving-Up / Graduation / GAWAD'];
+$caTaItineraryTypes = ['Travel'];
+$caFundSourceTypes = ['Travel', 'School MOOE', 'SBFP'];
+$caActivityProposalTypes = ['Training', 'SLAC / Moving-Up / Graduation / GAWAD'];
+$caMonthTypes = ['Communication Expenses'];
+
+$reimbDateVenueTypes = ['Travel', 'Meals', 'Accommodation', 'Meals and Accommodation', 'Seminars / Trainings', 'GAD Documents / SLAC Session'];
+$reimbTaItineraryTypes = ['Travel'];
+$reimbActivityProposalTypes = ['Seminars / Trainings'];
+$reimbCommunicationsTypes = ['Communication Load'];
+$reimbUtilityBillsTypes = ['Utility Bills'];
+
 // Cash Advance validations
 $inclusiveDates = null;
 if ($type === 'Cash Advance') {
-    if (empty($cashAdvanceCategory) || !in_array($cashAdvanceCategory, ['MOOE', 'Activity'])) {
+    if (empty($cashAdvanceCategory) || !in_array($cashAdvanceCategory, $allowedCaCategories)) {
         http_response_code(422);
-        echo json_encode(['success' => false, 'message' => 'Cash Advance Category (MOOE or Activity) is required.']);
+        echo json_encode(['success' => false, 'message' => 'A valid Cash Advance Coverage Type is required.']);
         exit;
     }
-    if ($cashAdvanceCategory === 'MOOE') {
-        if (empty($mooeStartDate) || empty($mooeEndDate) || empty($fundSource) || empty($venue)) {
-            http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Inclusive dates, fund source, and venue are required for MOOE.']);
-            exit;
-        }
-    } elseif ($cashAdvanceCategory === 'Activity') {
+
+    // Date/Venue required?
+    if (in_array($cashAdvanceCategory, $caDateVenueTypes)) {
         if (empty($mooeStartDate) || empty($mooeEndDate) || empty($venue)) {
             http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Activity dates and venue are required for Activity.']);
+            echo json_encode(['success' => false, 'message' => 'Inclusive dates and venue are required for ' . $cashAdvanceCategory . '.']);
+            exit;
+        }
+        $inclusiveDates = $mooeStartDate . ' to ' . $mooeEndDate;
+    }
+
+    // Fund Source required?
+    if (in_array($cashAdvanceCategory, $caFundSourceTypes)) {
+        if (empty($fundSource)) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Fund source is required for ' . $cashAdvanceCategory . '.']);
             exit;
         }
     }
-    $inclusiveDates = $mooeStartDate . ' to ' . $mooeEndDate;
+
+    // Month required for Communication Expenses?
+    if (in_array($cashAdvanceCategory, $caMonthTypes)) {
+        if (empty($caMonthValue)) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Month is required for Communication Expenses.']);
+            exit;
+        }
+    }
 }
 
 // Reimbursement validations
+$reimbInclusiveDates = null;
 if ($type === 'Reimbursement') {
-    if (empty($reimbursementCategory) || !in_array($reimbursementCategory, ['Travel', 'Communications Allowance', 'Procured Goods'])) {
+    if (empty($reimbursementCategory) || !in_array($reimbursementCategory, $allowedReimbCategories)) {
         http_response_code(422);
-        echo json_encode(['success' => false, 'message' => 'Reimbursement Category (Travel, Communications Allowance, or Procured Goods) is required.']);
+        echo json_encode(['success' => false, 'message' => 'A valid Reimbursement Coverage Type is required.']);
         exit;
     }
-    if ($reimbursementCategory === 'Communications Allowance') {
-        if (empty($reimbursementMonth)) {
+
+    // Date/Venue required?
+    if (in_array($reimbursementCategory, $reimbDateVenueTypes)) {
+        if (empty($reimbStartDate) || empty($reimbEndDate) || empty($reimbVenue)) {
             http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Month is required for Communications Allowance.']);
+            echo json_encode(['success' => false, 'message' => 'Inclusive dates and venue are required for ' . $reimbursementCategory . '.']);
             exit;
         }
+        $reimbInclusiveDates = $reimbStartDate . ' to ' . $reimbEndDate;
+    }
+
+    // Communications Load month required?
+    if (in_array($reimbursementCategory, $reimbCommunicationsTypes)) {
+        if (empty($reimbursementMonth)) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Month is required for Communication Load.']);
+            exit;
+        }
+    }
+
+    // Utility Bills month required?
+    if (in_array($reimbursementCategory, $reimbUtilityBillsTypes)) {
+        if (empty($utilityMonth)) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Month is required for Utility Bills.']);
+            exit;
+        }
+        // Store utility month in the reimbursement_month field
+        $reimbursementMonth = $utilityMonth;
     }
 }
 
@@ -195,49 +266,92 @@ $dtrPath = null;
 $certificatePath = null;
 $billProofPath = null;
 
-// Enforce required uploads for Cash Advance MOOE & Activity
+// Reimbursement-specific file paths
+$reimbApprovedTaPath = null;
+$reimbTravelItineraryPath = null;
+$reimbActivityProposalPath = null;
+$utilityBillProofPath = null;
+
+// Enforce required uploads for Cash Advance coverage types
 if ($type === 'Cash Advance') {
-    if ($cashAdvanceCategory === 'MOOE') {
+    if (in_array($cashAdvanceCategory, $caTaItineraryTypes)) {
+        // Travel: TA + Itinerary required
         if (!isset($_FILES['approved_ta']) || $_FILES['approved_ta']['error'] === UPLOAD_ERR_NO_FILE) {
             http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Approved TA (Travel Authority) is required for MOOE cash advances.']);
+            echo json_encode(['success' => false, 'message' => 'Approved TA (Travel Authority) is required for Travel cash advances.']);
             exit;
         }
         if (!isset($_FILES['travel_itinerary']) || $_FILES['travel_itinerary']['error'] === UPLOAD_ERR_NO_FILE) {
             http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Travel Itinerary is required for MOOE cash advances.']);
+            echo json_encode(['success' => false, 'message' => 'Travel Itinerary is required for Travel cash advances.']);
             exit;
         }
         $approvedTaPath = handleSecureUpload('approved_ta', $uploadDir);
         $travelItineraryPath = handleSecureUpload('travel_itinerary', $uploadDir);
-    } elseif ($cashAdvanceCategory === 'Activity') {
+    }
+    if (in_array($cashAdvanceCategory, $caActivityProposalTypes)) {
+        // Training, SLAC/GAWAD: Activity Proposal required
         if (!isset($_FILES['activity_proposal']) || $_FILES['activity_proposal']['error'] === UPLOAD_ERR_NO_FILE) {
             http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Activity Proposal is required for Activity cash advances.']);
+            echo json_encode(['success' => false, 'message' => 'Activity Proposal is required for ' . $cashAdvanceCategory . ' cash advances.']);
             exit;
         }
         $activityProposalPath = handleSecureUpload('activity_proposal', $uploadDir);
     }
 } elseif ($type === 'Reimbursement') {
-    if ($reimbursementCategory === 'Communications Allowance') {
+    if (in_array($reimbursementCategory, $reimbTaItineraryTypes)) {
+        // Travel: TA + Itinerary required
+        if (!isset($_FILES['reimb_approved_ta']) || $_FILES['reimb_approved_ta']['error'] === UPLOAD_ERR_NO_FILE) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Approved TA (Travel Authority) is required for Travel reimbursement.']);
+            exit;
+        }
+        if (!isset($_FILES['reimb_travel_itinerary']) || $_FILES['reimb_travel_itinerary']['error'] === UPLOAD_ERR_NO_FILE) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Travel Itinerary is required for Travel reimbursement.']);
+            exit;
+        }
+        $reimbApprovedTaPath = handleSecureUpload('reimb_approved_ta', $uploadDir);
+        $reimbTravelItineraryPath = handleSecureUpload('reimb_travel_itinerary', $uploadDir);
+    }
+    if (in_array($reimbursementCategory, $reimbActivityProposalTypes)) {
+        // Seminars/Trainings: Activity Proposal required
+        if (!isset($_FILES['reimb_activity_proposal']) || $_FILES['reimb_activity_proposal']['error'] === UPLOAD_ERR_NO_FILE) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Activity Proposal is required for ' . $reimbursementCategory . ' reimbursement.']);
+            exit;
+        }
+        $reimbActivityProposalPath = handleSecureUpload('reimb_activity_proposal', $uploadDir);
+    }
+    if (in_array($reimbursementCategory, $reimbCommunicationsTypes)) {
+        // Communication Load: DTR + Certificate + Bill/Proof
         if (!isset($_FILES['reimb_dtr']) || $_FILES['reimb_dtr']['error'] === UPLOAD_ERR_NO_FILE) {
             http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'DTR document is required for Communications Allowance.']);
+            echo json_encode(['success' => false, 'message' => 'DTR document is required for Communication Load.']);
             exit;
         }
         if (!isset($_FILES['reimb_certificate']) || $_FILES['reimb_certificate']['error'] === UPLOAD_ERR_NO_FILE) {
             http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Certificate document is required for Communications Allowance.']);
+            echo json_encode(['success' => false, 'message' => 'Certificate document is required for Communication Load.']);
             exit;
         }
         if (!isset($_FILES['reimb_bill_proof']) || $_FILES['reimb_bill_proof']['error'] === UPLOAD_ERR_NO_FILE) {
             http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Bill / proof of payment document is required for Communications Allowance.']);
+            echo json_encode(['success' => false, 'message' => 'Bill / proof of payment document is required for Communication Load.']);
             exit;
         }
         $dtrPath = handleSecureUpload('reimb_dtr', $uploadDir);
         $certificatePath = handleSecureUpload('reimb_certificate', $uploadDir);
         $billProofPath = handleSecureUpload('reimb_bill_proof', $uploadDir);
+    }
+    if (in_array($reimbursementCategory, $reimbUtilityBillsTypes)) {
+        // Utility Bills: Bill/Proof upload required
+        if (!isset($_FILES['utility_bill_proof']) || $_FILES['utility_bill_proof']['error'] === UPLOAD_ERR_NO_FILE) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Bill / proof of payment document is required for Utility Bills.']);
+            exit;
+        }
+        $utilityBillProofPath = handleSecureUpload('utility_bill_proof', $uploadDir);
     }
 }
 
@@ -355,6 +469,12 @@ try {
 
     // Insert Cash Advance Details
     if ($type === 'Cash Advance') {
+        // For Communication Expenses, store month in inclusive_dates field as a workaround
+        $caInclusiveDates = $inclusiveDates;
+        if ($cashAdvanceCategory === 'Communication Expenses' && !empty($caMonthValue)) {
+            $caInclusiveDates = $caMonthValue; // Store month reference
+        }
+
         $insertCaSql = "
             INSERT INTO cash_advance_details (transaction_id, category, inclusive_dates, fund_source, venue, approved_ta_path, travel_itinerary_path, activity_proposal_path) 
             VALUES (:transaction_id, :category, :inclusive_dates, :fund_source, :venue, :approved_ta_path, :travel_itinerary_path, :activity_proposal_path)
@@ -363,9 +483,9 @@ try {
         $caStmt->execute([
             'transaction_id' => $transactionDbId,
             'category' => $cashAdvanceCategory,
-            'inclusive_dates' => $inclusiveDates,
-            'fund_source' => $cashAdvanceCategory === 'MOOE' ? $fundSource : null,
-            'venue' => $venue,
+            'inclusive_dates' => $caInclusiveDates,
+            'fund_source' => in_array($cashAdvanceCategory, $caFundSourceTypes) ? $fundSource : null,
+            'venue' => in_array($cashAdvanceCategory, $caDateVenueTypes) ? $venue : null,
             'approved_ta_path' => $approvedTaPath,
             'travel_itinerary_path' => $travelItineraryPath,
             'activity_proposal_path' => $activityProposalPath
@@ -375,17 +495,22 @@ try {
     // Insert Reimbursement Details
     if ($type === 'Reimbursement') {
         $insertReimbSql = "
-            INSERT INTO reimbursement_details (transaction_id, category, reimbursement_month, dtr_path, certificate_path, bill_proof_path) 
-            VALUES (:transaction_id, :category, :reimbursement_month, :dtr_path, :certificate_path, :bill_proof_path)
+            INSERT INTO reimbursement_details (transaction_id, category, reimbursement_month, inclusive_dates, venue, approved_ta_path, travel_itinerary_path, activity_proposal_path, dtr_path, certificate_path, bill_proof_path) 
+            VALUES (:transaction_id, :category, :reimbursement_month, :inclusive_dates, :venue, :approved_ta_path, :travel_itinerary_path, :activity_proposal_path, :dtr_path, :certificate_path, :bill_proof_path)
         ";
         $reimbStmt = $fastPDO->prepare($insertReimbSql);
         $reimbStmt->execute([
             'transaction_id' => $transactionDbId,
             'category' => $reimbursementCategory,
-            'reimbursement_month' => $reimbursementCategory === 'Communications Allowance' ? $reimbursementMonth : null,
+            'reimbursement_month' => $reimbursementMonth ?: null,
+            'inclusive_dates' => $reimbInclusiveDates,
+            'venue' => in_array($reimbursementCategory, $reimbDateVenueTypes) ? $reimbVenue : null,
+            'approved_ta_path' => $reimbApprovedTaPath,
+            'travel_itinerary_path' => $reimbTravelItineraryPath,
+            'activity_proposal_path' => $reimbActivityProposalPath,
             'dtr_path' => $dtrPath,
             'certificate_path' => $certificatePath,
-            'bill_proof_path' => $billProofPath
+            'bill_proof_path' => $utilityBillProofPath ?: $billProofPath
         ]);
     }
 
@@ -432,30 +557,15 @@ try {
         $fastPDO->rollBack();
     }
     // Clean up uploaded files if database transaction fails
-    if (!empty($attachmentPaths)) {
-        foreach ($attachmentPaths as $path) {
-            if (file_exists(dirname(dirname(__DIR__)) . '/' . $path)) {
-                unlink(dirname(dirname(__DIR__)) . '/' . $path);
-            }
+    $allUploadedPaths = array_merge(
+        $attachmentPaths,
+        array_filter([$approvedTaPath, $travelItineraryPath, $activityProposalPath, $dtrPath, $certificatePath, $billProofPath, $reimbApprovedTaPath, $reimbTravelItineraryPath, $reimbActivityProposalPath, $utilityBillProofPath])
+    );
+    foreach ($allUploadedPaths as $path) {
+        $fullPath = dirname(dirname(__DIR__)) . '/' . $path;
+        if (file_exists($fullPath)) {
+            unlink($fullPath);
         }
-    }
-    if ($approvedTaPath && file_exists(dirname(dirname(__DIR__)) . '/' . $approvedTaPath)) {
-        unlink(dirname(dirname(__DIR__)) . '/' . $approvedTaPath);
-    }
-    if ($travelItineraryPath && file_exists(dirname(dirname(__DIR__)) . '/' . $travelItineraryPath)) {
-        unlink(dirname(dirname(__DIR__)) . '/' . $travelItineraryPath);
-    }
-    if ($activityProposalPath && file_exists(dirname(dirname(__DIR__)) . '/' . $activityProposalPath)) {
-        unlink(dirname(dirname(__DIR__)) . '/' . $activityProposalPath);
-    }
-    if ($dtrPath && file_exists(dirname(dirname(__DIR__)) . '/' . $dtrPath)) {
-        unlink(dirname(dirname(__DIR__)) . '/' . $dtrPath);
-    }
-    if ($certificatePath && file_exists(dirname(dirname(__DIR__)) . '/' . $certificatePath)) {
-        unlink(dirname(dirname(__DIR__)) . '/' . $certificatePath);
-    }
-    if ($billProofPath && file_exists(dirname(dirname(__DIR__)) . '/' . $billProofPath)) {
-        unlink(dirname(dirname(__DIR__)) . '/' . $billProofPath);
     }
     
     error_log("Transaction submission database failure: " . $e->getMessage());
