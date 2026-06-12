@@ -7,3 +7,6 @@
 
 # Local scratch
 /scratch/
+
+# Database
+/db/
