@@ -32,7 +32,10 @@ function getMappedPositionId($roleId, $positionText) {
         case 1: // Super Admin
             return 7;
         case 2: // Accounting Staff
-            return 2; // Accountant
+            if (stripos($positionText, 'accountant') !== false && stripos($positionText, 'support') === false) {
+                return 2; // Accountant (Stage 4: ACCT Support)
+            }
+            return 3; // Accounting Support (Stage 2: ACCTG Support)
         case 3: // Budget Officer
             return 4; // Budget Officer
         case 4: // Approver

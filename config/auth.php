@@ -155,12 +155,14 @@ if (!function_exists('get_data_scope_filter')) {
                 $statuses[] = "'Pending Budget'";
             } elseif ($userRole === 'Approver' || $userPosition === 'ASDS' || $userPosition === 'SDS') {
                 $statuses[] = "'Pending Signatories'";
+            } elseif ($userPosition === 'Accounting Support' || ($userRole === 'Accounting Staff' && $userPosition !== 'Accountant')) {
+                $statuses[] = "'Pending ACCTG Support'";
+                $statuses[] = "'Pending Signatories'";
             } elseif ($userPosition === 'Accountant') {
                 $statuses[] = "'Pending ACCT Support'";
             } elseif ($userRole === 'Cashier' || $userPosition === 'Cashier') {
                 $statuses[] = "'Pending Cashier Release'";
             } else {
-                // Default to Accounting Support / Accounting Staff / other assigned roles
                 $statuses[] = "'Pending ACCTG Support'";
             }
 
