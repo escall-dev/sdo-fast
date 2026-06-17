@@ -27,6 +27,29 @@ if (!hasPermission('manage_users')) {
     echo json_encode(['success' => false, 'message' => 'Forbidden: You do not have permissions to manage users.']);
     exit;
 }
+function getMappedPositionId($roleId, $positionText) {
+    switch ((int)$roleId) {
+        case 1: // Super Admin
+            return 7;
+        case 2: // Accounting Staff
+            return 2; // Accountant
+        case 3: // Budget Officer
+            return 4; // Budget Officer
+        case 4: // Approver
+            if (stripos($positionText, 'SDS') !== false && stripos($positionText, 'ASDS') === false) {
+                return 6; // SDS
+            }
+            return 5; // ASDS
+        case 8: // Cashier
+            return 8; // Cashier
+        case 6: // Admin
+            return 2; // Accountant
+        case 5: // Requestor
+        case 7: // User
+        default:
+            return 1; // Personnel
+    }
+}
 
 $action = trim($_GET['action'] ?? '');
 
@@ -35,16 +58,51 @@ try {
         $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
         $perPage = isset($_GET['per_page']) ? min(50, max(5, (int)$_GET['per_page'])) : 10;
         $search = isset($_GET['search']) ? trim($_GET['search']) : '';
-        
-        $whereSql = '';
+        $roleId = isset($_GET['role_id']) ? (int)$_GET['role_id'] : 0;
+        $status = isset($_GET['status']) ? trim($_GET['status']) : '';
+        $office = isset($_GET['office']) ? trim($_GET['office']) : '';
+        $unitSection = isset($_GET['unit_section']) ? trim($_GET['unit_section']) : '';
+
+        $whereConds = [];
         $params = [];
+
         if (!empty($search)) {
-            $whereSql = " WHERE u.full_name LIKE :search OR u.email LIKE :search OR u.username LIKE :search";
+            $whereConds[] = "(u.full_name LIKE :search OR u.email LIKE :search OR u.username LIKE :search OR u.employee_no LIKE :search)";
             $params['search'] = '%' . $search . '%';
         }
 
+        if ($roleId > 0) {
+            $whereConds[] = "ur.role_id = :role_id";
+            $params['role_id'] = $roleId;
+        }
+
+        if (!empty($status)) {
+            $whereConds[] = "u.status = :status";
+            $params['status'] = $status;
+        }
+
+        if (!empty($office)) {
+            $whereConds[] = "u.office = :office";
+            $params['office'] = $office;
+        }
+
+        if (!empty($unitSection)) {
+            $whereConds[] = "u.unit_section = :unit_section";
+            $params['unit_section'] = $unitSection;
+        }
+
+        $whereSql = '';
+        if (!empty($whereConds)) {
+            $whereSql = " WHERE " . implode(" AND ", $whereConds);
+        }
+
         // Count
-        $countSql = "SELECT COUNT(*) FROM users u" . $whereSql;
+        $countSql = "
+            SELECT COUNT(DISTINCT u.id) 
+            FROM users u
+            LEFT JOIN user_roles ur ON u.id = ur.user_id
+            {$whereSql}
+        ";
         $countStmt = $fastPDO->prepare($countSql);
         $countStmt->execute($params);
         $totalCount = (int)$countStmt->fetchColumn();
@@ -53,8 +111,10 @@ try {
         $offset = ($page - 1) * $perPage;
         $dataSql = "
             SELECT u.id, u.uuid, u.full_name, u.email, u.username, u.position_id, u.status, u.created_at,
+                   u.office, u.unit_section, u.employee_no, u.position,
                    r.id as role_id, r.role_name,
-                   p.position_name
+                   p.position_name,
+                   (SELECT MAX(login_at) FROM login_logs WHERE user_id = u.id) as last_login
             FROM users u
             LEFT JOIN user_roles ur ON u.id = ur.user_id
             LEFT JOIN roles r ON ur.role_id = r.id
@@ -85,52 +145,67 @@ try {
 
         $name = trim($_POST['full_name'] ?? '');
         $email = trim($_POST['email'] ?? '');
-        $username = trim($_POST['username'] ?? '');
+        $roleId = (int)($_POST['role_id'] ?? 0);
+        $office = trim($_POST['office'] ?? '');
+        $unitSection = trim($_POST['unit_section'] ?? '');
+        $employeeNo = trim($_POST['employee_no'] ?? '');
+        $position = trim($_POST['position'] ?? '');
         $password = $_POST['password'] ?? '';
-        $positionId = (int)($_POST['position_id'] ?? 0);
-        $explicitRoleId = (int)($_POST['role_id'] ?? 0);
+        $confirmPassword = $_POST['confirm_password'] ?? '';
+        $status = isset($_POST['is_active']) && $_POST['is_active'] == '1' ? 'active' : 'inactive';
 
-        if (empty($name) || empty($email) || empty($username) || empty($password) || $positionId <= 0) {
+        if (empty($name) || empty($email) || empty($password) || $roleId <= 0) {
             http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'All fields (name, email, username, password, position) are required.']);
+            echo json_encode(['success' => false, 'message' => 'Full name, email, password, and role selection are required.']);
             exit;
         }
 
-        // Look up the position to get mapped role
-        $posStmt = $fastPDO->prepare("SELECT * FROM positions WHERE id = :id LIMIT 1");
-        $posStmt->execute(['id' => $positionId]);
-        $position = $posStmt->fetch();
-
-        if (!$position) {
+        if (strlen($password) < 8) {
             http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Invalid position selected.']);
+            echo json_encode(['success' => false, 'message' => 'Password must be at least 8 characters.']);
             exit;
         }
 
-        // Resolve role_id
-        $roleId = 0;
-        if ($explicitRoleId > 0) {
-            $roleId = $explicitRoleId;
-        } else {
-            $roleStmt = $fastPDO->prepare("SELECT id FROM roles WHERE role_name = :role_name LIMIT 1");
-            $roleStmt->execute(['role_name' => $position['mapped_role']]);
-            $roleId = (int)$roleStmt->fetchColumn();
-        }
-
-        if ($roleId <= 0) {
-            http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'System error: Could not resolve role for position.']);
+        if ($password !== $confirmPassword) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Password and Confirm Password do not match.']);
             exit;
         }
 
         // Validate duplicates
-        $checkStmt = $fastPDO->prepare("SELECT COUNT(*) FROM users WHERE email = :email OR username = :username");
-        $checkStmt->execute(['email' => $email, 'username' => $username]);
+        $checkStmt = $fastPDO->prepare("SELECT COUNT(*) FROM users WHERE email = :email");
+        $checkStmt->execute(['email' => $email]);
         if ($checkStmt->fetchColumn() > 0) {
             http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Email address or username is already registered.']);
+            echo json_encode(['success' => false, 'message' => 'Email address is already registered.']);
             exit;
         }
+
+        if (!empty($employeeNo)) {
+            $checkEmpStmt = $fastPDO->prepare("SELECT COUNT(*) FROM users WHERE employee_no = :employee_no");
+            $checkEmpStmt->execute(['employee_no' => $employeeNo]);
+            if ($checkEmpStmt->fetchColumn() > 0) {
+                http_response_code(422);
+                echo json_encode(['success' => false, 'message' => 'Employee number is already registered.']);
+                exit;
+            }
+        }
+
+        // Auto-generate username from email prefix
+        $baseUsername = explode('@', $email)[0];
+        $username = $baseUsername;
+        $counter = 1;
+        while (true) {
+            $stmt = $fastPDO->prepare("SELECT id FROM users WHERE username = :username LIMIT 1");
+            $stmt->execute(['username' => $username]);
+            if (!$stmt->fetch()) {
+                break;
+            }
+            $username = $baseUsername . $counter;
+            $counter++;
+        }
+
+        $positionId = getMappedPositionId($roleId, $position);
 
         $fastPDO->beginTransaction();
         
@@ -138,34 +213,42 @@ try {
         $uuid = substr($uuid, 0, 8) . '-' . substr($uuid, 8, 4) . '-' . substr($uuid, 12, 4) . '-' . substr($uuid, 16, 4) . '-' . substr($uuid, 20, 12);
         $hashPass = password_hash($password, PASSWORD_DEFAULT);
 
-        // Insert User with position_id
+        // Insert User with all details
         $stmt = $fastPDO->prepare("
-            INSERT INTO users (uuid, full_name, email, username, position_id, password, status) 
-            VALUES (:uuid, :full_name, :email, :username, :position_id, :password, 'active')
+            INSERT INTO users (uuid, full_name, email, username, password, office, unit_section, employee_no, position, position_id, status) 
+            VALUES (:uuid, :full_name, :email, :username, :password, :office, :unit_section, :employee_no, :position, :position_id, :status)
         ");
         $stmt->execute([
             'uuid' => $uuid,
             'full_name' => $name,
             'email' => $email,
             'username' => $username,
+            'password' => $hashPass,
+            'office' => $office ?: null,
+            'unit_section' => $unitSection ?: null,
+            'employee_no' => $employeeNo ?: null,
+            'position' => $position ?: null,
             'position_id' => $positionId,
-            'password' => $hashPass
+            'status' => $status
         ]);
         $newUserId = $fastPDO->lastInsertId();
 
-        // Assign auto-mapped Role
+        // Assign Role
         $roleInsertStmt = $fastPDO->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)");
         $roleInsertStmt->execute(['user_id' => $newUserId, 'role_id' => $roleId]);
 
         // Audit Log
         AuditLogService::log($fastPDO, $adminId, "Created user account: {$username} ({$email})", null, [
             'full_name' => $name, 
-            'position' => $position['position_name'],
-            'auto_role' => $position['mapped_role']
+            'office' => $office,
+            'unit_section' => $unitSection,
+            'employee_no' => $employeeNo,
+            'position' => $position,
+            'status' => $status
         ]);
 
         $fastPDO->commit();
-        echo json_encode(['success' => true, 'message' => "User account for '{$name}' created successfully with position '{$position['position_name']}' (Role: {$position['mapped_role']})."]);
+        echo json_encode(['success' => true, 'message' => "User account for '{$name}' created successfully."]);
         exit;
 
     } elseif ($action === 'update') {
@@ -176,44 +259,45 @@ try {
         $userId = (int)($_POST['user_id'] ?? 0);
         $name = trim($_POST['full_name'] ?? '');
         $email = trim($_POST['email'] ?? '');
-        $username = trim($_POST['username'] ?? '');
-        $positionId = (int)($_POST['position_id'] ?? 0);
-        $explicitRoleId = (int)($_POST['role_id'] ?? 0);
+        $roleId = (int)($_POST['role_id'] ?? 0);
+        $office = trim($_POST['office'] ?? '');
+        $unitSection = trim($_POST['unit_section'] ?? '');
+        $employeeNo = trim($_POST['employee_no'] ?? '');
+        $position = trim($_POST['position'] ?? '');
+        $status = isset($_POST['is_active']) && $_POST['is_active'] == '1' ? 'active' : 'inactive';
+        $password = $_POST['password'] ?? '';
+        $confirmPassword = $_POST['confirm_password'] ?? '';
 
-        if ($userId <= 0 || empty($name) || empty($email) || empty($username) || $positionId <= 0) {
+        if ($userId <= 0 || empty($name) || empty($email) || $roleId <= 0) {
             http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'All profile fields and position choice are required.']);
+            echo json_encode(['success' => false, 'message' => 'Full name, email, and role selection are required.']);
             exit;
         }
 
-        // Look up position for mapped role
-        $posStmt = $fastPDO->prepare("SELECT * FROM positions WHERE id = :id LIMIT 1");
-        $posStmt->execute(['id' => $positionId]);
-        $position = $posStmt->fetch();
-
-        if (!$position) {
-            http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Invalid position selected.']);
-            exit;
-        }
-
-        // Resolve role_id from mapped_role (fallback if explicit role_id is not provided or invalid)
-        $roleId = 0;
-        if ($explicitRoleId > 0) {
-            $roleId = $explicitRoleId;
-        } else {
-            $roleStmt = $fastPDO->prepare("SELECT id FROM roles WHERE role_name = :role_name LIMIT 1");
-            $roleStmt->execute(['role_name' => $position['mapped_role']]);
-            $roleId = (int)$roleStmt->fetchColumn();
+        if ($password !== '') {
+            if ($userRole !== 'Super Admin') {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Forbidden: Only the Super Admin is allowed to change user passwords.']);
+                exit;
+            }
+            if (strlen($password) < 8) {
+                http_response_code(422);
+                echo json_encode(['success' => false, 'message' => 'Password must be at least 8 characters long.']);
+                exit;
+            }
+            if ($password !== $confirmPassword) {
+                http_response_code(422);
+                echo json_encode(['success' => false, 'message' => 'Password and Confirm Password do not match.']);
+                exit;
+            }
         }
 
         // Fetch current user row for logs
         $currStmt = $fastPDO->prepare("
-            SELECT u.*, ur.role_id, p.position_name as old_position, r.role_name as old_role
+            SELECT u.*, ur.role_id, r.role_name as old_role
             FROM users u 
             LEFT JOIN user_roles ur ON u.id = ur.user_id 
             LEFT JOIN roles r ON ur.role_id = r.id
-            LEFT JOIN positions p ON u.position_id = p.id
             WHERE u.id = :id LIMIT 1
         ");
         $currStmt->execute(['id' => $userId]);
@@ -226,50 +310,102 @@ try {
         }
 
         // Validate duplicates
-        $checkStmt = $fastPDO->prepare("SELECT COUNT(*) FROM users WHERE (email = :email OR username = :username) AND id != :id");
-        $checkStmt->execute(['email' => $email, 'username' => $username, 'id' => $userId]);
+        $checkStmt = $fastPDO->prepare("SELECT COUNT(*) FROM users WHERE email = :email AND id != :id");
+        $checkStmt->execute(['email' => $email, 'id' => $userId]);
         if ($checkStmt->fetchColumn() > 0) {
             http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Email or username already used by another account.']);
+            echo json_encode(['success' => false, 'message' => 'Email already used by another account.']);
             exit;
         }
 
+        if (!empty($employeeNo)) {
+            $checkEmpStmt = $fastPDO->prepare("SELECT COUNT(*) FROM users WHERE employee_no = :employee_no AND id != :id");
+            $checkEmpStmt->execute(['employee_no' => $employeeNo, 'id' => $userId]);
+            if ($checkEmpStmt->fetchColumn() > 0) {
+                http_response_code(422);
+                echo json_encode(['success' => false, 'message' => 'Employee number already used by another account.']);
+                exit;
+            }
+        }
+
+        $positionId = getMappedPositionId($roleId, $position);
+
         $fastPDO->beginTransaction();
 
-        // Update profile with position
-        $updateStmt = $fastPDO->prepare("
+        // Update profile
+        $updateQuery = "
             UPDATE users 
-            SET full_name = :full_name, email = :email, username = :username, position_id = :position_id 
-            WHERE id = :id
-        ");
-        $updateStmt->execute([
+            SET full_name = :full_name, email = :email, office = :office, unit_section = :unit_section, 
+                employee_no = :employee_no, position = :position, position_id = :position_id, status = :status
+        ";
+        $updateParams = [
             'full_name' => $name,
             'email' => $email,
-            'username' => $username,
+            'office' => $office ?: null,
+            'unit_section' => $unitSection ?: null,
+            'employee_no' => $employeeNo ?: null,
+            'position' => $position ?: null,
             'position_id' => $positionId,
+            'status' => $status,
             'id' => $userId
-        ]);
+        ];
+
+        if ($password !== '') {
+            $updateQuery .= ", password = :password";
+            $updateParams['password'] = password_hash($password, PASSWORD_DEFAULT);
+        }
+
+        $updateQuery .= " WHERE id = :id";
+
+        $updateStmt = $fastPDO->prepare($updateQuery);
+        $updateStmt->execute($updateParams);
 
         // Update Role based on selection/mapping
         if ($roleId > 0) {
-            $roleUpdateStmt = $fastPDO->prepare("
-                INSERT INTO user_roles (user_id, role_id) 
-                VALUES (:user_id, :role_id) 
-                ON DUPLICATE KEY UPDATE role_id = VALUES(role_id)
-            ");
-            $roleUpdateStmt->execute(['role_id' => $roleId, 'user_id' => $userId]);
+            // Delete old role assignments to avoid duplicate roles
+            $roleDeleteStmt = $fastPDO->prepare("DELETE FROM user_roles WHERE user_id = :user_id");
+            $roleDeleteStmt->execute(['user_id' => $userId]);
+
+            $roleInsertStmt = $fastPDO->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)");
+            $roleInsertStmt->execute(['user_id' => $userId, 'role_id' => $roleId]);
         }
 
         // Get new role name for log
         $newRoleName = $fastPDO->query("SELECT role_name FROM roles WHERE id = {$roleId}")->fetchColumn();
 
         // Audit Log
+        $auditMessage = "Updated profile details and role for user: {$oldUser['username']}";
+        $auditNew = [
+            'full_name' => $name, 
+            'email' => $email, 
+            'office' => $office,
+            'unit_section' => $unitSection,
+            'employee_no' => $employeeNo,
+            'position' => $position,
+            'role' => $newRoleName,
+            'status' => $status
+        ];
+
+        if ($password !== '') {
+            $auditMessage = "Updated profile details, password, and role for user: {$oldUser['username']}";
+            $auditNew['password_changed'] = true;
+        }
+
         AuditLogService::log(
             $fastPDO, 
             $adminId, 
-            "Updated profile details and role for user: {$username}", 
-            ['full_name' => $oldUser['full_name'], 'email' => $oldUser['email'], 'position' => $oldUser['old_position'] ?? 'N/A', 'role' => $oldUser['old_role'] ?? 'N/A'],
-            ['full_name' => $name, 'email' => $email, 'position' => $position['position_name'], 'role' => $newRoleName]
+            $auditMessage, 
+            [
+                'full_name' => $oldUser['full_name'], 
+                'email' => $oldUser['email'], 
+                'office' => $oldUser['office'] ?? 'N/A', 
+                'unit_section' => $oldUser['unit_section'] ?? 'N/A',
+                'employee_no' => $oldUser['employee_no'] ?? 'N/A',
+                'position' => $oldUser['position'] ?? 'N/A',
+                'role' => $oldUser['old_role'] ?? 'N/A',
+                'status' => $oldUser['status']
+            ],
+            $auditNew
         );
 
         $fastPDO->commit();

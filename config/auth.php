@@ -152,15 +152,16 @@ if (!function_exists('get_data_scope_filter')) {
 
             $statuses = [];
             if ($userRole === 'Budget Officer' || $userPosition === 'Budget Officer') {
-                $statuses[] = "'Pending Budget Check'";
+                $statuses[] = "'Pending Budget'";
             } elseif ($userRole === 'Approver' || $userPosition === 'ASDS' || $userPosition === 'SDS') {
-                $statuses[] = "'Pending Final Approval'";
+                $statuses[] = "'Pending Signatories'";
             } elseif ($userPosition === 'Accountant') {
-                $statuses[] = "'Pending Accountant 1'";
-                $statuses[] = "'Pending Accountant 2'";
+                $statuses[] = "'Pending ACCT Support'";
+            } elseif ($userRole === 'Cashier' || $userPosition === 'Cashier') {
+                $statuses[] = "'Pending Cashier Release'";
             } else {
                 // Default to Accounting Support / Accounting Staff / other assigned roles
-                $statuses[] = "'Pending Support'";
+                $statuses[] = "'Pending ACCTG Support'";
             }
 
             $statusCondition = "{$prefix}current_status IN (" . implode(',', $statuses) . ")";

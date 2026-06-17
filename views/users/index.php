@@ -25,30 +25,70 @@ if (!hasPermission('manage_users')) {
 }
 ?>
 
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold text-dark mb-0"><i class="bi bi-people-fill me-2"></i>User Management</h3>
+        <p class="text-muted fs-8 mb-0" id="totalUsersSubtitle">0 Total Users</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#managePositionsModal">
+            <i class="bi bi-briefcase-fill"></i>
+            <span>Manage Positions</span>
+        </button>
+        <button type="button" class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createUserModal">
+            <i class="bi bi-person-plus-fill"></i>
+            <span>Add User</span>
+        </button>
+    </div>
+</div>
+
+<!-- Filter Bar -->
 <div class="card mb-4 shadow-sm border-0">
     <div class="card-body">
-        <div class="row g-3 align-items-center justify-content-between">
-            <div class="col-12 col-md-5">
-                <!-- Search filter -->
-                <form id="userSearchForm" onsubmit="event.preventDefault(); fetchUsers(1);">
-                    <div class="input-group">
-                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                        <input type="text" id="userSearch" class="form-control border-start-0" placeholder="Search by name, email, or username..." oninput="fetchUsers(1)">
-                    </div>
-                </form>
+        <form id="userFilterForm" class="row g-2 align-items-end" onsubmit="event.preventDefault(); fetchUsers(1);">
+            <div class="col-12 col-md-3 col-lg-2">
+                <label class="form-label fs-8 text-muted mb-1 fw-semibold">Search</label>
+                <input type="text" id="userSearch" class="form-control form-control-sm" placeholder="Name, email...">
             </div>
-            
-            <div class="col-12 col-md-auto d-flex gap-2">
-                <button type="button" class="btn btn-outline-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#managePositionsModal">
-                    <i class="bi bi-briefcase-fill"></i>
-                    <span>Manage Positions</span>
+            <div class="col-12 col-md-3 col-lg-2">
+                <label class="form-label fs-8 text-muted mb-1 fw-semibold">Role</label>
+                <select id="filterRole" class="form-select form-select-sm">
+                    <option value="">All Roles</option>
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+            <div class="col-12 col-md-3 col-lg-2">
+                <label class="form-label fs-8 text-muted mb-1 fw-semibold">Status</label>
+                <select id="filterStatus" class="form-select form-select-sm">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-3 col-lg-2">
+                <label class="form-label fs-8 text-muted mb-1 fw-semibold">Office</label>
+                <select id="filterOffice" class="form-select form-select-sm" onchange="handleFilterOfficeChange()">
+                    <option value="">All Offices</option>
+                    <option value="OSDS">OSDS</option>
+                    <option value="SGOD">SGOD</option>
+                    <option value="CID">CID</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-3 col-lg-2">
+                <label class="form-label fs-8 text-muted mb-1 fw-semibold">Unit/Section</label>
+                <select id="filterUnit" class="form-select form-select-sm" disabled>
+                    <option value="">All Units</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-3 col-lg-2 d-flex gap-1 justify-content-end">
+                <button type="submit" class="btn btn-sm btn-primary d-flex align-items-center gap-1">
+                    <i class="bi bi-filter"></i> Filter
                 </button>
-                <button type="button" class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createUserModal">
-                    <i class="bi bi-person-plus-fill"></i>
-                    <span>Register New User</span>
+                <button type="button" class="btn btn-sm btn-secondary d-flex align-items-center gap-1" onclick="clearFilters()">
+                    <i class="bi bi-x-lg"></i> Clear
                 </button>
             </div>
-        </div>
+        </form>
     </div>
 </div>
 
@@ -59,19 +99,17 @@ if (!hasPermission('manage_users')) {
             <table class="table align-middle table-hover">
                 <thead>
                     <tr class="fs-8 text-uppercase text-muted">
-                        <th>Full Name</th>
-                        <th>Email Address</th>
-                        <th>Username</th>
-                        <th>Position</th>
-                        <th>System Role</th>
-                        <th>Account Status</th>
-                        <th>Date Registered</th>
+                        <th>User</th>
+                        <th>Employee Info</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Registered</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="usersTableBody">
                     <tr>
-                        <td colspan="8" class="text-center py-4 text-muted">Loading users list...</td>
+                        <td colspan="6" class="text-center py-4 text-muted">Loading users list...</td>
                     </tr>
                 </tbody>
             </table>
@@ -97,48 +135,90 @@ if (!hasPermission('manage_users')) {
      MODAL: REGISTER NEW USER
      ========================================================================= -->
 <div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 rounded-4 shadow">
             <div class="modal-header">
-                <h5 class="modal-title fw-bold text-primary-dark" id="createUserModalLabel">Register New User Account</h5>
+                <h5 class="modal-title fw-bold text-primary-dark" id="createUserModalLabel"><i class="bi bi-person-plus-fill me-2"></i>Add User</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="createUserForm" onsubmit="handleCreateUserSubmit(event)">
                 <div class="modal-body py-3">
-                    <div class="form-floating mb-3">
-                        <input type="text" name="full_name" class="form-control" id="regName" placeholder="Full Name" required>
-                        <label for="regName">Full Name</label>
-                    </div>
-                    <div class="form-floating mb-3">
-                        <input type="email" name="email" class="form-control" id="regEmail" placeholder="Email Address" required>
-                        <label for="regEmail">Email Address</label>
-                    </div>
-                    <div class="form-floating mb-3">
-                        <input type="text" name="username" class="form-control" id="regUsername" placeholder="Username" required autocomplete="username">
-                        <label for="regUsername">Username</label>
-                    </div>
-                    <div class="form-floating mb-3">
-                        <input type="password" name="password" class="form-control" id="regPassword" placeholder="Default Password" required autocomplete="new-password" minlength="8">
-                        <label for="regPassword">Default Password</label>
-                    </div>
-                    <div class="form-floating mb-3">
-                        <select name="position_id" class="form-select" id="regPosition" required>
-                            <option value="" disabled selected>Choose Position</option>
-                            <!-- Populated via JS -->
-                        </select>
-                        <label for="regPosition">Assign Position</label>
-                    </div>
-                    <div class="form-floating mb-3">
-                        <select name="role_id" class="form-select" id="regRole" required>
-                            <option value="" disabled selected>Choose Role</option>
-                            <!-- Populated via JS -->
-                        </select>
-                        <label for="regRole">System Role</label>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <div class="form-floating">
+                                <input type="text" name="full_name" class="form-control" id="regName" placeholder="Full Name" required>
+                                <label for="regName">Full Name <span class="text-danger">*</span></label>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-floating">
+                                <input type="email" name="email" class="form-control" id="regEmail" placeholder="Email Address" required>
+                                <label for="regEmail">Email Address <span class="text-danger">*</span></label>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-floating">
+                                <select name="role_id" class="form-select" id="regRole" required>
+                                    <option value="" disabled selected>Choose Role</option>
+                                    <!-- Populated via JS -->
+                                </select>
+                                <label for="regRole">System Role <span class="text-danger">*</span></label>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-floating">
+                                <select name="office" class="form-select" id="regOffice" onchange="handleModalOfficeChange('regOffice', 'regUnitSection')" required>
+                                    <option value="" disabled selected>Choose Office</option>
+                                    <option value="OSDS">OSDS (Office of the SDS Staff)</option>
+                                    <option value="SGOD">SGOD (School Governance and Operations Division)</option>
+                                    <option value="CID">CID (Curriculum Implementation Division)</option>
+                                </select>
+                                <label for="regOffice">Office <span class="text-danger">*</span></label>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-floating">
+                                <select name="unit_section" class="form-select" id="regUnitSection" required disabled>
+                                    <option value="" disabled selected>Choose Unit/Section</option>
+                                </select>
+                                <label for="regUnitSection">Unit/Section <span class="text-danger">*</span></label>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-floating">
+                                <input type="text" name="employee_no" class="form-control" id="regEmployeeNo" placeholder="Employee No.">
+                                <label for="regEmployeeNo">Employee No. (optional)</label>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-floating">
+                                <input type="text" name="position" class="form-control" id="regPositionText" placeholder="Position">
+                                <label for="regPositionText">Position (optional)</label>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-floating">
+                                <input type="password" name="password" class="form-control" id="regPassword" placeholder="Password" required autocomplete="new-password" minlength="8">
+                                <label for="regPassword">Password <span class="text-danger">*</span></label>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-floating">
+                                <input type="password" name="confirm_password" class="form-control" id="regConfirmPassword" placeholder="Confirm Password" required autocomplete="new-password" minlength="8">
+                                <label for="regConfirmPassword">Confirm Password <span class="text-danger">*</span></label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check form-switch pt-2">
+                                <input class="form-check-input" type="checkbox" name="is_active" id="regIsActive" value="1" checked>
+                                <label class="form-check-label fw-semibold text-muted" for="regIsActive">User is active</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 pt-0">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save User</button>
+                    <button type="submit" class="btn btn-primary d-flex align-items-center gap-1"><i class="bi bi-save"></i> Save User</button>
                 </div>
             </form>
         </div>
@@ -149,46 +229,95 @@ if (!hasPermission('manage_users')) {
      MODAL: EDIT USER PROFILE
      ========================================================================= -->
 <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 rounded-4 shadow">
             <div class="modal-header">
-                <h5 class="modal-title fw-bold text-primary-dark" id="editUserModalLabel">Edit User Profile</h5>
+                <h5 class="modal-title fw-bold text-primary-dark" id="editUserModalLabel"><i class="bi bi-pencil-square me-2"></i>Edit User</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="editUserForm" onsubmit="handleEditUserSubmit(event)">
                 <div class="modal-body py-3">
                     <input type="hidden" name="user_id" id="editUserId">
-                    
-                    <div class="form-floating mb-3">
-                        <input type="text" name="full_name" class="form-control" id="editName" placeholder="Full Name" required>
-                        <label for="editName">Full Name</label>
-                    </div>
-                    <div class="form-floating mb-3">
-                        <input type="email" name="email" class="form-control" id="editEmail" placeholder="Email Address" required>
-                        <label for="editEmail">Email Address</label>
-                    </div>
-                    <div class="form-floating mb-3">
-                        <input type="text" name="username" class="form-control" id="editUsername" placeholder="Username" required>
-                        <label for="editUsername">Username</label>
-                    </div>
-                    <div class="form-floating mb-3">
-                        <select name="position_id" class="form-select" id="editPosition" required>
-                            <option value="" disabled>Choose Position</option>
-                            <!-- Populated via JS -->
-                        </select>
-                        <label for="editPosition">Assign Position</label>
-                    </div>
-                    <div class="form-floating mb-3">
-                        <select name="role_id" class="form-select" id="editRole" required>
-                            <option value="" disabled>Choose Role</option>
-                            <!-- Populated via JS -->
-                        </select>
-                        <label for="editRole">System Role</label>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <div class="form-floating">
+                                <input type="text" name="full_name" class="form-control" id="editName" placeholder="Full Name" required>
+                                <label for="editName">Full Name <span class="text-danger">*</span></label>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-floating">
+                                <input type="email" name="email" class="form-control" id="editEmail" placeholder="Email Address" required>
+                                <label for="editEmail">Email Address <span class="text-danger">*</span></label>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-floating">
+                                <select name="role_id" class="form-select" id="editRole" required>
+                                    <option value="" disabled>Choose Role</option>
+                                    <!-- Populated via JS -->
+                                </select>
+                                <label for="editRole">System Role <span class="text-danger">*</span></label>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-floating">
+                                <select name="office" class="form-select" id="editOffice" onchange="handleModalOfficeChange('editOffice', 'editUnitSection')" required>
+                                    <option value="" disabled>Choose Office</option>
+                                    <option value="OSDS">OSDS (Office of the SDS Staff)</option>
+                                    <option value="SGOD">SGOD (School Governance and Operations Division)</option>
+                                    <option value="CID">CID (Curriculum Implementation Division)</option>
+                                </select>
+                                <label for="editOffice">Office <span class="text-danger">*</span></label>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-floating">
+                                <select name="unit_section" class="form-select" id="editUnitSection" required>
+                                    <option value="" disabled>Choose Unit/Section</option>
+                                </select>
+                                <label for="editUnitSection">Unit/Section <span class="text-danger">*</span></label>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-floating">
+                                <input type="text" name="employee_no" class="form-control" id="editEmployeeNo" placeholder="Employee No.">
+                                <label for="editEmployeeNo">Employee No. (optional)</label>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-floating">
+                                <input type="text" name="position" class="form-control" id="editPositionText" placeholder="Position">
+                                <label for="editPositionText">Position (optional)</label>
+                            </div>
+                        </div>
+                        
+                        <?php if ($userRole === 'Super Admin'): ?>
+                        <div class="col-12 col-md-6">
+                            <div class="form-floating">
+                                <input type="password" name="password" class="form-control" id="editPassword" placeholder="New Password" autocomplete="new-password" minlength="8">
+                                <label for="editPassword">New Password (optional)</label>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-floating">
+                                <input type="password" name="confirm_password" class="form-control" id="editConfirmPassword" placeholder="Confirm Password" autocomplete="new-password" minlength="8">
+                                <label for="editConfirmPassword">Confirm New Password</label>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <div class="col-12">
+                            <div class="form-check form-switch pt-2">
+                                <input class="form-check-input" type="checkbox" name="is_active" id="editIsActive" value="1">
+                                <label class="form-check-label fw-semibold text-muted" for="editIsActive">User is active</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 pt-0">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update Profile</button>
+                    <button type="submit" class="btn btn-primary d-flex align-items-center gap-1"><i class="bi bi-save"></i> Save Changes</button>
                 </div>
             </form>
         </div>
@@ -319,18 +448,52 @@ let globalUserPage = 1;
 let cachedPositions = [];
 let cachedRoles = [];
 
+const officeUnits = {
+    "OSDS": [
+        "OSDS (Office of the SDS Staff)",
+        "OASDS (Office of the ASDS Staff)",
+        "Personnel",
+        "Property and Supply",
+        "Records",
+        "Cash",
+        "Procurement",
+        "General Services",
+        "Legal",
+        "ICT",
+        "Accounting (Finance - Accounting)",
+        "Budget (Finance - Budget)",
+        "Administrative"
+    ],
+    "SGOD": [
+        "SGOD (School Governance and Operations Division)",
+        "SMME (School Management Monitoring and Evaluation)",
+        "HRD (Human Resource Development)",
+        "SMN (Social Mobilization and Networking)",
+        "PR (Planning and Research)",
+        "DRRM (Disaster Risk Reduction and Management)",
+        "EF (Education Facilities)",
+        "SHN_DENTAL (School Health and Nutrition - Dental)",
+        "SHN_MEDICAL (School Health and Nutrition - Medical)",
+        "SHN (School Health and Nutrition)"
+    ],
+    "CID": [
+        "CID (Curriculum Implementation Division)",
+        "IM (Instructional Management)",
+        "LRM (Learning Resource Management)",
+        "ALS (Alternative Learning System)",
+        "DIS (District Instructional Supervision)"
+    ]
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     loadPositions().then(() => {
         fetchUsers(1);
     });
-    
-    // Auto-select role when position changes in modals
-    document.getElementById('regPosition').addEventListener('change', function() {
-        autoSelectRole('regPosition', 'regRole');
-    });
-    
-    document.getElementById('editPosition').addEventListener('change', function() {
-        autoSelectRole('editPosition', 'editRole');
+
+    // Clear and reset modals on show
+    document.getElementById('createUserModal').addEventListener('show.bs.modal', function() {
+        document.getElementById('createUserForm').reset();
+        fillUnitSelectDropdown('regUnitSection', '');
     });
 
     // Load positions when manage positions modal opens
@@ -339,20 +502,58 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-function autoSelectRole(posSelectId, roleSelectId) {
-    const posSelect = document.getElementById(posSelectId);
-    const roleSelect = document.getElementById(roleSelectId);
-    const selectedOption = posSelect.options[posSelect.selectedIndex];
+function fillUnitSelectDropdown(selectId, officeCode, selectedValue = '') {
+    const select = document.getElementById(selectId);
+    if (!select) return;
     
-    if (selectedOption && selectedOption.dataset.role) {
-        const mappedRoleName = selectedOption.dataset.role;
-        for (let i = 0; i < roleSelect.options.length; i++) {
-            if (roleSelect.options[i].text === mappedRoleName) {
-                roleSelect.selectedIndex = i;
-                break;
+    select.innerHTML = '<option value="" disabled selected>Choose Unit/Section</option>';
+    select.disabled = true;
+    
+    if (officeCode && officeUnits[officeCode]) {
+        select.disabled = false;
+        officeUnits[officeCode].forEach(unit => {
+            const option = document.createElement('option');
+            option.value = unit;
+            option.textContent = unit;
+            if (unit === selectedValue) {
+                option.selected = true;
             }
-        }
+            select.appendChild(option);
+        });
     }
+}
+
+function handleModalOfficeChange(officeSelectId, unitSelectId) {
+    const officeCode = document.getElementById(officeSelectId).value;
+    fillUnitSelectDropdown(unitSelectId, officeCode);
+}
+
+function handleFilterOfficeChange() {
+    const officeCode = document.getElementById('filterOffice').value;
+    const select = document.getElementById('filterUnit');
+    select.innerHTML = '<option value="">All Units</option>';
+    select.disabled = true;
+    
+    if (officeCode && officeUnits[officeCode]) {
+        select.disabled = false;
+        officeUnits[officeCode].forEach(unit => {
+            const option = document.createElement('option');
+            option.value = unit;
+            option.textContent = unit;
+            select.appendChild(option);
+        });
+    }
+}
+
+function clearFilters() {
+    document.getElementById('userSearch').value = '';
+    document.getElementById('filterRole').value = '';
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('filterOffice').value = '';
+    const filterUnit = document.getElementById('filterUnit');
+    filterUnit.innerHTML = '<option value="">All Units</option>';
+    filterUnit.disabled = true;
+    fetchUsers(1);
 }
 
 async function loadPositions() {
@@ -366,30 +567,23 @@ async function loadPositions() {
 }
 
 function populatePositionDropdowns() {
-    const regSelect = document.getElementById('regPosition');
-    const editSelect = document.getElementById('editPosition');
     const regRoleSelect = document.getElementById('regRole');
     const editRoleSelect = document.getElementById('editRole');
+    const filterRoleSelect = document.getElementById('filterRole');
     
     // Clear existing options
-    regSelect.innerHTML = '<option value="" disabled selected>Choose Position</option>';
-    editSelect.innerHTML = '<option value="" disabled>Choose Position</option>';
     regRoleSelect.innerHTML = '<option value="" disabled selected>Choose Role</option>';
     editRoleSelect.innerHTML = '<option value="" disabled>Choose Role</option>';
+    filterRoleSelect.innerHTML = '<option value="">All Roles</option>';
     
-    cachedPositions.forEach(pos => {
-        const optionHTML = `<option value="${pos.id}" data-role="${pos.mapped_role}">${pos.position_name}</option>`;
-        regSelect.insertAdjacentHTML('beforeend', optionHTML);
-        editSelect.insertAdjacentHTML('beforeend', optionHTML);
-    });
-
     cachedRoles.forEach(role => {
         const optionHTML = `<option value="${role.id}">${role.role_name}</option>`;
         regRoleSelect.insertAdjacentHTML('beforeend', optionHTML);
         editRoleSelect.insertAdjacentHTML('beforeend', optionHTML);
+        filterRoleSelect.insertAdjacentHTML('beforeend', optionHTML);
     });
 
-    // Also populate new position mapped role select dynamically
+    // Also populate new position mapped role select dynamically in position modal
     const newPositionRoleSelect = document.getElementById('newPositionRole');
     if (newPositionRoleSelect) {
         newPositionRoleSelect.innerHTML = '<option value="" disabled selected>Choose Role</option>';
@@ -403,23 +597,36 @@ function populatePositionDropdowns() {
 async function fetchUsers(page) {
     globalUserPage = page;
     const search = document.getElementById('userSearch').value;
+    const roleId = document.getElementById('filterRole').value;
+    const status = document.getElementById('filterStatus').value;
+    const office = document.getElementById('filterOffice').value;
+    const unitSection = document.getElementById('filterUnit').value;
+
     const params = new URLSearchParams({
         action: 'list',
         page: page,
         per_page: 10,
-        search: search
+        search: search,
+        role_id: roleId,
+        status: status,
+        office: office,
+        unit_section: unitSection
     });
 
     const tbody = document.getElementById('usersTableBody');
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span> Loading users...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span> Loading users...</td></tr>';
 
     const response = await API.request('<?php echo env('APP_URL'); ?>/api/users/manage-users.php?' + params.toString());
     
     if (response && response.success) {
+        const totalUsersSubtitle = document.getElementById('totalUsersSubtitle');
+        if (totalUsersSubtitle) {
+            totalUsersSubtitle.textContent = `${response.data.total_count} Total Users`;
+        }
         renderUsersTable(response.data.users);
         renderUserPagination(response.data.total_count, page, 10);
     } else {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle"></i> Failed to retrieve user accounts.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle"></i> Failed to retrieve user accounts.</td></tr>';
     }
 }
 
@@ -428,7 +635,7 @@ function renderUsersTable(users) {
     tbody.innerHTML = '';
 
     if (users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No user accounts found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No user accounts found.</td></tr>';
         return;
     }
 
@@ -458,8 +665,11 @@ function renderUsersTable(users) {
             month: 'short', day: 'numeric', year: 'numeric'
         });
 
+        const lastLoginFormatted = user.last_login 
+            ? new Date(user.last_login).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
+            : 'Never';
+
         const statusClass = user.status === 'active' ? 'bg-success' : 'bg-secondary';
-        const positionDisplay = user.position_name || '<span class="text-muted fst-italic">—</span>';
         
         // Role badge color based on role
         let roleBadgeClass = 'bg-light text-dark border';
@@ -473,17 +683,35 @@ function renderUsersTable(users) {
             roleBadgeClass = 'bg-success text-white';
         } else if (user.role_name === 'Approver') {
             roleBadgeClass = 'bg-dark text-white';
+        } else if (user.role_name === 'Cashier') {
+            roleBadgeClass = 'bg-secondary text-white';
         }
+
+        const initial = user.full_name.charAt(0).toUpperCase();
 
         const rowHTML = `
             <tr>
-                <td><strong>${user.full_name}</strong> ${isSelf ? '<span class="badge bg-light text-primary border ms-1 fs-9">You</span>' : ''}</td>
-                <td>${user.email}</td>
-                <td><code class="text-dark">${user.username}</code></td>
-                <td><span class="badge bg-light text-dark border">${positionDisplay}</span></td>
-                <td><span class="badge ${roleBadgeClass}">${user.role_name}</span></td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold me-3 shadow-sm" style="width: 40px; height: 40px; min-width: 40px; font-size: 1.1rem;">
+                            ${initial}
+                        </div>
+                        <div>
+                            <div class="fw-bold text-dark fs-8">${user.full_name} ${isSelf ? '<span class="badge bg-light text-primary border ms-1 fs-9">You</span>' : ''}</div>
+                            <div class="text-muted fs-9">${user.email}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="fw-semibold text-dark fs-8">${user.position || '—'}</div>
+                    <div class="text-muted fs-9">${user.office || ''} ${user.unit_section ? ' - ' + user.unit_section : ''}</div>
+                </td>
+                <td><span class="badge ${roleBadgeClass} text-uppercase fs-9">${user.role_name || 'USER'}</span></td>
                 <td><span class="badge ${statusClass} badge-status">${user.status}</span></td>
-                <td class="text-muted fs-8">${dateFormatted}</td>
+                <td>
+                    <div class="fw-semibold text-dark fs-8">${dateFormatted}</div>
+                    <div class="text-muted fs-9">${lastLoginFormatted}</div>
+                </td>
                 <td class="text-end">
                     <div class="d-flex justify-content-end gap-1">
                         <button class="btn btn-sm btn-light border py-1 px-2" onclick="openEditUserModal(${JSON.stringify(user).replace(/"/g, '&quot;')})">Edit</button>
@@ -586,13 +814,26 @@ function openEditUserModal(user) {
     document.getElementById('editUserId').value = user.id;
     document.getElementById('editName').value = user.full_name;
     document.getElementById('editEmail').value = user.email;
-    document.getElementById('editUsername').value = user.username;
-    document.getElementById('editPosition').value = user.position_id || '';
     document.getElementById('editRole').value = user.role_id || '';
+    document.getElementById('editOffice').value = user.office || '';
+    
+    fillUnitSelectDropdown('editUnitSection', user.office || '', user.unit_section || '');
+    
+    document.getElementById('editEmployeeNo').value = user.employee_no || '';
+    document.getElementById('editPositionText').value = user.position || '';
+    
+    const editPassword = document.getElementById('editPassword');
+    if (editPassword) editPassword.value = '';
+    const editConfirmPassword = document.getElementById('editConfirmPassword');
+    if (editConfirmPassword) editConfirmPassword.value = '';
+    
+    document.getElementById('editIsActive').checked = (user.status === 'active');
 
     const modalEl = document.getElementById('editUserModal');
-    const modal = new bootstrap.Modal(modalEl);
-    modal.show();
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    if (!modalEl.classList.contains('show')) {
+        modal.show();
+    }
 }
 
 async function handleEditUserSubmit(e) {
@@ -661,8 +902,10 @@ async function triggerPasswordReset(userId) {
         
         // Open Modal
         const modalEl = document.getElementById('adminResetModal');
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        if (!modalEl.classList.contains('show')) {
+            modal.show();
+        }
     } else {
         API.showToast(data.message || 'Failed to generate reset link.', 'danger');
     }
@@ -698,15 +941,17 @@ async function viewLoginHistory(userId) {
         }
         
         const modalEl = document.getElementById('loginHistoryModal');
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        if (!modalEl.classList.contains('show')) {
+            modal.show();
+        }
     } else {
         API.showToast('Failed to load login logs.', 'danger');
     }
 }
 
 // =========================================================================
-// POSITIONS MANAGEMENT
+// POSITIONS MANAGEMENT (Admin only)
 // =========================================================================
 
 async function fetchPositionsList() {
@@ -747,6 +992,8 @@ function renderPositionsTable(positions) {
             roleBadgeClass = 'bg-success text-white';
         } else if (pos.mapped_role === 'Approver') {
             roleBadgeClass = 'bg-dark text-white';
+        } else if (pos.mapped_role === 'Cashier') {
+            roleBadgeClass = 'bg-secondary text-white';
         }
         const typeBadge = isDefault 
             ? '<span class="badge bg-light text-dark border">Default</span>' 

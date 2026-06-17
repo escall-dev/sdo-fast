@@ -1226,8 +1226,10 @@ function openProjectModal(row, docs, isHistory) {
     checklistDiv.appendChild(ol);
     
     const modalEl = document.getElementById('projectDetailModal');
-    const modal = new bootstrap.Modal(modalEl);
-    modal.show();
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    if (!modalEl.classList.contains('show')) {
+        modal.show();
+    }
 }
 
 function openRejectModal(projectId, title) {
@@ -1236,8 +1238,10 @@ function openRejectModal(projectId, title) {
     document.getElementById('rejectionReason').value = '';
     
     const modalEl = document.getElementById('rejectModal');
-    const modal = new bootstrap.Modal(modalEl);
-    modal.show();
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    if (!modalEl.classList.contains('show')) {
+        modal.show();
+    }
 }
 </script>
 

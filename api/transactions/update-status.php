@@ -1,13 +1,28 @@
 <?php
 /**
  * Transaction Workflow Status Update API for SDO FAST.
+ * Updated for 6-Stage Workflow v2.
+ *
+ * Stage Flow:
+ *   Stage 1: Requestor submits         → Pending ACCTG Support
+ *   Stage 2: ACCTG Support reviews     → Pending Budget          (via approve-attachment.php auto-advance)
+ *   Stage 3: Budget checks funds       → Pending ACCT Support    (via budget-check.php)
+ *   Stage 4: ACCT Support processes    → Pending Signatories
+ *   Stage 5: Signatories complete      → Pending Cashier Release (via complete-signatory-task.php auto-advance)
+ *   Stage 6: Cashier releases          → Released
+ *
+ * This endpoint handles:
+ *   - Stage 4: ACCT Support → Pending Signatories (forward), Returned, Rejected
+ *   - Stage 6: Cashier → Released, Returned, Rejected
+ *   - Any stage: Return or Reject (by authorized role)
+ *   - Super Admin: any transition
  */
 
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../config/auth.php'; // Enforces authorization
+require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../services/AuditLogService.php';
 
 // Support JSON input payloads
@@ -50,8 +65,18 @@ $userId = $_SESSION['user_id'];
 $userRole = $_SESSION['user_role'];
 $userPosition = $_SESSION['user_position'] ?? '';
 
-// Valid Status List
-$allowedStatuses = ['Pending Accountant 1', 'Pending Support', 'Pending Budget Check', 'Pending Accountant 2', 'Pending Final Approval', 'Approved', 'Rejected', 'Returned'];
+// Valid Status List (new 6-stage workflow)
+$allowedStatuses = [
+    'Pending ACCTG Support',    // Stage 2
+    'Pending Budget',           // Stage 3
+    'Pending ACCT Support',     // Stage 4
+    'Pending Signatories',      // Stage 5
+    'Pending Cashier Release',  // Stage 6
+    'Released',                 // Final
+    'Rejected',                 // Terminal
+    'Returned'                  // Terminal
+];
+
 if (!in_array($newStatus, $allowedStatuses)) {
     http_response_code(422);
     echo json_encode([
@@ -78,32 +103,41 @@ try {
 
     $oldStatus = $transaction['current_status'];
     
-    // 2. Validate Role-Based Transition Permissions
+    // 2. Validate Role-Based Transition Permissions (6-Stage Workflow v2)
     $authorized = false;
+
     if ($userRole === 'Super Admin') {
+        // Super Admin can do anything
         $authorized = true;
-    } elseif ($userPosition === 'Accountant') {
-        // Accountant checks first (Pending Accountant 1 -> Pending Support)
-        if ($oldStatus === 'Pending Accountant 1' && in_array($newStatus, ['Pending Support', 'Returned', 'Rejected'])) {
-            $authorized = true;
-        }
-        // Accountant checks second (Pending Accountant 2 -> Pending Final Approval)
-        elseif ($oldStatus === 'Pending Accountant 2' && in_array($newStatus, ['Pending Final Approval', 'Returned', 'Rejected'])) {
-            $authorized = true;
-        }
     } elseif ($userRole === 'Accounting Staff' || $userPosition === 'Accounting Support') {
-        // Accounting Support checks (Pending Support -> Pending Budget Check)
-        if ($oldStatus === 'Pending Support' && in_array($newStatus, ['Pending Budget Check', 'Returned', 'Rejected'])) {
+        // Stage 2: ACCTG Support reviews attachments (auto-advanced via approve-attachment.php)
+        // They can also return/reject at Stage 2
+        if ($oldStatus === 'Pending ACCTG Support' && in_array($newStatus, ['Returned', 'Rejected'])) {
+            $authorized = true;
+        }
+        // Stage 4: ACCT Support processes → Pending Signatories
+        if ($oldStatus === 'Pending ACCT Support' && in_array($newStatus, ['Pending Signatories', 'Returned', 'Rejected'])) {
+            $authorized = true;
+        }
+    } elseif ($userPosition === 'Accountant') {
+        // Accountant can also handle Stage 4 (ACCT Support)
+        if ($oldStatus === 'Pending ACCT Support' && in_array($newStatus, ['Pending Signatories', 'Returned', 'Rejected'])) {
             $authorized = true;
         }
     } elseif ($userRole === 'Budget Officer' || $userPosition === 'Budget Officer') {
-        // Budget Officer checks (Pending Budget Check -> Pending Accountant 2)
-        if ($oldStatus === 'Pending Budget Check' && in_array($newStatus, ['Pending Accountant 2', 'Returned', 'Rejected'])) {
+        // Stage 3: Budget check (handled primarily via budget-check.php)
+        // Can also return/reject at Stage 3
+        if ($oldStatus === 'Pending Budget' && in_array($newStatus, ['Pending ACCT Support', 'Returned', 'Rejected'])) {
             $authorized = true;
         }
     } elseif ($userRole === 'Approver' || $userPosition === 'ASDS' || $userPosition === 'SDS') {
-        // Final Approver (ASDS/SDS) signs off (Pending Final Approval -> Approved)
-        if ($oldStatus === 'Pending Final Approval' && in_array($newStatus, ['Approved', 'Returned', 'Rejected'])) {
+        // Stage 5: Signatories can return/reject
+        if ($oldStatus === 'Pending Signatories' && in_array($newStatus, ['Returned', 'Rejected'])) {
+            $authorized = true;
+        }
+    } elseif ($userRole === 'Cashier' || $userPosition === 'Cashier') {
+        // Stage 6: Cashier releases payment
+        if ($oldStatus === 'Pending Cashier Release' && in_array($newStatus, ['Released', 'Returned', 'Rejected'])) {
             $authorized = true;
         }
     }
@@ -132,7 +166,7 @@ try {
         'id' => $transactionId
     ]);
 
-    // 5. Update Document Details (DV / BIR Numbers) if provided
+    // 5. Update Document Details (DV / BIR Numbers) if provided — Stage 4 (ACCT Support)
     if (!empty($dvNumber) || !empty($birNumber)) {
         // Check if details exist
         $docStmt = $fastPDO->prepare("SELECT id FROM document_details WHERE transaction_id = :id LIMIT 1");
@@ -191,13 +225,10 @@ try {
     // Commit changes
     $fastPDO->commit();
 
-    // 8. Dynamic Integration Sync Trigger (Phase 13 hook)
-    // We will initiate a service sync to BAC asynchronously if payment released or approved
-    if (in_array($newStatus, ['Approved', 'Rejected'])) {
+    // 8. BAC Integration Sync — triggers on Released or Rejected
+    if (in_array($newStatus, ['Released', 'Rejected'])) {
         try {
-            // Include service loader
             require_once __DIR__ . '/../../services/BacIntegrationService.php';
-            // Call integration handler to update BAC. We catch exceptions so it doesn't rollback FAST db
             BacIntegrationService::syncStatusToBac($transactionId, $newStatus, $remarks, $dvNumber, $fastPDO);
         } catch (Exception $e) {
             error_log("Failed to sync status update to SDO-BAC: " . $e->getMessage());

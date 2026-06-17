@@ -80,6 +80,9 @@ try {
         $defaults['view'] = 1;
         $defaults['encode'] = 1;
         $defaults['approve'] = 1;
+    } elseif ($roleName === 'Cashier') {
+        $defaults['view'] = 1;
+        $defaults['approve'] = 1;
     } else {
         $defaults['view'] = 1;
     }

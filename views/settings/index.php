@@ -172,6 +172,12 @@ if ($fastPDO !== null) {
                                                 $roleBadgeClass = 'bg-primary text-white';
                                             } else if ($role['role_name'] === 'Accounting Staff') {
                                                 $roleBadgeClass = 'bg-info text-white';
+                                            } else if ($role['role_name'] === 'Budget Officer') {
+                                                $roleBadgeClass = 'bg-success text-white';
+                                            } else if ($role['role_name'] === 'Approver') {
+                                                $roleBadgeClass = 'bg-dark text-white';
+                                            } else if ($role['role_name'] === 'Cashier') {
+                                                $roleBadgeClass = 'bg-secondary text-white';
                                             }
                                             ?>
                                             <span class="badge <?php echo $roleBadgeClass; ?> fs-7 py-2 px-3">
@@ -368,8 +374,10 @@ async function openEditPermissionsModal(roleId, roleName) {
     
     // Show Modal
     const modalEl = document.getElementById('editPermissionsModal');
-    const modal = new bootstrap.Modal(modalEl);
-    modal.show();
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    if (!modalEl.classList.contains('show')) {
+        modal.show();
+    }
 }
 
 // Handle save permissions

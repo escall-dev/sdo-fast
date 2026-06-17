@@ -11,6 +11,7 @@ require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/navbar.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../includes/document_checklist.php';
 
 $userRole = $_SESSION['user_role'] ?? '';
 
@@ -351,44 +352,30 @@ if ($fastPDO !== null) {
                         </div>
                     </div>
 
-                    <!-- Financial and Tax details -->
-                    <div class="row g-3 mb-4">
-                        <div class="col-12 col-sm-6">
-                            <label for="amount" class="form-label fs-8 fw-semibold text-muted">Gross Amount (₱) <span class="text-danger">*</span></label>
-                            <input type="number" name="amount" id="amount" class="form-control" placeholder="0.00" step="0.01" min="1" required oninput="calculateTaxPreview()">
-                        </div>
-
-                        <div class="col-12 col-sm-6">
-                            <label for="taxType" class="form-label fs-8 fw-semibold text-muted">Tax Classification <span class="text-danger">*</span></label>
-                            <select name="tax_type" id="taxType" class="form-select" required onchange="calculateTaxPreview()">
-                                <option value="" disabled selected>Select Tax Type</option>
-                                <?php foreach ($taxConfigurations as $config): ?>
-                                    <option value="<?php echo htmlspecialchars($config['tax_type']); ?>">
-                                        <?php echo htmlspecialchars($config['tax_type']) . " (" . number_format($config['tax_percentage']) . "%)"; ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
+                    <!-- DM 214 Documents Checklist (Cash Advance / Reimbursement) -->
+                    <div id="documentChecklistSection" class="mb-4 d-none">
+                        <div class="card border border-primary-subtle bg-white shadow-sm">
+                            <div class="card-header bg-primary-subtle py-2 px-3 border-bottom border-primary-subtle">
+                                <h6 class="mb-0 fw-bold text-primary-dark d-flex align-items-center gap-2 fs-7">
+                                    <i class="bi bi-clipboard2-check"></i>
+                                    <span>Documents Checklist</span>
+                                    <span class="badge bg-primary fs-9" id="documentChecklistCategoryLabel"></span>
+                                </h6>
+                                <small class="text-muted fs-9 d-block mt-1">Per DM No. 214, S. 2026 — prepare and attach the documents below.</small>
+                            </div>
+                            <div class="card-body p-3">
+                                <div id="documentChecklistNote" class="d-none alert alert-info border-0 py-2 px-3 mb-3 fs-9"></div>
+                                <div id="documentChecklistSource" class="d-none text-muted fs-9 mb-2"></div>
+                                <div id="documentChecklistContent"></div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Interactive Tax Preview Card -->
-                    <div class="mb-4 d-none" id="taxPreviewCard">
-                        <span class="fs-8 fw-semibold text-muted text-uppercase d-block mb-1">Financial Calculation Preview</span>
-                        <div class="p-3 bg-light rounded-3 border">
-                            <div class="row text-center text-sm-start">
-                                <div class="col-12 col-sm-4 mb-2 mb-sm-0">
-                                    <small class="text-muted d-block">Gross Amount</small>
-                                    <span class="fw-semibold text-dark fs-6" id="previewGross">₱0.00</span>
-                                </div>
-                                <div class="col-12 col-sm-4 mb-2 mb-sm-0">
-                                    <small class="text-muted d-block">Tax Deduction Amount</small>
-                                    <span class="fw-semibold text-danger fs-6" id="previewTax">₱0.00</span>
-                                </div>
-                                <div class="col-12 col-sm-4">
-                                    <small class="text-muted d-block">Estimated Net Payout</small>
-                                    <strong class="text-primary-dark fs-5" id="previewNet">₱0.00</strong>
-                                </div>
-                            </div>
+                    <!-- Financial and Tax details -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <label for="amount" class="form-label fs-8 fw-semibold text-muted">Gross Amount (₱) <span class="text-danger">*</span></label>
+                            <input type="number" name="amount" id="amount" class="form-control" placeholder="0.00" step="0.01" min="1" required>
                         </div>
                     </div>
 
@@ -437,6 +424,8 @@ if ($fastPDO !== null) {
      JAVASCRIPT LOGIC
      ========================================================================= -->
 <script>
+const DOCUMENT_CHECKLIST_DATA = <?php echo getDocumentChecklistsForJs(); ?>;
+
 document.addEventListener('DOMContentLoaded', function() {
     const txTypeSelect = document.getElementById('transactionType');
     const caCategorySelect = document.getElementById('cashAdvanceCategory');
@@ -457,6 +446,291 @@ document.addEventListener('DOMContentLoaded', function() {
     const reimbActivityProposal = document.getElementById('reimbActivityProposalContainer');
     const reimbCommunications = document.getElementById('reimbCommunicationsContainer');
     const reimbUtilityBills = document.getElementById('reimbUtilityBillsContainer');
+    const documentChecklistSection = document.getElementById('documentChecklistSection');
+    const documentChecklistContent = document.getElementById('documentChecklistContent');
+    const documentChecklistNote = document.getElementById('documentChecklistNote');
+    const documentChecklistSource = document.getElementById('documentChecklistSource');
+    const documentChecklistCategoryLabel = document.getElementById('documentChecklistCategoryLabel');
+
+    // Map of document key -> array of attached file names (frontend only, for UX grouping)
+    let docFileMap = {};
+    let currentAttachDocKey = null;
+    let currentChecklistDocs = [];
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function resolveChecklistClient(txType, category) {
+        if (!txType || !category) return null;
+
+        const alias = DOCUMENT_CHECKLIST_DATA.aliases?.[txType]?.[category];
+        let lookupType = txType;
+        let lookupCategory = category;
+        let note = null;
+        let sourceLabel = null;
+
+        if (alias) {
+            if (alias.ref) {
+                lookupType = alias.ref;
+                lookupCategory = alias.category;
+            }
+            note = alias.note || null;
+            sourceLabel = alias.source_label || null;
+        }
+
+        const entry = DOCUMENT_CHECKLIST_DATA.checklists?.[lookupType]?.[lookupCategory];
+        if (!entry) return null;
+
+        return { entry, note, sourceLabel, category };
+    }
+
+    function buildDocKey(doc) {
+        const section = doc.sectionTitle || '';
+        return `${doc.title}__${section}`;
+    }
+
+    function normalizeText(text) {
+        return (text || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function tokenize(text) {
+        return normalizeText(text)
+            .split(' ')
+            .filter(token => token.length > 2);
+    }
+
+    function renderDocumentRows(documents) {
+        if (!documents || !documents.length) return '';
+
+        return documents.map(doc => {
+            const required = !!doc.required;
+            const badgeClass = required ? 'bg-danger-subtle text-danger' : 'bg-secondary-subtle text-secondary';
+            const badgeText = required ? 'Required' : 'Optional';
+            const condition = doc.condition ? ` <small class="text-muted">(${escapeHtml(doc.condition)})</small>` : '';
+            const docKey = buildDocKey(doc);
+            return `
+                <li class="list-group-item d-flex flex-column gap-1 py-2 px-3 fs-8" data-doc-key="${escapeHtml(docKey)}">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <span class="text-dark">
+                            ${escapeHtml(doc.title)}${condition}
+                            ${doc.sectionTitle ? `<br><small class="text-muted">Section: ${escapeHtml(doc.sectionTitle)}</small>` : ''}
+                        </span>
+                        <span class="badge ${badgeClass} fs-9 flex-shrink-0">${badgeText}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center gap-2 mt-1">
+                        <small class="text-muted fs-9" data-doc-files-summary data-doc-key="${escapeHtml(docKey)}">No files attached yet.</small>
+                        <button type="button" class="btn btn-outline-primary btn-xs py-0 px-2 fs-9" data-doc-attach-btn data-doc-key="${escapeHtml(docKey)}">
+                            <i class="bi bi-paperclip me-1"></i>Attach
+                        </button>
+                    </div>
+                    <div class="mt-1" data-doc-files-list data-doc-key="${escapeHtml(docKey)}"></div>
+                </li>
+            `;
+        }).join('');
+    }
+
+    function updateDocumentChecklist() {
+        const txType = txTypeSelect.value;
+        let category = '';
+        if (txType === 'Cash Advance') {
+            category = caCategorySelect.value;
+        } else if (txType === 'Reimbursement') {
+            category = reimbCategorySelect.value;
+        }
+
+        if (!category || (txType !== 'Cash Advance' && txType !== 'Reimbursement')) {
+            documentChecklistSection.classList.add('d-none');
+            documentChecklistContent.innerHTML = '';
+            return;
+        }
+
+        const resolved = resolveChecklistClient(txType, category);
+        if (!resolved) {
+            documentChecklistSection.classList.add('d-none');
+            documentChecklistContent.innerHTML = '';
+            return;
+        }
+
+        documentChecklistSection.classList.remove('d-none');
+        documentChecklistCategoryLabel.textContent = category;
+
+        const baseDocs = (resolved.entry.documents || []).map(d => ({ ...d, sectionTitle: null }));
+        const sectionDocs = (resolved.entry.sections || []).flatMap(section =>
+            (section.documents || []).map(d => ({
+                ...d,
+                sectionTitle: section.title || 'Additional Documents'
+            }))
+        );
+
+        const allDocs = baseDocs.concat(sectionDocs);
+        currentChecklistDocs = allDocs.map(doc => ({
+            key: buildDocKey(doc),
+            title: doc.title
+        }));
+        const requiredDocs = allDocs.filter(d => d.required);
+        const optionalDocs = allDocs.filter(d => !d.required);
+        const reqCount = allDocs.filter(d => d.required).length;
+        const optCount = allDocs.length - reqCount;
+
+        if (resolved.note) {
+            documentChecklistNote.classList.remove('d-none');
+            documentChecklistNote.innerHTML = '<i class="bi bi-info-circle me-1"></i>' + escapeHtml(resolved.note);
+        } else {
+            documentChecklistNote.classList.add('d-none');
+            documentChecklistNote.innerHTML = '';
+        }
+
+        if (resolved.sourceLabel) {
+            documentChecklistSource.classList.remove('d-none');
+            documentChecklistSource.innerHTML = '<i class="bi bi-arrow-return-right me-1"></i>' + escapeHtml(resolved.sourceLabel);
+        } else {
+            documentChecklistSource.classList.add('d-none');
+            documentChecklistSource.innerHTML = '';
+        }
+
+        let html = `<div class="d-flex gap-2 mb-3 flex-wrap">
+            <span class="badge bg-danger-subtle text-danger fs-9">${reqCount} Required</span>
+            <span class="badge bg-secondary-subtle text-secondary fs-9">${optCount} Optional</span>
+        </div>`;
+        if (requiredDocs.length > 0) {
+            html += '<h6 class="fw-semibold text-secondary fs-8 mb-2">Required Documents</h6>';
+            html += '<ul class="list-group list-group-flush border rounded-3 overflow-hidden mb-0">';
+            html += renderDocumentRows(requiredDocs);
+            html += '</ul>';
+        }
+
+        if (optionalDocs.length > 0) {
+            html += '<h6 class="fw-semibold text-secondary fs-8 mt-3 mb-2">Optional / Conditional Documents</h6>';
+            html += '<ul class="list-group list-group-flush border rounded-3 overflow-hidden mb-0">';
+            html += renderDocumentRows(optionalDocs);
+            html += '</ul>';
+        }
+
+        documentChecklistContent.innerHTML = html;
+
+        wireChecklistAttachButtons();
+        autoAssignUnmappedFiles();
+        refreshDocFileSummaries();
+    }
+
+    function autoAssignUnmappedFiles() {
+        if (!currentChecklistDocs.length || !selectedFiles.length) return;
+
+        const assignedSet = new Set(Object.values(docFileMap).flat());
+        const unassigned = selectedFiles.filter(file => !assignedSet.has(file.name));
+
+        unassigned.forEach(file => {
+            const fileTokens = tokenize(file.name);
+            if (!fileTokens.length) return;
+
+            let bestKey = null;
+            let bestScore = 0;
+
+            currentChecklistDocs.forEach(doc => {
+                const titleTokens = tokenize(doc.title);
+                if (!titleTokens.length) return;
+
+                let score = 0;
+                titleTokens.forEach(token => {
+                    if (fileTokens.some(ft => ft.includes(token) || token.includes(ft))) {
+                        score += 1;
+                    }
+                });
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestKey = doc.key;
+                }
+            });
+
+            if (bestKey && bestScore > 0) {
+                const existing = docFileMap[bestKey] || [];
+                if (!existing.includes(file.name)) {
+                    existing.push(file.name);
+                    docFileMap[bestKey] = existing;
+                }
+            }
+        });
+    }
+
+    function wireChecklistAttachButtons() {
+        const buttons = document.querySelectorAll('[data-doc-attach-btn]');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const key = btn.getAttribute('data-doc-key');
+                currentAttachDocKey = key;
+                if (fileInput) {
+                    fileInput.click();
+                }
+            });
+        });
+    }
+
+    window.removeChecklistFile = function(docKey, fileName) {
+        // Remove file association from the checklist row
+        docFileMap[docKey] = (docFileMap[docKey] || []).filter(name => name !== fileName);
+
+        // Remove from selected files pool (first exact name match)
+        const fileIdx = selectedFiles.findIndex(f => f.name === fileName);
+        if (fileIdx !== -1) {
+            selectedFiles.splice(fileIdx, 1);
+        }
+
+        syncFileInput();
+        renderSelectedFiles();
+        refreshDocFileSummaries();
+    };
+
+    function refreshDocFileSummaries() {
+        const summaryEls = document.querySelectorAll('[data-doc-files-summary]');
+        summaryEls.forEach(el => {
+            const key = el.getAttribute('data-doc-key');
+            const list = docFileMap[key] || [];
+            const attachBtn = document.querySelector(`[data-doc-attach-btn][data-doc-key="${CSS.escape(key)}"]`);
+            if (!list.length) {
+                el.textContent = 'No files attached yet.';
+                if (attachBtn) {
+                    attachBtn.className = 'btn btn-outline-primary btn-xs py-0 px-2 fs-9';
+                    attachBtn.innerHTML = '<i class="bi bi-paperclip me-1"></i>Attach';
+                }
+            } else {
+                el.textContent = `${list.length} file(s) attached.`;
+                if (attachBtn) {
+                    attachBtn.className = 'btn btn-success btn-xs py-0 px-2 fs-9';
+                    attachBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Attached';
+                }
+            }
+        });
+
+        const listEls = document.querySelectorAll('[data-doc-files-list]');
+        listEls.forEach(el => {
+            const key = el.getAttribute('data-doc-key');
+            const list = docFileMap[key] || [];
+            if (!list.length) {
+                el.innerHTML = '';
+                return;
+            }
+
+            const chips = list.map(name => {
+                const jsKey = JSON.stringify(key);
+                const jsName = JSON.stringify(name);
+                return `
+                <span class="badge bg-light text-dark border me-1 mb-1 d-inline-flex align-items-center gap-1">
+                    <span class="text-truncate" style="max-width: 240px;" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
+                    <button type="button" class="btn btn-link p-0 text-danger text-decoration-none fw-bold" onclick='removeChecklistFile(${jsKey}, ${jsName})' title="Remove file">×</button>
+                </span>
+            `;
+            }).join('');
+            el.innerHTML = chips;
+        });
+    }
 
     // Coverage type → sub-field mapping
     const caFieldMap = {
@@ -571,6 +845,8 @@ document.addEventListener('DOMContentLoaded', function() {
             hideAndDisable(reimbCommunications);
             hideAndDisable(reimbUtilityBills);
         }
+
+        updateDocumentChecklist();
     }
 
     txTypeSelect.addEventListener('change', toggleFormFields);
@@ -610,13 +886,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 const isDuplicate = selectedFiles.some(f => f.name === file.name && f.size === file.size);
                 if (!isDuplicate) {
                     selectedFiles.push(file);
+                    if (currentAttachDocKey) {
+                        const existing = docFileMap[currentAttachDocKey] || [];
+                        if (!existing.includes(file.name)) {
+                            existing.push(file.name);
+                        }
+                        docFileMap[currentAttachDocKey] = existing;
+                    }
                 }
             });
             // Clear input value so selecting the same file again triggers 'change'
             fileInput.value = '';
             syncFileInput();
         }
+        if (!currentAttachDocKey) {
+            autoAssignUnmappedFiles();
+        }
+        currentAttachDocKey = null;
         renderSelectedFiles();
+        refreshDocFileSummaries();
     }
 
     function syncFileInput() {
@@ -628,9 +916,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     window.removeFile = function(index) {
-        selectedFiles.splice(index, 1);
+        const removed = selectedFiles.splice(index, 1)[0];
+
+        if (removed) {
+            Object.keys(docFileMap).forEach(key => {
+                docFileMap[key] = (docFileMap[key] || []).filter(name => name !== removed.name);
+            });
+        }
+
         syncFileInput();
         renderSelectedFiles();
+        refreshDocFileSummaries();
     };
 
     function renderSelectedFiles() {
@@ -668,35 +964,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-async function calculateTaxPreview() {
-    const amount = parseFloat(document.getElementById('amount').value);
-    const taxType = document.getElementById('taxType').value;
-    const previewCard = document.getElementById('taxPreviewCard');
 
-    if (!amount || amount <= 0 || !taxType) {
-        previewCard.classList.add('d-none');
-        return;
-    }
-
-    const payload = new FormData();
-    payload.append('amount', amount);
-    payload.append('tax_type', taxType);
-    payload.append('csrf_token', '<?php echo $_SESSION['csrf_token']; ?>');
-
-    const response = await API.request('<?php echo env('APP_URL'); ?>/api/tax/compute-tax.php', {
-        method: 'POST',
-        body: payload
-    });
-
-    if (response && response.success) {
-        document.getElementById('previewGross').innerText = '₱' + amount.toLocaleString('en-PH', { minimumFractionDigits: 2 });
-        document.getElementById('previewTax').innerText = '₱' + parseFloat(response.data.tax_amount).toLocaleString('en-PH', { minimumFractionDigits: 2 });
-        document.getElementById('previewNet').innerText = '₱' + parseFloat(response.data.net_amount).toLocaleString('en-PH', { minimumFractionDigits: 2 });
-        previewCard.classList.remove('d-none');
-    } else {
-        previewCard.classList.add('d-none');
-    }
-}
 
 async function handleFormSubmit(e) {
     e.preventDefault();

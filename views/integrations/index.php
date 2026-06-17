@@ -273,8 +273,10 @@ function showSyncPayload(log) {
     document.getElementById('modalRawPayload').innerText = displayContent || 'No payload recorded.';
 
     const modalEl = document.getElementById('payloadModal');
-    const modal = new bootstrap.Modal(modalEl);
-    modal.show();
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    if (!modalEl.classList.contains('show')) {
+        modal.show();
+    }
 }
 
 async function triggerManualRetry(logId) {

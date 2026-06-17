@@ -1,0 +1,310 @@
+<?php
+/**
+ * DM No. 214, S. 2026 — Required document checklists per transaction type and coverage.
+ * R = required, O = optional / conditional (see condition field).
+ */
+
+return [
+    'Cash Advance' => [
+        'Travel' => [
+            'documents' => [
+                ['title' => 'Request Letter', 'required' => true],
+                ['title' => 'Memorandum / Invitation / Letter', 'required' => true],
+                ['title' => 'Authority to Travel and/or Locator Slip', 'required' => true],
+                ['title' => 'Itinerary of Travel', 'required' => true],
+                ['title' => 'SARO Copy', 'required' => false, 'condition' => 'if applicable'],
+                ['title' => 'Screenshot of Airfare', 'required' => true],
+            ],
+        ],
+        'School MOOE' => [
+            'documents' => [
+                ['title' => 'Liquidation Report (2 copies)', 'required' => true],
+                ['title' => 'Cash Disbursement Register (2 copies)', 'required' => true],
+                ['title' => 'Photocopy of Disbursement Voucher', 'required' => true],
+                ['title' => 'Bank Reconciliation', 'required' => true],
+                ['title' => 'Snapshot of Bank Statement (iAccess)', 'required' => true],
+                ['title' => 'Photocopy of Cancelled Checks', 'required' => false, 'condition' => 'if applicable'],
+                ['title' => 'Request Letter', 'required' => true],
+            ],
+        ],
+        'SBFP' => [
+            'documents' => [
+                ['title' => 'Liquidation Report (2 copies)', 'required' => true],
+                ['title' => 'Photocopy of Disbursement Voucher Liquidated', 'required' => true],
+                ['title' => 'Request Letter', 'required' => true],
+            ],
+        ],
+        'Training' => [
+            'documents' => [
+                ['title' => 'Memorandum', 'required' => true],
+                ['title' => 'Itinerary of Travel', 'required' => true],
+                ['title' => 'Registration Fee', 'required' => true],
+                ['title' => 'Travel Authority', 'required' => true],
+            ],
+        ],
+        'Meals' => [
+            'documents' => [
+                ['title' => 'Proposal', 'required' => true],
+                ['title' => 'Memorandum', 'required' => true],
+                ['title' => 'SARO Copy', 'required' => false, 'condition' => 'if applicable'],
+                ['title' => 'Purchase Request', 'required' => true],
+                ['title' => 'PhilGEPS Registration', 'required' => false, 'condition' => 'new suppliers only'],
+                ['title' => 'DTI Registration', 'required' => false, 'condition' => 'new suppliers only'],
+                ['title' => 'Business Permit', 'required' => false, 'condition' => 'new suppliers only'],
+                ['title' => 'BIR 2303', 'required' => false, 'condition' => 'new suppliers only'],
+                ['title' => 'Sample Official Sales Invoice', 'required' => false, 'condition' => 'new suppliers only'],
+                ['title' => 'Request for Quotation', 'required' => true],
+                ['title' => 'Abstract of Quotation', 'required' => true],
+                ['title' => 'PhilGEPS Posting', 'required' => true],
+                ['title' => 'BAC Resolution', 'required' => true],
+                ['title' => 'Notice of Award', 'required' => true],
+                ['title' => 'Omnibus Sworn Statement', 'required' => true],
+                ['title' => 'Notice to Proceed', 'required' => true],
+                ['title' => 'Purchase Order', 'required' => true],
+                ['title' => 'Sales/Service Invoice', 'required' => true],
+                ['title' => 'Delivery Receipt', 'required' => true],
+                ['title' => 'Inspection and Acceptance Report', 'required' => true],
+                ['title' => 'Registration/Attendance', 'required' => true],
+                ['title' => 'Meal Attendance', 'required' => true],
+                ['title' => 'Geotagged Pictures of Food Delivered/Received', 'required' => true],
+            ],
+        ],
+        'Meals and Accommodation' => [
+            'documents' => [
+                ['title' => 'Memorandum', 'required' => true],
+                ['title' => 'Activity/Budget Proposal', 'required' => true],
+                ['title' => 'SARO Copy', 'required' => false, 'condition' => 'if applicable'],
+                ['title' => 'Purchase Request', 'required' => true],
+                ['title' => 'PhilGEPS Registration', 'required' => false, 'condition' => 'new suppliers only'],
+                ['title' => 'DTI Registration', 'required' => false, 'condition' => 'new suppliers only'],
+                ['title' => 'Business Permit', 'required' => false, 'condition' => 'new suppliers only'],
+                ['title' => 'BIR 2303', 'required' => false, 'condition' => 'new suppliers only'],
+                ['title' => 'Sample Official Sales Invoice', 'required' => false, 'condition' => 'new suppliers only'],
+                ['title' => 'Request for Quotation', 'required' => true],
+                ['title' => 'Abstract of Quotation', 'required' => true],
+                ['title' => 'PhilGEPS Posting', 'required' => true],
+                ['title' => 'Contract (signed and notarized)', 'required' => true],
+                ['title' => 'BAC Resolution', 'required' => true],
+                ['title' => 'Notice of Award', 'required' => true],
+                ['title' => 'Omnibus Sworn Statement', 'required' => true],
+                ['title' => 'Notice to Proceed', 'required' => true],
+                ['title' => 'Purchase Order', 'required' => true],
+                ['title' => 'Billing Invoice', 'required' => true],
+                ['title' => 'Inspection and Acceptance Report', 'required' => true],
+                ['title' => 'Registration/Attendance', 'required' => true],
+                ['title' => 'Meal Attendance', 'required' => true],
+                ['title' => 'Geotagged Pictures of Food Delivered/Received', 'required' => true],
+            ],
+        ],
+        'Honorarium' => [
+            'documents' => [
+                ['title' => 'Payroll with Speaker\'s TIN', 'required' => true],
+                ['title' => 'Curriculum Vitae', 'required' => true],
+                ['title' => 'Approved Budget Proposal', 'required' => true],
+                ['title' => 'Approved Memorandum', 'required' => true],
+                ['title' => 'Training Matrix', 'required' => true],
+                ['title' => 'Geotagged Pictures, Awarding of Certificate', 'required' => true],
+                ['title' => 'Geotagged Pictures, During Public Speaking', 'required' => true],
+            ],
+        ],
+        'Supplies and Materials' => [
+            'documents' => [
+                ['title' => 'Proposal', 'required' => true],
+                ['title' => 'Memorandum', 'required' => true],
+                ['title' => 'SARO Copy', 'required' => false, 'condition' => 'if applicable'],
+                ['title' => 'Purchase Request', 'required' => true],
+                ['title' => 'PhilGEPS Registration', 'required' => false, 'condition' => 'new suppliers only'],
+                ['title' => 'DTI Registration', 'required' => false, 'condition' => 'new suppliers only'],
+                ['title' => 'Business Permit', 'required' => false, 'condition' => 'new suppliers only'],
+                ['title' => 'BIR 2303', 'required' => false, 'condition' => 'new suppliers only'],
+                ['title' => 'Sample Official Sales Invoice', 'required' => false, 'condition' => 'new suppliers only'],
+                ['title' => 'Request for Quotation', 'required' => true],
+                ['title' => 'Abstract of Quotation', 'required' => true],
+                ['title' => 'PhilGEPS Posting', 'required' => true],
+                ['title' => 'BAC Resolution', 'required' => true],
+                ['title' => 'Notice of Award', 'required' => true],
+                ['title' => 'Omnibus Sworn Statement', 'required' => true],
+                ['title' => 'Notice to Proceed', 'required' => true],
+                ['title' => 'Purchase Order', 'required' => true],
+                ['title' => 'Sales/Service Invoice', 'required' => true],
+                ['title' => 'Delivery Receipt', 'required' => true],
+                ['title' => 'Inspection and Acceptance Report', 'required' => true],
+                ['title' => 'Geotagged Pictures of Items Received', 'required' => true],
+            ],
+        ],
+        'Communication Expenses' => [
+            'documents' => [
+                ['title' => 'Statement of Account/Bill', 'required' => true],
+                ['title' => 'Invoice/OR', 'required' => true],
+                ['title' => 'Certification of Communication Expenses Annex A', 'required' => true],
+                ['title' => 'Official DTR', 'required' => true],
+            ],
+        ],
+        'SLAC / Moving-Up / Graduation / GAWAD' => [
+            'documents' => [
+                ['title' => 'Activity Proposal', 'required' => true],
+                ['title' => 'Purchase Request', 'required' => true],
+                ['title' => 'Request for Quotation (3 suppliers)', 'required' => true],
+                ['title' => 'Abstract of Quotation (2 copies)', 'required' => true],
+                ['title' => 'PhilGEPS Posting', 'required' => false, 'condition' => 'if total exceeds P200,000'],
+                ['title' => 'Purchase Order', 'required' => true],
+            ],
+        ],
+    ],
+
+    'Reimbursement' => [
+        'Travel' => [
+            'documents' => [
+                ['title' => 'Reason for Travel (memorandum/invitation/letter)', 'required' => true],
+                ['title' => 'Travel Order', 'required' => true],
+                ['title' => 'Authority to Travel and/or Locator Slip', 'required' => true],
+                ['title' => 'Itinerary of Travel', 'required' => true],
+                ['title' => 'Approved Revised Itinerary', 'required' => false, 'condition' => 'only if previous itinerary was not followed'],
+                ['title' => 'Copy of Previous Approved Itinerary', 'required' => false, 'condition' => 'only if previous itinerary was not followed'],
+                ['title' => 'SARO Copy', 'required' => false, 'condition' => 'if applicable'],
+                ['title' => 'Boarding Pass and Official Receipt for Airfare', 'required' => true],
+                ['title' => 'Bus Ticket / Grab E-Receipts / Other Transport Receipts', 'required' => true],
+                ['title' => 'Official Receipt for registration fee', 'required' => true],
+                ['title' => 'Original Certificate of Appearance', 'required' => true],
+                ['title' => 'Certificate of Participation (photocopy only)', 'required' => true],
+                ['title' => 'Certificate of Travel Completed', 'required' => true],
+                // DM shows "R (for trainings/seminars)"; per your key, treat conditional items as Optional/Conditional.
+                ['title' => 'Narrative Report', 'required' => false, 'condition' => 'for trainings/seminars'],
+                ['title' => 'Reimbursement Expense Receipt', 'required' => false, 'condition' => 'expenses above P300 only'],
+                ['title' => 'Certificate of Expenses not Requiring Receipts', 'required' => false, 'condition' => 'P300 and below only'],
+            ],
+            'sections' => [
+                [
+                    'title' => 'For Van Rental (additional)',
+                    'documents' => [
+                        ['title' => 'Photocopy of Driver\'s License', 'required' => true],
+                        ['title' => 'Certificate of Registration', 'required' => true],
+                        ['title' => 'Geotagged Pictures of Passenger/s', 'required' => true],
+                        ['title' => 'List of Passenger/s with signature', 'required' => true],
+                        ['title' => 'Authority to Use Van Rental', 'required' => true],
+                    ],
+                ],
+            ],
+        ],
+        'Supplies and Materials' => [
+            'documents' => [
+                ['title' => 'Purchase Request', 'required' => true],
+                ['title' => 'Sales/Service Invoice', 'required' => true],
+                ['title' => 'Delivery Receipt', 'required' => true],
+                ['title' => 'Inspection and Acceptance Report', 'required' => true],
+                ['title' => 'Geotagged Pictures of Items Received', 'required' => true],
+            ],
+        ],
+        'Meals' => [
+            'documents' => [
+                ['title' => 'Purchase Request', 'required' => true],
+                ['title' => 'Sales/Service Invoice', 'required' => true],
+                ['title' => 'Inspection and Acceptance Report', 'required' => true],
+                ['title' => 'Meal Attendance', 'required' => true],
+                ['title' => 'Geotagged Pictures of Food Received', 'required' => true],
+            ],
+        ],
+        'Communication Load' => [
+            'documents' => [
+                ['title' => 'Statement of Account/Bill', 'required' => true],
+                ['title' => 'Invoice/Official Receipt', 'required' => true],
+                ['title' => 'Certification of Communication Expenses Annex A', 'required' => true],
+                ['title' => 'Official DTR', 'required' => true],
+            ],
+        ],
+        'Utility Bills' => [
+            'documents' => [
+                ['title' => 'Official Receipt/Invoice/machine-validated SOA', 'required' => true],
+                ['title' => 'Statement of Account/Billing', 'required' => true],
+                ['title' => 'Certification for Entitlement of Allowance', 'required' => false, 'condition' => 'communication only'],
+                ['title' => 'Duly signed Daily Time Record', 'required' => true],
+                ['title' => 'Reimbursement Payroll', 'required' => false, 'condition' => 'for more than one payee only'],
+            ],
+        ],
+        'Repair, Repaint, Improvement' => [
+            'documents' => [
+                ['title' => 'Purchase Request', 'required' => true],
+                ['title' => 'Request for Quotation (3 suppliers)', 'required' => true],
+                ['title' => 'Abstract of Quotation (2 copies)', 'required' => true],
+                ['title' => 'Purchase Order', 'required' => true],
+                ['title' => 'Delivery Receipt', 'required' => true],
+                ['title' => 'Sales Invoice/Service Invoice', 'required' => true],
+                ['title' => 'Geotagged Pictures of Items Received', 'required' => true],
+                ['title' => 'Inspection and Acceptance Report (2 copies)', 'required' => true],
+                ['title' => 'Program of Works', 'required' => true],
+                ['title' => 'Labor Payroll', 'required' => false, 'condition' => 'if applicable'],
+                ['title' => 'Photocopy of Labor\'s valid ID', 'required' => true],
+                ['title' => 'Geotagged Pictures of Before, During, and After of Works Done', 'required' => true],
+            ],
+        ],
+        'Installation of Electricity and Water' => [
+            'documents' => [
+                ['title' => 'Agreement Contract from the Provider', 'required' => true],
+                ['title' => 'Lay-Out', 'required' => true],
+                ['title' => 'Barangay and Mayor\'s Permit', 'required' => true],
+                ['title' => 'Program of Works', 'required' => true],
+                ['title' => 'Official Receipt', 'required' => true],
+                ['title' => 'Geotagged Pictures of Before, During, and After of Works Done', 'required' => true],
+            ],
+        ],
+        'Installation of Internet / Telephone' => [
+            'documents' => [
+                ['title' => 'Agreement Contract from the Provider', 'required' => true],
+                ['title' => 'Billing', 'required' => true],
+                ['title' => 'Official Receipt', 'required' => true],
+            ],
+        ],
+        'Seminars / Trainings' => [
+            'documents' => [
+                ['title' => 'Memorandum', 'required' => true],
+                ['title' => 'Travel Order', 'required' => true],
+                ['title' => 'Official Receipt for Registration Fee (Deposit Slip)', 'required' => true],
+                ['title' => 'Certificate of Appearance and Certificate of Participation', 'required' => true],
+                ['title' => 'Itinerary of Travel', 'required' => true],
+                ['title' => 'Certificate of Expenses not requiring receipt (below P300)', 'required' => false, 'condition' => 'below P300 only'],
+                ['title' => 'Certificate of Travel Completed', 'required' => true],
+                ['title' => 'Request for Quotation (3 suppliers, VAN HIRE)', 'required' => false, 'condition' => 'if van rental is used'],
+                ['title' => 'RER (below P1,000)', 'required' => false, 'condition' => 'below P1,000 only'],
+                ['title' => 'Acknowledgement Receipt (above P1,000)', 'required' => false, 'condition' => 'above P1,000 only'],
+            ],
+        ],
+        'GAD Documents / SLAC Session' => [
+            'documents' => [
+                ['title' => 'Activity Proposal (List of Participants, Program Matrix)', 'required' => true],
+                ['title' => 'Memorandum', 'required' => true],
+                ['title' => 'Travel Order', 'required' => false, 'condition' => 'GAD only'],
+                ['title' => 'Notarized Contract (Venue)', 'required' => false, 'condition' => 'if applicable'],
+                ['title' => 'Purchase Request', 'required' => true],
+                ['title' => 'Request for Quotation (3 suppliers)', 'required' => true],
+                ['title' => 'Abstract of Quotation (2 copies)', 'required' => true],
+                ['title' => 'Purchase Order', 'required' => true],
+                ['title' => 'Sales/Service Invoice', 'required' => true],
+                ['title' => 'Geotagged Pictures of GAD Training/SLAC session', 'required' => true],
+                ['title' => 'Attendance (Registration)', 'required' => true],
+                ['title' => 'Meal Attendance', 'required' => true],
+            ],
+        ],
+        'Job Order' => [
+            'documents' => [
+                ['title' => 'Job Order (duly signed, approved)', 'required' => true],
+                ['title' => 'Contract', 'required' => true],
+                ['title' => 'DTR', 'required' => true],
+                ['title' => 'Job Order Payroll', 'required' => true],
+            ],
+        ],
+        'Fidelity Bond' => [
+            'documents' => [
+                ['title' => 'Deposit Slip', 'required' => true],
+                ['title' => 'Authority to Accept Payment', 'required' => true],
+                ['title' => 'Confirmation Letter', 'required' => true],
+            ],
+        ],
+        'Immersion and Insurance for SHS' => [
+            'documents' => [
+                ['title' => 'Agreement/Contract', 'required' => true],
+                ['title' => 'List of Students', 'required' => true],
+                ['title' => 'Sales/Service Invoice/Official Receipt', 'required' => true],
+            ],
+        ],
+    ],
+];

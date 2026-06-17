@@ -33,7 +33,10 @@ if (!in_array($userRole, ['Super Admin', 'Requestor']) && $userPosition !== 'Per
 $type = trim($_POST['transaction_type'] ?? '');
 $eventName = trim($_POST['event_name'] ?? '');
 $amount = (float)($_POST['amount'] ?? 0.00);
-$taxType = trim($_POST['tax_type'] ?? '');
+$taxType = isset($_POST['tax_type']) ? trim($_POST['tax_type']) : null;
+if ($taxType === '') {
+    $taxType = null;
+}
 $targetDate = trim($_POST['target_date'] ?? '');
 $remarks = trim($_POST['remarks'] ?? '');
 
@@ -54,9 +57,9 @@ $reimbVenue = trim($_POST['reimb_venue'] ?? '');
 $utilityMonth = trim($_POST['utility_month'] ?? '');
 
 // 2. Validate Inputs
-if (empty($type) || empty($eventName) || $amount <= 0 || empty($taxType)) {
+if (empty($type) || empty($eventName) || $amount <= 0) {
     http_response_code(422);
-    echo json_encode(['success' => false, 'message' => 'Transaction type, event name, tax type, and amount are required.']);
+    echo json_encode(['success' => false, 'message' => 'Transaction type, event name, and amount are required.']);
     exit;
 }
 
@@ -174,21 +177,24 @@ if ($type === 'Reimbursement') {
 }
 
 // Fetch active tax configurations to validate and calculate tax
-try {
-    $taxStmt = $fastPDO->prepare("SELECT tax_percentage FROM tax_configurations WHERE tax_type = :tax_type AND is_active = 1 LIMIT 1");
-    $taxStmt->execute(['tax_type' => $taxType]);
-    $taxPercentage = $taxStmt->fetchColumn();
+$taxPercentage = 0.00;
+if ($taxType !== null) {
+    try {
+        $taxStmt = $fastPDO->prepare("SELECT tax_percentage FROM tax_configurations WHERE tax_type = :tax_type AND is_active = 1 LIMIT 1");
+        $taxStmt->execute(['tax_type' => $taxType]);
+        $taxPercentage = $taxStmt->fetchColumn();
 
-    if ($taxPercentage === false) {
-        http_response_code(422);
-        echo json_encode(['success' => false, 'message' => 'Invalid or inactive tax type selected.']);
+        if ($taxPercentage === false) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Invalid or inactive tax type selected.']);
+            exit;
+        }
+    } catch (PDOException $e) {
+        error_log("Tax retrieval failure: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'System error during tax validation.']);
         exit;
     }
-} catch (PDOException $e) {
-    error_log("Tax retrieval failure: " . $e->getMessage());
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'System error during tax validation.']);
-    exit;
 }
 
 // 3. Compute Tax and Net Amount
@@ -242,7 +248,8 @@ function handleSecureUpload($fileKey, $uploadDir) {
     $filename = bin2hex(random_bytes(16)) . '.' . $extension;
     $targetPath = $uploadDir . $filename;
 
-    if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+    $uploaded = defined('TEST_MODE') ? copy($file['tmp_name'], $targetPath) : move_uploaded_file($file['tmp_name'], $targetPath);
+    if (!$uploaded) {
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => 'Failed to save uploaded file: ' . $fileKey]);
         exit;
@@ -407,7 +414,8 @@ if (isset($_FILES['attachment']) && is_array($_FILES['attachment']['name']) && $
         $newFilename = bin2hex(random_bytes(16)) . '.' . $extension;
         $targetPath = $uploadDir . $newFilename;
 
-        if (!move_uploaded_file($tmpName, $targetPath)) {
+        $uploaded = defined('TEST_MODE') ? copy($tmpName, $targetPath) : move_uploaded_file($tmpName, $targetPath);
+        if (!$uploaded) {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Failed to save uploaded attachment: ' . ($i + 1)]);
             exit;
@@ -428,7 +436,7 @@ try {
     $uuid = bin2hex(random_bytes(16)); // simple UUID format
     $uuid = substr($uuid, 0, 8) . '-' . substr($uuid, 8, 4) . '-' . substr($uuid, 12, 4) . '-' . substr($uuid, 16, 4) . '-' . substr($uuid, 20, 12);
     
-    $status = 'Pending Accountant 1';
+    $status = 'Pending ACCTG Support';
 
     // Insert Transaction
     $insertTxSql = "
@@ -526,6 +534,74 @@ try {
         'changed_by' => $userId,
         'remarks' => 'Initial submission by requestor.'
     ]);
+
+    // ============================================================
+    // Workflow v2: Populate attachment_approvals for Stage 2 review
+    // ============================================================
+    $allUploadedFiles = [];
+
+    // Supporting attachments
+    if (!empty($attachmentPaths)) {
+        foreach ($attachmentPaths as $aPath) {
+            $allUploadedFiles[] = ['path' => $aPath, 'label' => 'Supporting Attachment: ' . basename($aPath)];
+        }
+    }
+    // Cash Advance specific files
+    if (!empty($approvedTaPath)) {
+        $allUploadedFiles[] = ['path' => $approvedTaPath, 'label' => 'Approved Travel Authority'];
+    }
+    if (!empty($travelItineraryPath)) {
+        $allUploadedFiles[] = ['path' => $travelItineraryPath, 'label' => 'Travel Itinerary'];
+    }
+    if (!empty($activityProposalPath)) {
+        $allUploadedFiles[] = ['path' => $activityProposalPath, 'label' => 'Activity Proposal'];
+    }
+    // Reimbursement specific files
+    if (!empty($reimbApprovedTaPath)) {
+        $allUploadedFiles[] = ['path' => $reimbApprovedTaPath, 'label' => 'Approved Travel Authority (Reimb)'];
+    }
+    if (!empty($reimbTravelItineraryPath)) {
+        $allUploadedFiles[] = ['path' => $reimbTravelItineraryPath, 'label' => 'Travel Itinerary (Reimb)'];
+    }
+    if (!empty($reimbActivityProposalPath)) {
+        $allUploadedFiles[] = ['path' => $reimbActivityProposalPath, 'label' => 'Activity Proposal (Reimb)'];
+    }
+    if (!empty($dtrPath)) {
+        $allUploadedFiles[] = ['path' => $dtrPath, 'label' => 'DTR Document'];
+    }
+    if (!empty($certificatePath)) {
+        $allUploadedFiles[] = ['path' => $certificatePath, 'label' => 'Certificate'];
+    }
+    if (!empty($billProofPath)) {
+        $allUploadedFiles[] = ['path' => $billProofPath, 'label' => 'Bill / Proof of Payment'];
+    }
+    if (!empty($utilityBillProofPath)) {
+        $allUploadedFiles[] = ['path' => $utilityBillProofPath, 'label' => 'Utility Bill / Proof'];
+    }
+
+    if (!empty($allUploadedFiles)) {
+        $insertApproval = $fastPDO->prepare("
+            INSERT INTO attachment_approvals (transaction_id, file_path, file_label, status)
+            VALUES (:tx_id, :file_path, :file_label, 'pending')
+        ");
+        foreach ($allUploadedFiles as $f) {
+            $insertApproval->execute([
+                'tx_id' => $transactionDbId,
+                'file_path' => $f['path'],
+                'file_label' => $f['label']
+            ]);
+        }
+    }
+
+    // ============================================================
+    // Workflow v2: Create signatory_tasks (Stage 5 parallel tasks)
+    // ============================================================
+    $insertTask = $fastPDO->prepare("
+        INSERT INTO signatory_tasks (transaction_id, task_type, status)
+        VALUES (:tx_id, :task_type, 'pending')
+    ");
+    $insertTask->execute(['tx_id' => $transactionDbId, 'task_type' => 'payroll_prep']);
+    $insertTask->execute(['tx_id' => $transactionDbId, 'task_type' => 'dv_ors_prep']);
 
     // Audit Log entry
     AuditLogService::log(

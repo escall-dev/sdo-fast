@@ -44,12 +44,12 @@ if ($fastPDO !== null) {
         $totalTransactions = (int)$stmt->fetchColumn();
 
         // 2. Pending Approvals count (all pending workflow stages)
-        $stmt = $fastPDO->prepare("SELECT COUNT(*) FROM transactions WHERE current_status IN ('Pending Accountant 1', 'Pending Support', 'Pending Budget Check', 'Pending Accountant 2', 'Pending Final Approval')" . $roleFilter);
+        $stmt = $fastPDO->prepare("SELECT COUNT(*) FROM transactions WHERE current_status IN ('Pending ACCTG Support', 'Pending Budget', 'Pending ACCT Support', 'Pending Signatories', 'Pending Cashier Release')" . $roleFilter);
         $stmt->execute($roleParams);
         $pendingApprovals = (int)$stmt->fetchColumn();
 
         // 3. Approved Transactions count
-        $stmt = $fastPDO->prepare("SELECT COUNT(*) FROM transactions WHERE current_status = 'Approved'" . $roleFilter);
+        $stmt = $fastPDO->prepare("SELECT COUNT(*) FROM transactions WHERE current_status = 'Released'" . $roleFilter);
         $stmt->execute($roleParams);
         $approvedTransactions = (int)$stmt->fetchColumn();
 
@@ -64,12 +64,12 @@ if ($fastPDO !== null) {
         $returnedTransactions = (int)$stmt->fetchColumn();
 
         // 6. Total Disbursed (net amount of approved transactions)
-        $stmt = $fastPDO->prepare("SELECT COALESCE(SUM(net_amount), 0) FROM transactions WHERE current_status = 'Approved'" . $roleFilter);
+        $stmt = $fastPDO->prepare("SELECT COALESCE(SUM(net_amount), 0) FROM transactions WHERE current_status = 'Released'" . $roleFilter);
         $stmt->execute($roleParams);
         $totalDisbursed = (float)$stmt->fetchColumn();
 
         // 7. Total Tax Deducted (tax from approved transactions)
-        $stmt = $fastPDO->prepare("SELECT COALESCE(SUM(tax_amount), 0) FROM transactions WHERE current_status = 'Approved'" . $roleFilter);
+        $stmt = $fastPDO->prepare("SELECT COALESCE(SUM(tax_amount), 0) FROM transactions WHERE current_status = 'Released'" . $roleFilter);
         $stmt->execute($roleParams);
         $totalTaxDeducted = (float)$stmt->fetchColumn();
 
@@ -240,8 +240,8 @@ for ($i = 1; $i <= 12; $i++) {
                     <i class="bi bi-search fs-5"></i>
                     <span>Track Status Timeline</span>
                 </a>
-                <?php if (in_array($userRole, ['Super Admin', 'Admin', 'Accounting Staff', 'Budget Officer', 'Approver']) || 
-                          in_array($userPosition, ['Accounting Support', 'Accountant', 'Budget Officer', 'ASDS', 'SDS'])): ?>
+                <?php if (in_array($userRole, ['Super Admin', 'Admin', 'Accounting Staff', 'Budget Officer', 'Approver', 'Cashier']) || 
+                          in_array($userPosition, ['Accounting Support', 'Accountant', 'Budget Officer', 'ASDS', 'SDS', 'Cashier'])): ?>
                     <a href="<?php echo env('APP_URL'); ?>/views/reports/index.php" class="btn btn-light border w-100 py-3 justify-content-center align-items-center gap-2">
                         <i class="bi bi-file-earmark-bar-graph fs-5"></i>
                         <span>Generate Financial Report</span>
@@ -283,14 +283,14 @@ for ($i = 1; $i <= 12; $i++) {
                         <?php foreach ($recentTransactions as $row): 
                             $statusBadgeClass = 'bg-secondary';
                             switch ($row['current_status']) {
-                                case 'Pending Accountant 1':
-                                case 'Pending Support':
-                                case 'Pending Budget Check':
-                                case 'Pending Accountant 2':
-                                case 'Pending Final Approval':
+                                case 'Pending ACCTG Support':
+                                case 'Pending Budget':
+                                case 'Pending ACCT Support':
+                                case 'Pending Signatories':
+                                case 'Pending Cashier Release':
                                     $statusBadgeClass = 'bg-warning text-dark';
                                     break;
-                                case 'Approved':
+                                case 'Released':
                                     $statusBadgeClass = 'bg-success';
                                     break;
                                 case 'Rejected':

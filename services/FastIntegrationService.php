@@ -259,6 +259,15 @@ class FastIntegrationService {
                     ]);
                 }
 
+                // Refresh workflow approvals/tasks if the transaction is still pending ACCTG support
+                $statusCheck = $pdo->prepare("SELECT current_status FROM transactions WHERE id = ?");
+                $statusCheck->execute([$existingId]);
+                $currStatus = $statusCheck->fetchColumn();
+                
+                if ($currStatus === 'Pending ACCTG Support') {
+                    self::seedWorkflowDetails($pdo, $existingId, $filePath, $originalFilename);
+                }
+
                 $pdo->commit();
                 return [
                     'success' => true,
@@ -295,7 +304,7 @@ class FastIntegrationService {
             
             // Map default requestor to Super Admin (User ID 1) for automated entries
             $requestorId = 1; 
-            $status = 'Pending Accountant 1';
+            $status = 'Pending ACCTG Support';
 
             // 5. Insert Transaction Draft
             $transactionRemarks = "Automatically generated draft from SDO-BAC procurement link: {$refNumber}.";
@@ -477,6 +486,9 @@ class FastIntegrationService {
                 "Enterprise Sync: Generated FAST draft {$trackingNumber} from BAC reference {$refNumber}"
             );
 
+            // Seed workflow approvals and signatory tasks for the new transaction
+            self::seedWorkflowDetails($pdo, $transactionId, $filePath, $originalFilename);
+
             $pdo->commit();
 
             return [
@@ -497,5 +509,63 @@ class FastIntegrationService {
                 'message' => 'A database error occurred during integration ingestion: ' . $e->getMessage()
             ];
         }
+    }
+
+    /**
+     * Seeds or refreshes attachment approvals and signatory tasks for a transaction.
+     */
+    private static function seedWorkflowDetails(PDO $pdo, int $transactionId, ?string $filePath, ?string $originalFilename) {
+        // 1. Delete and re-seed attachment approvals
+        $pdo->prepare("DELETE FROM attachment_approvals WHERE transaction_id = ?")
+            ->execute([$transactionId]);
+
+        $filesToApprove = [];
+        if (!empty($filePath)) {
+            $filesToApprove[$filePath] = 'SDO-BAC Approval Document';
+        }
+
+        // Fetch all from transaction_documents
+        $docStmt = $pdo->prepare("SELECT file_path, category FROM transaction_documents WHERE transaction_id = ?");
+        $docStmt->execute([$transactionId]);
+        $docsList = $docStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $categoryLabels = [
+            'purchase_request' => 'Purchase Request',
+            'memorandum' => 'Memorandum',
+            'activity_proposal' => 'Activity Proposal',
+            'saro' => 'SARO'
+        ];
+
+        foreach ($docsList as $doc) {
+            $dPath = $doc['file_path'];
+            $dCat = $doc['category'];
+            $label = isset($categoryLabels[$dCat]) ? $categoryLabels[$dCat] : ('Document: ' . ucfirst($dCat));
+            $filesToApprove[$dPath] = $label;
+        }
+
+        if (!empty($filesToApprove)) {
+            $insertApproval = $pdo->prepare("
+                INSERT INTO attachment_approvals (transaction_id, file_path, file_label, status)
+                VALUES (:tx_id, :file_path, :file_label, 'pending')
+            ");
+            foreach ($filesToApprove as $fPath => $fLabel) {
+                $insertApproval->execute([
+                    'tx_id' => $transactionId,
+                    'file_path' => $fPath,
+                    'file_label' => $fLabel
+                ]);
+            }
+        }
+
+        // 2. Delete and re-seed signatory tasks
+        $pdo->prepare("DELETE FROM signatory_tasks WHERE transaction_id = ?")
+            ->execute([$transactionId]);
+
+        $insertTask = $pdo->prepare("
+            INSERT INTO signatory_tasks (transaction_id, task_type, status)
+            VALUES (:tx_id, :task_type, 'pending')
+        ");
+        $insertTask->execute(['tx_id' => $transactionId, 'task_type' => 'payroll_prep']);
+        $insertTask->execute(['tx_id' => $transactionId, 'task_type' => 'dv_ors_prep']);
     }
 }
