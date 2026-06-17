@@ -21,7 +21,6 @@ if ($fastPDO === null) {
     exit;
 }
 
-$userRole = $_SESSION['user_role'] ?? '';
 $adminId = $_SESSION['user_id'];
 
 if (!hasPermission('configure_system')) {
@@ -30,44 +29,86 @@ if (!hasPermission('configure_system')) {
     exit;
 }
 
-$taxGoods = isset($_POST['tax_goods']) ? (float)$_POST['tax_goods'] : -1.0;
-$taxFoods = isset($_POST['tax_foods']) ? (float)$_POST['tax_foods'] : -1.0;
-$taxServices = isset($_POST['tax_services']) ? (float)$_POST['tax_services'] : -1.0;
+$taxTypes = $_POST['tax_type'] ?? [];
+$taxPercentages = $_POST['tax_percentage'] ?? [];
+$isActiveFlags = $_POST['is_active'] ?? [];
 
-if ($taxGoods < 0 || $taxFoods < 0 || $taxServices < 0) {
+if (!is_array($taxTypes) || !is_array($taxPercentages) || !is_array($isActiveFlags)) {
     http_response_code(422);
-    echo json_encode(['success' => false, 'message' => 'Tax percentages must be non-negative values.']);
+    echo json_encode(['success' => false, 'message' => 'Invalid tax configuration payload.']);
     exit;
 }
 
 try {
-    // Fetch old values for audits
-    $oldConfigs = $fastPDO->query("SELECT tax_type, tax_percentage FROM tax_configurations")->fetchAll(PDO::FETCH_KEY_PAIR);
+    $rowCount = count($taxTypes);
+    if ($rowCount === 0 || $rowCount !== count($taxPercentages) || $rowCount !== count($isActiveFlags)) {
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => 'Incomplete tax rows detected.']);
+        exit;
+    }
+
+    $normalizedRows = [];
+    $seenTypes = [];
+    for ($i = 0; $i < $rowCount; $i++) {
+        $taxType = trim((string)$taxTypes[$i]);
+        $percentageRaw = $taxPercentages[$i];
+        $isActive = ((int)$isActiveFlags[$i]) === 1 ? 1 : 0;
+
+        if ($taxType === '' || strlen($taxType) > 50) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Each tax label is required and must be at most 50 characters.']);
+            exit;
+        }
+
+        $normalizedKey = strtolower($taxType);
+        if (isset($seenTypes[$normalizedKey])) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Tax labels must be unique.']);
+            exit;
+        }
+        $seenTypes[$normalizedKey] = true;
+
+        if (!is_numeric($percentageRaw)) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Tax percentage must be numeric.']);
+            exit;
+        }
+        $percentage = (float)$percentageRaw;
+        if ($percentage < 0 || $percentage > 100) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Tax percentage must be between 0 and 100.']);
+            exit;
+        }
+
+        $normalizedRows[] = [
+            'tax_type' => $taxType,
+            'tax_percentage' => $percentage,
+            'is_active' => $isActive
+        ];
+    }
+
+    $oldConfigs = $fastPDO->query("SELECT tax_type, tax_percentage, is_active FROM tax_configurations ORDER BY tax_type ASC")->fetchAll(PDO::FETCH_ASSOC);
 
     $fastPDO->beginTransaction();
 
-    // 1. Update Goods
-    $goodsStmt = $fastPDO->prepare("UPDATE tax_configurations SET tax_percentage = :percentage WHERE tax_type = 'Goods'");
-    $goodsStmt->execute(['percentage' => $taxGoods]);
+    // Reset all rows inactive first, then upsert provided rows.
+    $fastPDO->exec("UPDATE tax_configurations SET is_active = 0");
+    $upsertStmt = $fastPDO->prepare("
+        INSERT INTO tax_configurations (tax_type, tax_percentage, is_active)
+        VALUES (:tax_type, :tax_percentage, :is_active)
+        ON DUPLICATE KEY UPDATE
+            tax_percentage = VALUES(tax_percentage),
+            is_active = VALUES(is_active)
+    ");
+    foreach ($normalizedRows as $row) {
+        $upsertStmt->execute($row);
+    }
 
-    // 2. Update Foods
-    $foodsStmt = $fastPDO->prepare("UPDATE tax_configurations SET tax_percentage = :percentage WHERE tax_type = 'Foods'");
-    $foodsStmt->execute(['percentage' => $taxFoods]);
-
-    // 3. Update Services
-    $servicesStmt = $fastPDO->prepare("UPDATE tax_configurations SET tax_percentage = :percentage WHERE tax_type = 'Services'");
-    $servicesStmt->execute(['percentage' => $taxServices]);
-
-    // 4. Log Auditing
-    $newConfigs = [
-        'Goods' => $taxGoods,
-        'Foods' => $taxFoods,
-        'Services' => $taxServices
-    ];
+    $newConfigs = $fastPDO->query("SELECT tax_type, tax_percentage, is_active FROM tax_configurations ORDER BY tax_type ASC")->fetchAll(PDO::FETCH_ASSOC);
     AuditLogService::log(
         $fastPDO, 
         $adminId, 
-        "Updated system tax configurations", 
+        "Updated dynamic system tax configurations", 
         $oldConfigs, 
         $newConfigs
     );

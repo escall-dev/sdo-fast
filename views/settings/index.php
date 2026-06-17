@@ -21,9 +21,11 @@ if (!hasPermission('configure_system')) {
 }
 
 // Fetch current configurations
-$goodsPercentage = 5.00;
-$foodsPercentage = 2.00;
-$servicesPercentage = 10.00;
+$taxConfigurations = [
+    ['tax_type' => 'Goods', 'tax_percentage' => 5.00, 'is_active' => 1],
+    ['tax_type' => 'Foods', 'tax_percentage' => 2.00, 'is_active' => 1],
+    ['tax_type' => 'Services', 'tax_percentage' => 10.00, 'is_active' => 1]
+];
 
 // Fetch roles with user count
 $roles = [];
@@ -31,10 +33,10 @@ $roleUsers = [];
 
 if ($fastPDO !== null) {
     try {
-        $configs = $fastPDO->query("SELECT tax_type, tax_percentage FROM tax_configurations")->fetchAll(PDO::FETCH_KEY_PAIR);
-        $goodsPercentage = $configs['Goods'] ?? 5.00;
-        $foodsPercentage = $configs['Foods'] ?? 2.00;
-        $servicesPercentage = $configs['Services'] ?? 10.00;
+        $configs = $fastPDO->query("SELECT tax_type, tax_percentage, is_active FROM tax_configurations ORDER BY tax_type ASC")->fetchAll();
+        if (!empty($configs)) {
+            $taxConfigurations = $configs;
+        }
 
         $stmt = $fastPDO->query("
             SELECT r.id, r.role_name, COUNT(ur.user_id) as user_count 
@@ -95,34 +97,41 @@ if ($fastPDO !== null) {
                         <form id="taxSettingsForm" onsubmit="handleSettingsSubmit(event)">
                             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                             
-                            <!-- Goods Tax Percentage -->
-                            <div class="mb-4">
-                                <label for="taxGoods" class="form-label fs-8 fw-semibold text-muted">Goods Tax Rate (%)</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light"><i class="bi bi-box-seam text-muted"></i></span>
-                                    <input type="number" name="tax_goods" id="taxGoods" class="form-control" value="<?php echo htmlspecialchars($goodsPercentage); ?>" step="0.01" min="0" max="100" required>
-                                    <span class="input-group-text bg-light">%</span>
-                                </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fs-8 fw-semibold text-muted mb-0">Tax Items</label>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addTaxRow()">
+                                    <i class="bi bi-plus-lg me-1"></i>Add Tax
+                                </button>
                             </div>
-
-                            <!-- Foods Tax Percentage -->
-                            <div class="mb-4">
-                                <label for="taxFoods" class="form-label fs-8 fw-semibold text-muted">Foods Tax Rate (%)</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light"><i class="bi bi-egg-fried text-muted"></i></span>
-                                    <input type="number" name="tax_foods" id="taxFoods" class="form-control" value="<?php echo htmlspecialchars($foodsPercentage); ?>" step="0.01" min="0" max="100" required>
-                                    <span class="input-group-text bg-light">%</span>
-                                </div>
-                            </div>
-
-                            <!-- Services Tax Percentage -->
-                            <div class="mb-4">
-                                <label for="taxServices" class="form-label fs-8 fw-semibold text-muted">Services Tax Rate (%)</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light"><i class="bi bi-person-gear text-muted"></i></span>
-                                    <input type="number" name="tax_services" id="taxServices" class="form-control" value="<?php echo htmlspecialchars($servicesPercentage); ?>" step="0.01" min="0" max="100" required>
-                                    <span class="input-group-text bg-light">%</span>
-                                </div>
+                            <div id="taxRowsContainer" class="d-flex flex-column gap-3 mb-4">
+                                <?php foreach ($taxConfigurations as $config): ?>
+                                    <div class="p-3 border rounded-3 bg-light-subtle tax-row">
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col-12 col-md-5">
+                                                <label class="form-label fs-9 fw-semibold text-muted">Tax Label</label>
+                                                <input type="text" name="tax_type[]" class="form-control tax-type-input" maxlength="50" required value="<?php echo htmlspecialchars($config['tax_type']); ?>" placeholder="e.g. Goods">
+                                            </div>
+                                            <div class="col-12 col-md-4">
+                                                <label class="form-label fs-9 fw-semibold text-muted">Rate (%)</label>
+                                                <div class="input-group">
+                                                    <input type="number" name="tax_percentage[]" class="form-control" value="<?php echo htmlspecialchars($config['tax_percentage']); ?>" step="0.01" min="0" max="100" required>
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-8 col-md-2">
+                                                <div class="form-check form-switch mt-2">
+                                                    <input class="form-check-input tax-active-input" type="checkbox" name="is_active[]" value="1" <?php echo ((int)$config['is_active'] === 1) ? 'checked' : ''; ?>>
+                                                    <label class="form-check-label fs-9 text-muted">Active</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-4 col-md-1 text-end">
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeTaxRow(this)" title="Remove Tax Row">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
                             </div>
 
                             <div class="d-flex justify-content-end gap-2">
@@ -285,7 +294,36 @@ if ($fastPDO !== null) {
 async function handleSettingsSubmit(e) {
     e.preventDefault();
     const form = document.getElementById('taxSettingsForm');
-    const formData = new FormData(form);
+    const rows = [...document.querySelectorAll('#taxRowsContainer .tax-row')];
+    if (rows.length === 0) {
+        API.showToast('Please add at least one tax item.', 'danger');
+        return;
+    }
+
+    const seen = new Set();
+    for (const row of rows) {
+        const typeInput = row.querySelector('.tax-type-input');
+        const taxType = (typeInput?.value || '').trim().toLowerCase();
+        if (!taxType) {
+            API.showToast('Tax label is required for all rows.', 'danger');
+            typeInput?.focus();
+            return;
+        }
+        if (seen.has(taxType)) {
+            API.showToast('Tax labels must be unique.', 'danger');
+            typeInput?.focus();
+            return;
+        }
+        seen.add(taxType);
+    }
+
+    const formData = new FormData();
+    formData.append('csrf_token', form.querySelector('input[name="csrf_token"]').value);
+    rows.forEach(row => {
+        formData.append('tax_type[]', row.querySelector('.tax-type-input').value.trim());
+        formData.append('tax_percentage[]', row.querySelector('input[name="tax_percentage[]"]').value);
+        formData.append('is_active[]', row.querySelector('.tax-active-input').checked ? '1' : '0');
+    });
 
     API.showSpinner();
 
@@ -303,6 +341,50 @@ async function handleSettingsSubmit(e) {
     } else {
         API.showToast(data.message || 'Failed to save settings.', 'danger');
     }
+}
+
+function addTaxRow() {
+    const container = document.getElementById('taxRowsContainer');
+    const row = document.createElement('div');
+    row.className = 'p-3 border rounded-3 bg-light-subtle tax-row';
+    row.innerHTML = `
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-5">
+                <label class="form-label fs-9 fw-semibold text-muted">Tax Label</label>
+                <input type="text" name="tax_type[]" class="form-control tax-type-input" maxlength="50" required placeholder="e.g. Allowances">
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label fs-9 fw-semibold text-muted">Rate (%)</label>
+                <div class="input-group">
+                    <input type="number" name="tax_percentage[]" class="form-control" step="0.01" min="0" max="100" required>
+                    <span class="input-group-text">%</span>
+                </div>
+            </div>
+            <div class="col-8 col-md-2">
+                <div class="form-check form-switch mt-2">
+                    <input class="form-check-input tax-active-input" type="checkbox" name="is_active[]" value="1" checked>
+                    <label class="form-check-label fs-9 text-muted">Active</label>
+                </div>
+            </div>
+            <div class="col-4 col-md-1 text-end">
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeTaxRow(this)" title="Remove Tax Row">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    container.appendChild(row);
+}
+
+function removeTaxRow(button) {
+    const row = button.closest('.tax-row');
+    if (!row) return;
+    const container = document.getElementById('taxRowsContainer');
+    if (container.querySelectorAll('.tax-row').length === 1) {
+        API.showToast('At least one tax item must remain.', 'danger');
+        return;
+    }
+    row.remove();
 }
 
 // Get default checklist status based on user role matrix

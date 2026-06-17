@@ -299,6 +299,10 @@ if (in_array($userRole, ['Super Admin', 'Accounting Staff']) && $fastPDO !== nul
                             <input type="text" id="modalBudgetFundSource" class="form-control" placeholder="e.g. MOOE-2026, SEF-2026">
                         </div>
                         <div class="col-12">
+                            <label for="modalBudgetFundTrackingNumber" class="form-label fs-8 fw-semibold text-muted">Fund Source Tracking Number (SARO No., etc.) (Optional)</label>
+                            <input type="text" id="modalBudgetFundTrackingNumber" class="form-control" placeholder="e.g. SARO-2026-00123">
+                        </div>
+                        <div class="col-12">
                             <div class="form-check form-switch p-3 bg-light rounded-3 border">
                                 <input class="form-check-input ms-0 me-2" type="checkbox" id="modalBudgetFundAvailable" checked>
                                 <label class="form-check-label fw-semibold text-dark fs-8" for="modalBudgetFundAvailable">Is Fund Available & Allocated?</label>
@@ -532,6 +536,7 @@ function renderTable(transactions) {
                     <a href="<?php echo env('APP_URL'); ?>/views/tracker/index.php?tracking=${encodeURIComponent(row.tracking_number)}" class="fw-bold text-decoration-none text-primary" title="${row.tracking_number}">
                         ${row.tracking_number}
                     </a>
+                    ${row.fund_source_tracking_number ? `<div class="text-muted fs-9 mt-1" title="Fund Source Tracking Number">${row.fund_source_tracking_number}</div>` : ''}
                 </td>
                 <td class="transactions-col-event" title="${row.event_name}">${row.event_name}</td>
                 <td title="${row.transaction_type}${row.cash_advance_category ? ' (' + row.cash_advance_category + ')' : ''}${row.reimbursement_category ? ' (' + row.reimbursement_category + ')' : ''}"><span class="badge bg-light text-dark border txn-type-badge">${row.transaction_type}${row.cash_advance_category ? ' (' + row.cash_advance_category + ')' : ''}${row.reimbursement_category ? ' (' + row.reimbursement_category + ')' : ''}</span></td>
@@ -702,6 +707,7 @@ async function openWorkflowModal(row) {
     else if (tx.current_status === 'Pending Budget' && (userRole === 'Super Admin' || userRole === 'Budget Officer' || userPosition === 'Budget Officer')) {
         document.getElementById('stage3BudgetSection').style.display = 'block';
         document.getElementById('modalBudgetFundSource').value = details.budget_check ? details.budget_check.fund_source : '';
+        document.getElementById('modalBudgetFundTrackingNumber').value = details.budget_check ? (details.budget_check.fund_source_tracking_number || '') : '';
         document.getElementById('modalBudgetFundAvailable').checked = details.budget_check ? (details.budget_check.fund_available == 1) : true;
         
         actionSelect.innerHTML = `
@@ -1009,6 +1015,7 @@ async function handleWorkflowSubmit(e) {
     // Special Route for Budget check (Stage 3)
     if (action === 'approve_budget') {
         const fundSource = document.getElementById('modalBudgetFundSource').value.trim();
+        const fundSourceTrackingNumber = document.getElementById('modalBudgetFundTrackingNumber').value.trim();
         const fundAvailable = document.getElementById('modalBudgetFundAvailable').checked ? 1 : 0;
         
         if (fundSource === '') {
@@ -1019,6 +1026,7 @@ async function handleWorkflowSubmit(e) {
         const payload = {
             transaction_id: id,
             fund_source: fundSource,
+            fund_source_tracking_number: fundSourceTrackingNumber,
             fund_available: fundAvailable,
             remarks: remarks,
             action: 'approve'
@@ -1046,11 +1054,13 @@ async function handleWorkflowSubmit(e) {
     // Handle return/rejection at Budget Check (Stage 3)
     if (currentModalTransactionData.current_status === 'Pending Budget' && ['Returned', 'Rejected'].includes(action)) {
         const fundSource = document.getElementById('modalBudgetFundSource').value.trim() || 'N/A';
+        const fundSourceTrackingNumber = document.getElementById('modalBudgetFundTrackingNumber').value.trim();
         const fundAvailable = document.getElementById('modalBudgetFundAvailable').checked ? 1 : 0;
 
         const payload = {
             transaction_id: id,
             fund_source: fundSource,
+            fund_source_tracking_number: fundSourceTrackingNumber,
             fund_available: fundAvailable,
             remarks: remarks,
             action: action === 'Rejected' ? 'reject' : 'return'

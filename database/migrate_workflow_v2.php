@@ -80,6 +80,7 @@ try {
             id INT AUTO_INCREMENT PRIMARY KEY,
             transaction_id INT NOT NULL,
             fund_source VARCHAR(255) NOT NULL,
+            fund_source_tracking_number VARCHAR(255) DEFAULT NULL,
             fund_available TINYINT(1) NOT NULL DEFAULT 1,
             checked_by INT NOT NULL,
             checked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -92,6 +93,19 @@ try {
     logMsg("  [OK] budget_checks table created/verified.");
 } catch (Exception $e) {
     logMsg("  [WARN] budget_checks: " . $e->getMessage());
+}
+
+// 1b-2. Ensure new optional tracking number column exists in older installations
+try {
+    $colExists = $fastPDO->query("SHOW COLUMNS FROM budget_checks LIKE 'fund_source_tracking_number'")->fetch();
+    if (!$colExists) {
+        $fastPDO->exec("ALTER TABLE budget_checks ADD COLUMN fund_source_tracking_number VARCHAR(255) DEFAULT NULL AFTER fund_source");
+        logMsg("  [OK] Added budget_checks.fund_source_tracking_number column.");
+    } else {
+        logMsg("  [OK] budget_checks.fund_source_tracking_number already exists.");
+    }
+} catch (Exception $e) {
+    logMsg("  [WARN] budget_checks add column: " . $e->getMessage());
 }
 
 // 1c. signatory_tasks

@@ -155,10 +155,11 @@ try {
         unset($params['status']);
         
         $sql = "
-            SELECT t.*, u.full_name as requestor_name, 
+            SELECT t.*, u.full_name as requestor_name, bc.fund_source, bc.fund_source_tracking_number,
                    DATEDIFF(NOW(), t.created_at) as aging_days
             FROM transactions t
             LEFT JOIN users u ON t.requestor_id = u.id
+            LEFT JOIN budget_checks bc ON t.id = bc.transaction_id
             WHERE t.current_status IN ('Pending ACCTG Support', 'Pending Budget', 'Pending ACCT Support', 'Pending Signatories', 'Pending Cashier Release')
               AND {$pendingWhereSql}
             ORDER BY aging_days DESC
@@ -265,7 +266,7 @@ try {
             fputcsv($output, ['GRAND TOTALS', '', $totCount, $totGross, $totTax, $totNet]);
             
         } elseif ($reportType === 'pending_approvals') {
-            fputcsv($output, ['Tracking Number', 'Event/Particulars', 'Type', 'Requestor', 'Gross Amount', 'Net Amount', 'Status', 'Aging (Days)', 'Submitted Date']);
+            fputcsv($output, ['Tracking Number', 'Event/Particulars', 'Type', 'Requestor', 'Fund Source', 'Fund Source Tracking Number', 'Gross Amount', 'Net Amount', 'Status', 'Aging (Days)', 'Submitted Date']);
             $totGross = 0; $totNet = 0;
             foreach ($data as $row) {
                 fputcsv($output, [
@@ -273,6 +274,8 @@ try {
                     $row['event_name'],
                     $row['transaction_type'],
                     $row['requestor_name'],
+                    $row['fund_source'] ?: 'N/A',
+                    $row['fund_source_tracking_number'] ?: 'N/A',
                     $row['amount'],
                     $row['net_amount'],
                     $row['current_status'],
@@ -283,7 +286,7 @@ try {
                 $totNet += $row['net_amount'];
             }
             fputcsv($output, []);
-            fputcsv($output, ['GRAND TOTALS', '', '', '', $totGross, $totNet, '', '', '']);
+            fputcsv($output, ['GRAND TOTALS', '', '', '', '', '', $totGross, $totNet, '', '', '']);
             
         } elseif ($reportType === 'audit_trail') {
             fputcsv($output, ['Timestamp', 'Activity Log', 'User', 'Email', 'IP Address', 'Old Value', 'New Value']);
@@ -439,11 +442,12 @@ try {
             $pdf->SetTextColor(255, 255, 255);
             $pdf->SetFont('Arial', 'B', 8);
             
-            $pdf->Cell(30, 8, 'Tracking No.', 1, 0, 'L', true);
-            $pdf->Cell(45, 8, 'Particulars/Event', 1, 0, 'L', true);
-            $pdf->Cell(25, 8, 'Type', 1, 0, 'L', true);
-            $pdf->Cell(30, 8, 'Requestor', 1, 0, 'L', true);
-            $pdf->Cell(25, 8, 'Net Amount', 1, 0, 'R', true);
+            $pdf->Cell(20, 8, 'Tracking No.', 1, 0, 'L', true);
+            $pdf->Cell(38, 8, 'Particulars/Event', 1, 0, 'L', true);
+            $pdf->Cell(18, 8, 'Type', 1, 0, 'L', true);
+            $pdf->Cell(24, 8, 'Requestor', 1, 0, 'L', true);
+            $pdf->Cell(35, 8, 'Fund Ref', 1, 0, 'L', true);
+            $pdf->Cell(20, 8, 'Net Amount', 1, 0, 'R', true);
             $pdf->Cell(20, 8, 'Status', 1, 0, 'C', true);
             $pdf->Cell(15, 8, 'Aging(d)', 1, 1, 'C', true);
             
@@ -456,14 +460,19 @@ try {
                 $pdf->SetFillColor($fill ? 248 : 255, $fill ? 250 : 255, $fill ? 252 : 255);
                 
                 // Truncate long strings for PDF cell limits
-                $evt = strlen($row['event_name']) > 28 ? substr($row['event_name'], 0, 26) . '..' : $row['event_name'];
-                $req = strlen($row['requestor_name']) > 16 ? substr($row['requestor_name'], 0, 14) . '..' : $row['requestor_name'];
+                $evt = strlen($row['event_name']) > 24 ? substr($row['event_name'], 0, 22) . '..' : $row['event_name'];
+                $req = strlen($row['requestor_name']) > 13 ? substr($row['requestor_name'], 0, 11) . '..' : $row['requestor_name'];
+                $fundRef = trim(($row['fund_source'] ?: 'N/A') . ' / ' . ($row['fund_source_tracking_number'] ?: 'N/A'));
+                if (strlen($fundRef) > 24) {
+                    $fundRef = substr($fundRef, 0, 22) . '..';
+                }
 
-                $pdf->Cell(30, 8, $row['tracking_number'], 1, 0, 'L', true);
-                $pdf->Cell(45, 8, $evt, 1, 0, 'L', true);
-                $pdf->Cell(25, 8, $row['transaction_type'], 1, 0, 'L', true);
-                $pdf->Cell(30, 8, $req, 1, 0, 'L', true);
-                $pdf->Cell(25, 8, 'Php ' . number_format($row['net_amount'], 2), 1, 0, 'R', true);
+                $pdf->Cell(20, 8, $row['tracking_number'], 1, 0, 'L', true);
+                $pdf->Cell(38, 8, $evt, 1, 0, 'L', true);
+                $pdf->Cell(18, 8, $row['transaction_type'], 1, 0, 'L', true);
+                $pdf->Cell(24, 8, $req, 1, 0, 'L', true);
+                $pdf->Cell(35, 8, $fundRef, 1, 0, 'L', true);
+                $pdf->Cell(20, 8, 'Php ' . number_format($row['net_amount'], 2), 1, 0, 'R', true);
                 $pdf->Cell(20, 8, $row['current_status'], 1, 0, 'C', true);
                 $pdf->Cell(15, 8, $row['aging_days'], 1, 1, 'C', true);
                 
@@ -473,9 +482,9 @@ try {
             
             $pdf->SetFont('Arial', 'B', 8);
             $pdf->SetFillColor(241, 245, 249);
-            $pdf->Cell(130, 8, 'TOTAL ESTIMATED OUTSTANDING PAYOUT', 1, 0, 'L', true);
-            $pdf->Cell(25, 8, 'Php ' . number_format($totNet, 2), 1, 0, 'R', true);
-            $pdf->Cell(35, 8, '', 1, 1, 'C', true); // spacers
+            $pdf->Cell(135, 8, 'TOTAL ESTIMATED OUTSTANDING PAYOUT', 1, 0, 'L', true);
+            $pdf->Cell(20, 8, 'Php ' . number_format($totNet, 2), 1, 0, 'R', true);
+            $pdf->Cell(35, 8, '', 1, 1, 'C', true);
             
         } elseif ($reportType === 'audit_trail') {
             // Audit logs can be long, so adjust table column scales

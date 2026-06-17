@@ -670,6 +670,10 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                                             <strong class="text-dark"><?php echo htmlspecialchars($budgetCheckDetails['fund_source']); ?></strong>
                                         </div>
                                         <div class="col-12 col-sm-6">
+                                            <span class="text-muted d-block">Fund Source Tracking Number</span>
+                                            <strong class="text-dark"><?php echo htmlspecialchars($budgetCheckDetails['fund_source_tracking_number'] ?: 'N/A'); ?></strong>
+                                        </div>
+                                        <div class="col-12 col-sm-6">
                                             <span class="text-muted d-block">Fund Availability Verified</span>
                                             <?php if ($budgetCheckDetails['fund_available']): ?>
                                                 <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Available</span>
@@ -758,9 +762,13 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                             <!-- Procurement Checklist for Linked BAC Transactions -->
                             <?php 
                             try {
-                                $checkDocsStmt = $fastPDO->prepare("SELECT * FROM transaction_documents WHERE transaction_id = ?");
-                                $checkDocsStmt->execute([$transaction['id']]);
-                                $fastCheckDocs = $checkDocsStmt->fetchAll();
+                                if ($fastPDO !== null) {
+                                    $checkDocsStmt = $fastPDO->prepare("SELECT * FROM transaction_documents WHERE transaction_id = ?");
+                                    $checkDocsStmt->execute([$transaction['id']]);
+                                    $fastCheckDocs = $checkDocsStmt->fetchAll();
+                                } else {
+                                    $fastCheckDocs = [];
+                                }
                             } catch (\Exception $ex) {
                                 $fastCheckDocs = [];
                             }

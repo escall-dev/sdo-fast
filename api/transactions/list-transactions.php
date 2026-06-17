@@ -22,6 +22,14 @@ if ($fastPDO === null) {
 $userRole = $_SESSION['user_role'];
 $userId = $_SESSION['user_id'];
 
+$hasFundTrackingColumn = false;
+try {
+    $colStmt = $fastPDO->query("SHOW COLUMNS FROM budget_checks LIKE 'fund_source_tracking_number'");
+    $hasFundTrackingColumn = (bool)$colStmt->fetch();
+} catch (Exception $e) {
+    // Keep false; query will safely return NULL placeholder.
+}
+
 // Retrieve parameters with defaults
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $perPage = isset($_GET['per_page']) ? min(100, max(5, (int)$_GET['per_page'])) : 20;
@@ -112,15 +120,20 @@ try {
 
     // 2. Query Paginated Records
     $offset = ($page - 1) * $perPage;
+    $fundTrackingSelect = $hasFundTrackingColumn
+        ? "bc.fund_source_tracking_number"
+        : "NULL AS fund_source_tracking_number";
+
     $dataSql = "
         SELECT t.*, u.full_name as requestor_name, u.email as requestor_email, 
                d.dv_number, d.bir_2307_number, d.tax_type,
-               cad.category as cash_advance_category,
+               cad.category as cash_advance_category, {$fundTrackingSelect},
                rd.category as reimbursement_category
         FROM transactions t
         LEFT JOIN users u ON t.requestor_id = u.id
         LEFT JOIN document_details d ON t.id = d.transaction_id
         LEFT JOIN cash_advance_details cad ON t.id = cad.transaction_id
+        LEFT JOIN budget_checks bc ON t.id = bc.transaction_id
         LEFT JOIN reimbursement_details rd ON t.id = rd.transaction_id
         " . $whereSql . "
         ORDER BY " . $sortCol . " " . $sortOrder . "

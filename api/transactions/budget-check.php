@@ -25,8 +25,18 @@ if ($fastPDO === null) {
     exit;
 }
 
+try {
+    $colStmt = $fastPDO->query("SHOW COLUMNS FROM budget_checks LIKE 'fund_source_tracking_number'");
+    if (!$colStmt->fetch()) {
+        $fastPDO->exec("ALTER TABLE budget_checks ADD COLUMN fund_source_tracking_number VARCHAR(255) NULL AFTER fund_source");
+    }
+} catch (Exception $e) {
+    error_log("Failed ensuring budget_checks.fund_source_tracking_number exists: " . $e->getMessage());
+}
+
 $transactionId = (int)($inputData['transaction_id'] ?? 0);
 $fundSource = trim($inputData['fund_source'] ?? '');
+$fundSourceTrackingNumber = trim($inputData['fund_source_tracking_number'] ?? '');
 $fundAvailable = isset($inputData['fund_available']) ? (int)$inputData['fund_available'] : 1;
 $remarks = trim($inputData['remarks'] ?? '');
 $action = trim($inputData['action'] ?? 'approve'); // 'approve' or 'reject'
@@ -40,6 +50,12 @@ if ($transactionId <= 0 || empty($remarks)) {
 if ($action === 'approve' && empty($fundSource)) {
     http_response_code(422);
     echo json_encode(['success' => false, 'message' => 'Fund source is required when approving.']);
+    exit;
+}
+
+if (strlen($fundSourceTrackingNumber) > 255) {
+    http_response_code(422);
+    echo json_encode(['success' => false, 'message' => 'Fund source tracking number must be at most 255 characters.']);
     exit;
 }
 
@@ -77,10 +93,11 @@ try {
 
     // 2. Record budget check
     $budgetStmt = $fastPDO->prepare("
-        INSERT INTO budget_checks (transaction_id, fund_source, fund_available, checked_by, remarks)
-        VALUES (:tx_id, :fund_source, :fund_available, :user_id, :remarks)
+        INSERT INTO budget_checks (transaction_id, fund_source, fund_source_tracking_number, fund_available, checked_by, remarks)
+        VALUES (:tx_id, :fund_source, :fund_source_tracking_number, :fund_available, :user_id, :remarks)
         ON DUPLICATE KEY UPDATE 
             fund_source = VALUES(fund_source),
+            fund_source_tracking_number = VALUES(fund_source_tracking_number),
             fund_available = VALUES(fund_available),
             checked_by = VALUES(checked_by),
             checked_at = NOW(),
@@ -89,6 +106,7 @@ try {
     $budgetStmt->execute([
         'tx_id' => $transactionId,
         'fund_source' => $fundSource ?: 'N/A',
+        'fund_source_tracking_number' => $fundSourceTrackingNumber !== '' ? $fundSourceTrackingNumber : null,
         'fund_available' => $fundAvailable,
         'user_id' => $userId,
         'remarks' => $remarks
@@ -108,13 +126,13 @@ try {
             'tx_id' => $transactionId,
             'new_status' => $newStatus,
             'user_id' => $userId,
-            'remarks' => "Budget approved. Fund source: $fundSource. " . $remarks
+            'remarks' => "Budget approved. Fund source: $fundSource." . ($fundSourceTrackingNumber !== '' ? " Tracking No: $fundSourceTrackingNumber." : "") . " " . $remarks
         ]);
 
         AuditLogService::log($fastPDO, $userId,
             "Budget check approved: {$transaction['tracking_number']}",
             ['status' => 'Pending Budget'],
-            ['status' => $newStatus, 'fund_source' => $fundSource]
+            ['status' => $newStatus, 'fund_source' => $fundSource, 'fund_source_tracking_number' => $fundSourceTrackingNumber]
         );
     } else {
         // Reject
