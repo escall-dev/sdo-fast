@@ -1,0 +1,34 @@
+Content: Update Transaction Routing and Work Auditing Timeline.
+
+Task: Update Transaction Routing and Work Auditing Timeline
+
+Update the transaction processing logic so the transaction moves between role accounts in this sequence. Update the Work Auditing Timeline display to match each stage.
+
+Stage 1, Requestor account
+Requestor fills out the transaction submission form only. Remove the attachment field from this form. No documents can be uploaded at this stage. Status label: "Transaction Submitted." Route the transaction to the Budget Officer account.
+
+Stage 2, Budget Officer account
+Transaction appears in the Budget Officer account for fund verification. Budget Officer checks if there is a source of funds for the proposed program or project. On approval, route the transaction back to the Requestor account and unlock the attachment field. Status label: "Source of Funds Verification."
+
+Stage 3, Requestor account
+Transaction returns to the Requestor account. The attachment field is now visible and enabled, only after budget approval. Requestor submits the Mandatory Documentary Requirements. On submission, route the transaction to the Accounting Support account. Status label: "Mandatory Documentary Requirements Submitted."
+
+Stage 4, Accounting Support account
+Transaction appears in the Accounting Support account. Accounting Support scans and verifies all attachments. On verification, route the transaction to the Signatory Personnel account(s). Status label: "Document Inspection."
+
+Stage 5, Signatory Personnel account(s)
+Transaction appears in the Signatory Personnel account(s) for approval and signature. Status label: "Document for Approval and Signature (Internal Process)." Do not display individual signatory names. On approval, route the transaction to the Cashier account.
+
+Stage 6, Cashier account
+Transaction appears in the Cashier account. Cashier processes and releases payment. Status label: "Release of Payment." This is the final stage.
+
+Implementation notes
+- Each stage must update the transaction owner field so it shows under the correct role account at each point.
+- Each role should only see transactions currently assigned to their stage.
+- Remove the attachment upload field from the initial submission form. Add a conditional check so the attachment field renders only when transaction status equals "Budget Approved" or later.
+- Block any attempt to upload documents before budget approval, even through direct API calls or form manipulation.
+- Update form validation so the initial submission does not require document fields.
+- Keep timestamps for every stage transition.
+- Update the database schema or status enum to match these six stages.
+- Update the Work Auditing Timeline component to render these stages and statuses in order.
+- Remove any signatory name field from the timeline display.

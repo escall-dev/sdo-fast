@@ -1,0 +1,23 @@
+Content: the Workflow Timeline Chart.
+
+Workflow Timeline Chart, 
+
+Process flow: Requestor, then Budget, then Requestor, then Accounting Support, then Signatories, then Cashier.
+
+Step 1, REQUESTOR
+Requestor fills up the transaction submission form. No attachments yet. Mandatory Documentary Requirements are not submitted at this stage.
+
+Step 2, BUDGET OFFICER
+Budget Officer scans the proposed program or project. Checks if it has a source of funds for that program or project.
+
+Step 3, REQUESTOR
+Once the Budget Officer approves and confirms allotted budget or funds, the Requestor proceeds to submit the Mandatory Documentary Requirements.
+
+Step 4, ACCOUNTING SUPPORT
+Accounting Support scans and inspects all attachments submitted.
+
+Step 5, ACCOUNTING SUPPORT
+Once all attachments are approved, Accounting Support endorses the transaction to the Signatory Personnel(s) for Document Approval and Signature.
+
+Step 6, CASHIER
+Once approved by the Signatory Personnel(s), the transaction proceeds to the Cashier for Release of Payment.

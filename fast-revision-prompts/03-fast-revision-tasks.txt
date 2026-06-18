@@ -1,0 +1,24 @@
+SDO FAST Revision Prompts
+
+Task 1: Dashboard label rename
+Find "New Disbursement Voucher" in dashboard views, buttons, and JS labels. Rename it to "Submit New Transactions." Update related route names or comments if they reference the old label.
+
+Task 2: Status card rename
+Find "Rejected" status card label and any matching status text in code or database enum display. Rename it to "Disapproved." Do not change the underlying database value, only the displayed label.
+
+Task 3: Dashboard filters
+Add filter controls to the dashboard: Annual, Monthly, Transaction Type, Status, Date. Use existing filter UI patterns in the project. Connect each filter to the relevant query parameters.
+
+Task 4: Submit Transaction field renames
+In the Submit Transaction form, rename these fields:
+- "Target Completion Date" to "Target Implementation Date"
+- "Documents Checklist" to "Mandatory Documentary Requirements"
+- "Gross Amount" to "Amount Requested"
+- "Travel Documents" to "Mandatory Documents Requirements"
+Update labels in the HTML/Blade/PHP view and any JS validation messages that reference the old names.
+
+Task 5: Block incomplete submissions
+In the Submit Transaction form, add validation. Block form submission if the Mandatory Documentary Requirements section is incomplete. Show a clear error message naming the missing requirement.
+
+Task 6: Work Auditing Timeline update
+Remove the signatory name field from the Work Auditing Timeline display. Replace it with a static label: "Document for Approval and Signature (Internal Process)." Keep the timestamp and status fields as is.
