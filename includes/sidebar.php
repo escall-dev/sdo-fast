@@ -208,7 +208,7 @@ $renderSidebarMenu = function($isMobile = false) use (
             F
         </div>
         <div class="d-flex flex-column">
-            <span class="logo-title text-white" style="font-size: 1.15rem; line-height: 1.2;">SDO FAST</span>
+            <span class="logo-title text-white" style="font-size: 1.15rem; line-height: 1.2;">FAST - SDO</span>
             <span class="logo-subtitle text-white-50" style="font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Financial Accounting Services and Transactions</span>
         </div>
     </div>

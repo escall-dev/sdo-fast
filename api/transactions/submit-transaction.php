@@ -15,6 +15,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/auth.php'; // Enforces auth & CSRF
 require_once __DIR__ . '/../../services/TrackingNumberService.php';
 require_once __DIR__ . '/../../services/AuditLogService.php';
+require_once __DIR__ . '/../../services/CoverageCategoryService.php';
 
 if ($fastPDO === null) {
     http_response_code(500);
@@ -74,45 +75,19 @@ if (!in_array($type, $allowedTypes)) {
     exit;
 }
 
-// Allowed coverage types
-$allowedCaCategories = [
-    'Travel', 'School MOOE', 'SBFP', 'Training', 'Meals', 'Accommodation',
-    'Meals and Accommodation', 'Honorarium', 'Supplies and Materials',
-    'Communication Expenses', 'SLAC / Moving-Up / Graduation / GAWAD'
-];
-$allowedReimbCategories = [
-    'Travel', 'Supplies and Materials', 'Meals', 'Accommodation',
-    'Meals and Accommodation', 'Honorarium', 'Communication Load',
-    'Utility Bills', 'Repair, Repaint, Improvement',
-    'Installation of Electricity and Water', 'Installation of Internet / Telephone',
-    'Seminars / Trainings', 'GAD Documents / SLAC Session',
-    'Job Order', 'Fidelity Bond', 'Immersion and Insurance for SHS'
-];
-
-// Coverage types that require date/venue
-$caDateVenueTypes = ['Travel', 'Training', 'Meals', 'Accommodation', 'Meals and Accommodation', 'SLAC / Moving-Up / Graduation / GAWAD'];
-$caTaItineraryTypes = ['Travel'];
-$caFundSourceTypes = ['Travel', 'School MOOE', 'SBFP'];
-$caActivityProposalTypes = ['Training', 'SLAC / Moving-Up / Graduation / GAWAD'];
-$caMonthTypes = ['Communication Expenses'];
-
-$reimbDateVenueTypes = ['Travel', 'Meals', 'Accommodation', 'Meals and Accommodation', 'Seminars / Trainings', 'GAD Documents / SLAC Session'];
-$reimbTaItineraryTypes = ['Travel'];
-$reimbActivityProposalTypes = ['Seminars / Trainings'];
-$reimbCommunicationsTypes = ['Communication Load'];
-$reimbUtilityBillsTypes = ['Utility Bills'];
-
 // Cash Advance validations
 $inclusiveDates = null;
 if ($type === 'Cash Advance') {
-    if (empty($cashAdvanceCategory) || !in_array($cashAdvanceCategory, $allowedCaCategories)) {
+    $caCategoryConfig = CoverageCategoryService::getCategoryByName($fastPDO, 'Cash Advance', $cashAdvanceCategory, true);
+    if ($caCategoryConfig === null) {
         http_response_code(422);
         echo json_encode(['success' => false, 'message' => 'A valid Cash Advance Coverage Type is required.']);
         exit;
     }
 
-    // Date/Venue required?
-    if (in_array($cashAdvanceCategory, $caDateVenueTypes)) {
+    $caFields = $caCategoryConfig['field_config'];
+
+    if (!empty($caFields['dateVenue'])) {
         if (empty($mooeStartDate) || empty($mooeEndDate) || empty($venue)) {
             http_response_code(422);
             echo json_encode(['success' => false, 'message' => 'Inclusive dates and venue are required for ' . $cashAdvanceCategory . '.']);
@@ -121,14 +96,10 @@ if ($type === 'Cash Advance') {
         $inclusiveDates = $mooeStartDate . ' to ' . $mooeEndDate;
     }
 
-    // Workflow v3: Fund Source is determined by the Budget Officer during Stage 1.
-    // Requestor does not provide fund_source at initial submission.
-
-    // Month required for Communication Expenses?
-    if (in_array($cashAdvanceCategory, $caMonthTypes)) {
+    if (!empty($caFields['month'])) {
         if (empty($caMonthValue)) {
             http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Month is required for Communication Expenses.']);
+            echo json_encode(['success' => false, 'message' => 'Month is required for ' . $cashAdvanceCategory . '.']);
             exit;
         }
     }
@@ -137,14 +108,16 @@ if ($type === 'Cash Advance') {
 // Reimbursement validations
 $reimbInclusiveDates = null;
 if ($type === 'Reimbursement') {
-    if (empty($reimbursementCategory) || !in_array($reimbursementCategory, $allowedReimbCategories)) {
+    $reimbCategoryConfig = CoverageCategoryService::getCategoryByName($fastPDO, 'Reimbursement', $reimbursementCategory, true);
+    if ($reimbCategoryConfig === null) {
         http_response_code(422);
         echo json_encode(['success' => false, 'message' => 'A valid Reimbursement Coverage Type is required.']);
         exit;
     }
 
-    // Date/Venue required?
-    if (in_array($reimbursementCategory, $reimbDateVenueTypes)) {
+    $reimbFields = $reimbCategoryConfig['field_config'];
+
+    if (!empty($reimbFields['dateVenue'])) {
         if (empty($reimbStartDate) || empty($reimbEndDate) || empty($reimbVenue)) {
             http_response_code(422);
             echo json_encode(['success' => false, 'message' => 'Inclusive dates and venue are required for ' . $reimbursementCategory . '.']);
@@ -153,8 +126,7 @@ if ($type === 'Reimbursement') {
         $reimbInclusiveDates = $reimbStartDate . ' to ' . $reimbEndDate;
     }
 
-    // Communications Load month required?
-    if (in_array($reimbursementCategory, $reimbCommunicationsTypes)) {
+    if (!empty($reimbFields['communications'])) {
         if (empty($reimbursementMonth)) {
             http_response_code(422);
             echo json_encode(['success' => false, 'message' => 'Month is required for Communication Load.']);
@@ -162,14 +134,12 @@ if ($type === 'Reimbursement') {
         }
     }
 
-    // Utility Bills month required?
-    if (in_array($reimbursementCategory, $reimbUtilityBillsTypes)) {
+    if (!empty($reimbFields['utilityBills'])) {
         if (empty($utilityMonth)) {
             http_response_code(422);
             echo json_encode(['success' => false, 'message' => 'Month is required for Utility Bills.']);
             exit;
         }
-        // Store utility month in the reimbursement_month field
         $reimbursementMonth = $utilityMonth;
     }
 }

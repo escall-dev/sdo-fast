@@ -13,6 +13,7 @@ require_once __DIR__ . '/../../includes/navbar.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/document_checklist.php';
+require_once __DIR__ . '/../../services/CoverageCategoryService.php';
 
 $userRole = $_SESSION['user_role'] ?? '';
 $userId = $_SESSION['user_id'];
@@ -130,18 +131,20 @@ if ($transactionId > 0 && $fastPDO !== null) {
                         $type = $transaction['transaction_type'];
                         $caCategory = $transaction['ca_category'] ?? '';
                         $reimbCategory = $transaction['reimb_category'] ?? '';
-                        
-                        $caDateVenueTypes = ['Travel', 'Training', 'Meals', 'Accommodation', 'Meals and Accommodation', 'SLAC / Moving-Up / Graduation / GAWAD'];
-                        $caTaTypes = ['Travel'];
-                        $caActivityTypes = ['Training', 'SLAC / Moving-Up / Graduation / GAWAD'];
-                        $reimbDateVenueTypes = ['Travel', 'Meals', 'Accommodation', 'Meals and Accommodation', 'Seminars / Trainings', 'GAD Documents / SLAC Session'];
-                        $reimbTaTypes = ['Travel'];
-                        $reimbActivityTypes = ['Seminars / Trainings'];
-                        $reimbCommTypes = ['Communication Load'];
-                        $reimbUtilityTypes = ['Utility Bills'];
+
+                        $caFieldConfig = [];
+                        $reimbFieldConfig = [];
+                        if ($fastPDO !== null && $type === 'Cash Advance' && $caCategory !== '') {
+                            $caCatRow = CoverageCategoryService::getCategoryByName($fastPDO, 'Cash Advance', $caCategory);
+                            $caFieldConfig = $caCatRow['field_config'] ?? [];
+                        }
+                        if ($fastPDO !== null && $type === 'Reimbursement' && $reimbCategory !== '') {
+                            $reimbCatRow = CoverageCategoryService::getCategoryByName($fastPDO, 'Reimbursement', $reimbCategory);
+                            $reimbFieldConfig = $reimbCatRow['field_config'] ?? [];
+                        }
                         ?>
 
-                        <?php if ($type === 'Cash Advance' && in_array($caCategory, $caTaTypes)): ?>
+                        <?php if ($type === 'Cash Advance' && !empty($caFieldConfig['taItinerary'])): ?>
                             <!-- Travel Documents -->
                             <div class="card border mb-3">
                                 <div class="card-header bg-light"><h6 class="mb-0 fw-bold fs-7">Travel Authority Documents (<?php echo htmlspecialchars($caCategory); ?>)</h6></div>
@@ -160,7 +163,7 @@ if ($transactionId > 0 && $fastPDO !== null) {
                             </div>
                         <?php endif; ?>
 
-                        <?php if ($type === 'Cash Advance' && in_array($caCategory, $caActivityTypes)): ?>
+                        <?php if ($type === 'Cash Advance' && !empty($caFieldConfig['activityProposal'])): ?>
                             <div class="card border mb-3">
                                 <div class="card-header bg-light"><h6 class="mb-0 fw-bold fs-7">Activity Proposal (<?php echo htmlspecialchars($caCategory); ?>)</h6></div>
                                 <div class="card-body">
@@ -173,7 +176,7 @@ if ($transactionId > 0 && $fastPDO !== null) {
                             </div>
                         <?php endif; ?>
 
-                        <?php if ($type === 'Reimbursement' && in_array($reimbCategory, $reimbTaTypes)): ?>
+                        <?php if ($type === 'Reimbursement' && !empty($reimbFieldConfig['taItinerary'])): ?>
                             <div class="card border mb-3">
                                 <div class="card-header bg-light"><h6 class="mb-0 fw-bold fs-7">Travel Authority Documents (Reimbursement — <?php echo htmlspecialchars($reimbCategory); ?>)</h6></div>
                                 <div class="card-body">
@@ -189,7 +192,7 @@ if ($transactionId > 0 && $fastPDO !== null) {
                             </div>
                         <?php endif; ?>
 
-                        <?php if ($type === 'Reimbursement' && in_array($reimbCategory, $reimbActivityTypes)): ?>
+                        <?php if ($type === 'Reimbursement' && !empty($reimbFieldConfig['activityProposal'])): ?>
                             <div class="card border mb-3">
                                 <div class="card-header bg-light"><h6 class="mb-0 fw-bold fs-7">Activity Proposal (<?php echo htmlspecialchars($reimbCategory); ?>)</h6></div>
                                 <div class="card-body">
@@ -201,7 +204,7 @@ if ($transactionId > 0 && $fastPDO !== null) {
                             </div>
                         <?php endif; ?>
 
-                        <?php if ($type === 'Reimbursement' && in_array($reimbCategory, $reimbCommTypes)): ?>
+                        <?php if ($type === 'Reimbursement' && !empty($reimbFieldConfig['communications'])): ?>
                             <div class="card border mb-3">
                                 <div class="card-header bg-light"><h6 class="mb-0 fw-bold fs-7">Communication Load Documents</h6></div>
                                 <div class="card-body">
@@ -221,7 +224,7 @@ if ($transactionId > 0 && $fastPDO !== null) {
                             </div>
                         <?php endif; ?>
 
-                        <?php if ($type === 'Reimbursement' && in_array($reimbCategory, $reimbUtilityTypes)): ?>
+                        <?php if ($type === 'Reimbursement' && !empty($reimbFieldConfig['utilityBills'])): ?>
                             <div class="card border mb-3">
                                 <div class="card-header bg-light"><h6 class="mb-0 fw-bold fs-7">Utility Bill Documents</h6></div>
                                 <div class="card-body">

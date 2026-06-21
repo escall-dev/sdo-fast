@@ -3,12 +3,27 @@
  * Helpers for DM 214 document checklists per transaction type and coverage category.
  */
 
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../services/CoverageCategoryService.php';
+
 function getDocumentChecklistConfig(): array
 {
+    global $fastPDO;
     static $config = null;
+
     if ($config === null) {
-        $config = require __DIR__ . '/../config/document_checklists.php';
+        if ($fastPDO === null) {
+            $config = ['Cash Advance' => [], 'Reimbursement' => []];
+        } else {
+            try {
+                $config = CoverageCategoryService::getChecklistConfig($fastPDO);
+            } catch (Throwable $e) {
+                error_log('Failed to load checklist config from DB: ' . $e->getMessage());
+                $config = ['Cash Advance' => [], 'Reimbursement' => []];
+            }
+        }
     }
+
     return $config;
 }
 
@@ -19,64 +34,38 @@ function getDocumentChecklistConfig(): array
  */
 function resolveDocumentChecklist(string $transactionType, string $category): array
 {
+    global $fastPDO;
+
     $empty = ['documents' => [], 'sections' => [], 'note' => null, 'source_label' => null];
 
-    if ($transactionType === '' || $category === '') {
+    if ($transactionType === '' || $category === '' || $fastPDO === null) {
         return $empty;
     }
 
-    $config = getDocumentChecklistConfig();
-    $note = null;
-    $sourceLabel = null;
-    $lookupType = $transactionType;
-    $lookupCategory = $category;
-
-    if ($transactionType === 'Cash Advance' && $category === 'Accommodation') {
-        $lookupCategory = 'Meals and Accommodation';
-        $note = 'Per DM 214, Accommodation has no separate enclosure and falls under Meals and Accommodation.';
-    } elseif ($transactionType === 'Reimbursement' && $category === 'Accommodation') {
-        $lookupCategory = 'Meals and Accommodation';
-        $lookupType = 'Cash Advance';
-        $note = 'Per DM 214, Accommodation has no separate enclosure and falls under Meals and Accommodation.';
-        $sourceLabel = 'Same as Cash Advance: Meals and Accommodation';
-    } elseif ($transactionType === 'Reimbursement' && $category === 'Meals and Accommodation') {
-        $lookupType = 'Cash Advance';
-        $lookupCategory = 'Meals and Accommodation';
-        $sourceLabel = 'Same as Cash Advance: Meals and Accommodation';
-    } elseif ($transactionType === 'Reimbursement' && $category === 'Honorarium') {
-        $lookupType = 'Cash Advance';
-        $lookupCategory = 'Honorarium';
-        $sourceLabel = 'Same as Cash Advance: Honorarium';
-    }
-
-    $entry = $config[$lookupType][$lookupCategory] ?? null;
-    if ($entry === null) {
+    try {
+        return CoverageCategoryService::resolveDocumentChecklist($fastPDO, $transactionType, $category);
+    } catch (Throwable $e) {
+        error_log('resolveDocumentChecklist failed: ' . $e->getMessage());
         return $empty;
     }
-
-    return [
-        'documents' => $entry['documents'] ?? [],
-        'sections' => $entry['sections'] ?? [],
-        'note' => $note,
-        'source_label' => $sourceLabel,
-    ];
 }
 
 function getDocumentChecklistsForJs(): string
 {
-    $config = getDocumentChecklistConfig();
-    $aliases = [
-        'Cash Advance' => [
-            'Accommodation' => ['ref' => 'Cash Advance', 'category' => 'Meals and Accommodation', 'note' => 'Per DM 214, Accommodation has no separate enclosure and falls under Meals and Accommodation.'],
-        ],
-        'Reimbursement' => [
-            'Accommodation' => ['ref' => 'Cash Advance', 'category' => 'Meals and Accommodation', 'note' => 'Per DM 214, Accommodation has no separate enclosure and falls under Meals and Accommodation.', 'source_label' => 'Same as Cash Advance: Meals and Accommodation'],
-            'Meals and Accommodation' => ['ref' => 'Cash Advance', 'category' => 'Meals and Accommodation', 'source_label' => 'Same as Cash Advance: Meals and Accommodation'],
-            'Honorarium' => ['ref' => 'Cash Advance', 'category' => 'Honorarium', 'source_label' => 'Same as Cash Advance: Honorarium'],
-        ],
-    ];
+    global $fastPDO;
 
-    return json_encode(['checklists' => $config, 'aliases' => $aliases], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP);
+    if ($fastPDO === null) {
+        return json_encode(['checklists' => [], 'aliases' => []], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP);
+    }
+
+    try {
+        $checklists = CoverageCategoryService::getChecklistConfig($fastPDO);
+        $aliases = CoverageCategoryService::getAliasesForJs($fastPDO);
+        return json_encode(['checklists' => $checklists, 'aliases' => $aliases], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP);
+    } catch (Throwable $e) {
+        error_log('getDocumentChecklistsForJs failed: ' . $e->getMessage());
+        return json_encode(['checklists' => [], 'aliases' => []], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP);
+    }
 }
 
 /**

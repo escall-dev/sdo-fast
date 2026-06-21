@@ -12,16 +12,24 @@ require_once __DIR__ . '/../../includes/navbar.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/document_checklist.php';
+require_once __DIR__ . '/../../services/CoverageCategoryService.php';
 
 $userRole = $_SESSION['user_role'] ?? '';
 
 // Fetch tax configuration keys for dropdown select
 $taxConfigurations = [];
+$caCategories = [];
+$reimbCategories = [];
+$categoryFieldMaps = ['caFieldMap' => [], 'reimbFieldMap' => []];
+
 if ($fastPDO !== null) {
     try {
         $taxConfigurations = $fastPDO->query("SELECT * FROM tax_configurations WHERE is_active = 1")->fetchAll();
+        $caCategories = CoverageCategoryService::getActiveCategories($fastPDO, 'Cash Advance');
+        $reimbCategories = CoverageCategoryService::getActiveCategories($fastPDO, 'Reimbursement');
+        $categoryFieldMaps = CoverageCategoryService::getFieldMapsForJs($fastPDO);
     } catch (PDOException $e) {
-        error_log("Failed to fetch tax configs: " . $e->getMessage());
+        error_log("Failed to fetch submit form data: " . $e->getMessage());
     }
 }
 ?>
@@ -68,17 +76,11 @@ if ($fastPDO !== null) {
                                 <label for="cashAdvanceCategory" class="form-label fs-8 fw-semibold text-muted">Cash Advance Coverage Type <span class="text-danger">*</span></label>
                                 <select name="cash_advance_category" id="cashAdvanceCategory" class="form-select">
                                     <option value="" disabled selected>Select Coverage Type</option>
-                                    <option value="Travel">Travel (land transpo excluded)</option>
-                                    <option value="School MOOE">School MOOE</option>
-                                    <option value="SBFP">SBFP (School Based Feeding Program)</option>
-                                    <option value="Training">Training</option>
-                                    <option value="Meals">Meals</option>
-                                    <option value="Accommodation">Accommodation</option>
-                                    <option value="Meals and Accommodation">Meals and Accommodation</option>
-                                    <option value="Honorarium">Honorarium</option>
-                                    <option value="Supplies and Materials">Supplies and Materials</option>
-                                    <option value="Communication Expenses">Communication Expenses</option>
-                                    <option value="SLAC / Moving-Up / Graduation / GAWAD">SLAC / Moving-Up / Graduation / GAWAD and similar events</option>
+                                    <?php foreach ($caCategories as $cat): ?>
+                                        <option value="<?php echo htmlspecialchars($cat['name']); ?>">
+                                            <?php echo htmlspecialchars($cat['display_label'] ?: $cat['name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
                         </div>
@@ -169,22 +171,11 @@ if ($fastPDO !== null) {
                                 <label for="reimbursementCategory" class="form-label fs-8 fw-semibold text-muted">Reimbursement Coverage Type <span class="text-danger">*</span></label>
                                 <select name="reimbursement_category" id="reimbursementCategory" class="form-select">
                                     <option value="" disabled selected>Select Coverage Type</option>
-                                    <option value="Travel">Travel</option>
-                                    <option value="Supplies and Materials">Supplies and Materials</option>
-                                    <option value="Meals">Meals</option>
-                                    <option value="Accommodation">Accommodation</option>
-                                    <option value="Meals and Accommodation">Meals and Accommodation</option>
-                                    <option value="Honorarium">Honorarium</option>
-                                    <option value="Communication Load">Communication Load</option>
-                                    <option value="Utility Bills">Utility Bills (Electricity, Water, Telephone, Internet)</option>
-                                    <option value="Repair, Repaint, Improvement">Repair, Repaint, Improvement</option>
-                                    <option value="Installation of Electricity and Water">Installation of Electricity and Water</option>
-                                    <option value="Installation of Internet / Telephone">Installation of Internet / Telephone</option>
-                                    <option value="Seminars / Trainings">Seminars / Trainings (from Enclosure 12)</option>
-                                    <option value="GAD Documents / SLAC Session">GAD Documents / SLAC Session</option>
-                                    <option value="Job Order">Job Order</option>
-                                    <option value="Fidelity Bond">Fidelity Bond</option>
-                                    <option value="Immersion and Insurance for SHS">Immersion and Insurance for SHS</option>
+                                    <?php foreach ($reimbCategories as $cat): ?>
+                                        <option value="<?php echo htmlspecialchars($cat['name']); ?>">
+                                            <?php echo htmlspecialchars($cat['display_label'] ?: $cat['name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
                         </div>
@@ -504,39 +495,9 @@ document.addEventListener('DOMContentLoaded', function() {
         documentChecklistContent.innerHTML = html;
     }
 
-    // Coverage type → sub-field mapping
-    const caFieldMap = {
-        'Travel':           { dateVenue: true, fundSource: true, taItinerary: true, activityProposal: false, month: false },
-        'School MOOE':      { dateVenue: false, fundSource: true, taItinerary: false, activityProposal: false, month: false },
-        'SBFP':             { dateVenue: false, fundSource: true, taItinerary: false, activityProposal: false, month: false },
-        'Training':         { dateVenue: true, fundSource: false, taItinerary: false, activityProposal: true, month: false },
-        'Meals':            { dateVenue: true, fundSource: false, taItinerary: false, activityProposal: false, month: false },
-        'Accommodation':    { dateVenue: true, fundSource: false, taItinerary: false, activityProposal: false, month: false },
-        'Meals and Accommodation': { dateVenue: true, fundSource: false, taItinerary: false, activityProposal: false, month: false },
-        'Honorarium':       { dateVenue: false, fundSource: false, taItinerary: false, activityProposal: false, month: false },
-        'Supplies and Materials': { dateVenue: false, fundSource: false, taItinerary: false, activityProposal: false, month: false },
-        'Communication Expenses': { dateVenue: false, fundSource: false, taItinerary: false, activityProposal: false, month: true },
-        'SLAC / Moving-Up / Graduation / GAWAD': { dateVenue: true, fundSource: false, taItinerary: false, activityProposal: true, month: false }
-    };
-
-    const reimbFieldMap = {
-        'Travel':           { dateVenue: true, taItinerary: true, activityProposal: false, communications: false, utilityBills: false },
-        'Supplies and Materials': { dateVenue: false, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
-        'Meals':            { dateVenue: true, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
-        'Accommodation':    { dateVenue: true, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
-        'Meals and Accommodation': { dateVenue: true, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
-        'Honorarium':       { dateVenue: false, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
-        'Communication Load': { dateVenue: false, taItinerary: false, activityProposal: false, communications: true, utilityBills: false },
-        'Utility Bills':    { dateVenue: false, taItinerary: false, activityProposal: false, communications: false, utilityBills: true },
-        'Repair, Repaint, Improvement': { dateVenue: false, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
-        'Installation of Electricity and Water': { dateVenue: false, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
-        'Installation of Internet / Telephone': { dateVenue: false, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
-        'Seminars / Trainings': { dateVenue: true, taItinerary: false, activityProposal: true, communications: false, utilityBills: false },
-        'GAD Documents / SLAC Session': { dateVenue: true, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
-        'Job Order':        { dateVenue: false, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
-        'Fidelity Bond':    { dateVenue: false, taItinerary: false, activityProposal: false, communications: false, utilityBills: false },
-        'Immersion and Insurance for SHS': { dateVenue: false, taItinerary: false, activityProposal: false, communications: false, utilityBills: false }
-    };
+    // Coverage type → sub-field mapping (from database)
+    const caFieldMap = <?php echo json_encode($categoryFieldMaps['caFieldMap'], JSON_UNESCAPED_UNICODE); ?>;
+    const reimbFieldMap = <?php echo json_encode($categoryFieldMaps['reimbFieldMap'], JSON_UNESCAPED_UNICODE); ?>;
 
     function setFieldsState(container, enabled, required) {
         if (!container) return;

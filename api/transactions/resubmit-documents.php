@@ -15,6 +15,7 @@ require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../services/AuditLogService.php';
+require_once __DIR__ . '/../../services/CoverageCategoryService.php';
 
 if ($fastPDO === null) {
     http_response_code(500);
@@ -145,19 +146,22 @@ $type = $transaction['transaction_type'];
 $caCategory = $transaction['ca_category'] ?? '';
 $reimbCategory = $transaction['reimb_category'] ?? '';
 
-// Coverage types that require specific documents
-$caTaItineraryTypes = ['Travel'];
-$caActivityProposalTypes = ['Training', 'SLAC / Moving-Up / Graduation / GAWAD'];
-$reimbTaItineraryTypes = ['Travel'];
-$reimbActivityProposalTypes = ['Seminars / Trainings'];
-$reimbCommunicationsTypes = ['Communication Load'];
-$reimbUtilityBillsTypes = ['Utility Bills'];
+$caFieldConfig = [];
+$reimbFieldConfig = [];
+if ($type === 'Cash Advance' && $caCategory !== '') {
+    $caCatRow = CoverageCategoryService::getCategoryByName($fastPDO, 'Cash Advance', $caCategory);
+    $caFieldConfig = $caCatRow['field_config'] ?? [];
+}
+if ($type === 'Reimbursement' && $reimbCategory !== '') {
+    $reimbCatRow = CoverageCategoryService::getCategoryByName($fastPDO, 'Reimbursement', $reimbCategory);
+    $reimbFieldConfig = $reimbCatRow['field_config'] ?? [];
+}
 
 $allUploadedFiles = [];
 
 // Validate required uploads and process files
 if ($type === 'Cash Advance') {
-    if (in_array($caCategory, $caTaItineraryTypes)) {
+    if (!empty($caFieldConfig['taItinerary'])) {
         if (!isset($_FILES['approved_ta']) || $_FILES['approved_ta']['error'] === UPLOAD_ERR_NO_FILE) {
             http_response_code(422);
             echo json_encode(['success' => false, 'message' => 'Approved TA (Travel Authority) is required for Travel cash advances.']);
@@ -180,7 +184,7 @@ if ($type === 'Cash Advance') {
             $updCa->execute(['ta' => $taPath, 'ti' => $tiPath, 'id' => $transactionId]);
         }
     }
-    if (in_array($caCategory, $caActivityProposalTypes)) {
+    if (!empty($caFieldConfig['activityProposal'])) {
         if (!isset($_FILES['activity_proposal']) || $_FILES['activity_proposal']['error'] === UPLOAD_ERR_NO_FILE) {
             http_response_code(422);
             echo json_encode(['success' => false, 'message' => 'Activity Proposal is required for ' . $caCategory . ' cash advances.']);
@@ -194,7 +198,7 @@ if ($type === 'Cash Advance') {
         }
     }
 } elseif ($type === 'Reimbursement') {
-    if (in_array($reimbCategory, $reimbTaItineraryTypes)) {
+    if (!empty($reimbFieldConfig['taItinerary'])) {
         if (!isset($_FILES['reimb_approved_ta']) || $_FILES['reimb_approved_ta']['error'] === UPLOAD_ERR_NO_FILE) {
             http_response_code(422);
             echo json_encode(['success' => false, 'message' => 'Approved TA (Travel Authority) is required for Travel reimbursement.']);
@@ -216,7 +220,7 @@ if ($type === 'Cash Advance') {
             $updReimb->execute(['ta' => $taPath, 'ti' => $tiPath, 'id' => $transactionId]);
         }
     }
-    if (in_array($reimbCategory, $reimbActivityProposalTypes)) {
+    if (!empty($reimbFieldConfig['activityProposal'])) {
         if (!isset($_FILES['reimb_activity_proposal']) || $_FILES['reimb_activity_proposal']['error'] === UPLOAD_ERR_NO_FILE) {
             http_response_code(422);
             echo json_encode(['success' => false, 'message' => 'Activity Proposal is required for ' . $reimbCategory . ' reimbursement.']);
@@ -229,7 +233,7 @@ if ($type === 'Cash Advance') {
             $updReimb->execute(['ap' => $path, 'id' => $transactionId]);
         }
     }
-    if (in_array($reimbCategory, $reimbCommunicationsTypes)) {
+    if (!empty($reimbFieldConfig['communications'])) {
         if (!isset($_FILES['reimb_dtr']) || $_FILES['reimb_dtr']['error'] === UPLOAD_ERR_NO_FILE) {
             http_response_code(422);
             echo json_encode(['success' => false, 'message' => 'DTR document is required for Communication Load.']);
@@ -254,7 +258,7 @@ if ($type === 'Cash Advance') {
         $updReimb = $fastPDO->prepare("UPDATE reimbursement_details SET dtr_path = COALESCE(NULLIF(:dtr, ''), dtr_path), certificate_path = COALESCE(NULLIF(:cert, ''), certificate_path), bill_proof_path = COALESCE(NULLIF(:bill, ''), bill_proof_path) WHERE transaction_id = :id");
         $updReimb->execute(['dtr' => $dtrPath, 'cert' => $certPath, 'bill' => $billPath, 'id' => $transactionId]);
     }
-    if (in_array($reimbCategory, $reimbUtilityBillsTypes)) {
+    if (!empty($reimbFieldConfig['utilityBills'])) {
         if (!isset($_FILES['utility_bill_proof']) || $_FILES['utility_bill_proof']['error'] === UPLOAD_ERR_NO_FILE) {
             http_response_code(422);
             echo json_encode(['success' => false, 'message' => 'Bill / proof of payment is required for Utility Bills.']);
