@@ -3,7 +3,7 @@
 .env.*
 
 # Dependencies
-/vendor/
+
 
 # Local scratch
 /scratch/
