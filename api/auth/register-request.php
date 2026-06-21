@@ -93,14 +93,25 @@ try {
 
     // Send OTP
     $mailSent = MailService::sendOTP($email, $fullName, $otp);
+    $isLocal = env('APP_ENV', 'local') === 'local';
+
+    if (!$mailSent && !$isLocal) {
+        unset($_SESSION['register_otp'], $_SESSION['register_otp_time'], $_SESSION['register_data']);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Failed to send verification email. Please try again later or contact support.',
+        ]);
+        exit;
+    }
 
     $response = [
         'success' => true,
-        'message' => 'An OTP has been dispatched to your email. Please verify to complete registration.'
+        'message' => $mailSent
+            ? 'An OTP has been dispatched to your email. Please verify to complete registration.'
+            : 'Email delivery failed. Use the verification code shown below (local dev mode).',
     ];
 
-    // For local dev ease, append dev_otp to the response
-    if (env('APP_ENV', 'local') === 'local') {
+    if ($isLocal) {
         $response['dev_otp'] = $otp;
     }
 

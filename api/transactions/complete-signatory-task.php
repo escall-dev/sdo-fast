@@ -67,9 +67,9 @@ try {
         exit;
     }
 
-    if ($transaction['current_status'] !== 'Pending Signatories') {
+    if ($transaction['current_status'] !== 'Pending Signatory Approval') {
         http_response_code(422);
-        echo json_encode(['success' => false, 'message' => 'Transaction is not at Stage 5 (Pending Signatories). Current status: ' . $transaction['current_status']]);
+        echo json_encode(['success' => false, 'message' => 'Transaction is not at Stage 5 (Pending Signatory Approval). Current status: ' . $transaction['current_status']]);
         exit;
     }
 
@@ -154,24 +154,24 @@ try {
     $autoAdvanced = false;
 
     if ($bothComplete) {
-        // Auto-advance to Stage 6: Pending Cashier Release
-        $advStmt = $fastPDO->prepare("UPDATE transactions SET current_status = 'Pending Cashier Release' WHERE id = :id");
+        // Auto-advance to Stage 6: Pending Signatory Approval
+        $advStmt = $fastPDO->prepare("UPDATE transactions SET current_status = 'Pending Signatory Approval' WHERE id = :id");
         $advStmt->execute(['id' => $transactionId]);
 
         $logStmt = $fastPDO->prepare("
             INSERT INTO transaction_status_logs (transaction_id, previous_status, new_status, changed_by, remarks) 
-            VALUES (:tx_id, 'Pending Signatories', 'Pending Cashier Release', :user_id, :remarks)
+            VALUES (:tx_id, 'Pending Signatory Approval', 'Pending Signatory Approval', :user_id, :remarks)
         ");
         $logStmt->execute([
             'tx_id' => $transactionId,
             'user_id' => $userId,
-            'remarks' => 'Both signatory tasks completed. Auto-advanced to Stage 6 (Cashier Release).'
+            'remarks' => 'Both signatory tasks completed. Routed to Cashier for release.'
         ]);
 
         AuditLogService::log($fastPDO, $userId,
             "Both signatory tasks completed, auto-advanced: {$transaction['tracking_number']}",
-            ['status' => 'Pending Signatories'],
-            ['status' => 'Pending Cashier Release']
+            ['status' => 'Pending Signatory Approval'],
+            ['status' => 'Pending Signatory Approval']
         );
 
         $autoAdvanced = true;
@@ -182,7 +182,7 @@ try {
     $taskLabel = ($taskType === 'payroll_prep') ? 'Payroll Preparation' : 'DV/ORS Preparation';
     $message = "$taskLabel task marked as completed.";
     if ($autoAdvanced) {
-        $message .= " Both tasks done — transaction advanced to Pending Cashier Release.";
+        $message .= " Both tasks done — transaction advanced to Pending Signatory Approval.";
     }
 
     echo json_encode([

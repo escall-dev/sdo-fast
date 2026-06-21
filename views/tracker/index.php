@@ -315,14 +315,26 @@ if (!empty($searchQuery) && $fastPDO !== null) {
 
         <?php if ($transaction): 
             // Determine active step index to highlight timeline
-            $statusList = ['Pending ACCTG Support', 'Pending Budget', 'Pending ACCT Support', 'Pending Signatories', 'Pending Cashier Release', 'Released'];
+            $statusList = ['Pending Budget', 'Pending Requestor', 'Pending Accounting Support', 'Pending Signatory Approval', 'For Payment', 'Released'];
             if ($transaction['current_status'] === 'Rejected') {
-                $statusList[5] = 'Rejected';
+                $statusList[count($statusList) - 1] = 'Rejected';
             } elseif ($transaction['current_status'] === 'Returned') {
-                $statusList[5] = 'Returned';
+                $statusList[count($statusList) - 1] = 'Returned';
             }
             
             $currentStatus = $transaction['current_status'];
+            // Workflow v3 display labels
+            $statusDisplayLabels = [
+                'Pending Budget' => 'Source of Funds Verification',
+                'Pending Requestor' => 'Source of Funds Verified',
+                'Pending Accounting Support' => 'Mandatory Documentary Requirements Submitted',
+                'Pending Signatory Approval' => 'Document for Approval and Signature',
+                'For Payment' => 'Release of Payment',
+                'Released' => 'Payment Released',
+                'Rejected' => 'Disapproved',
+                'Returned' => 'Returned to Requestor'
+            ];
+            $currentStatusDisplay = $statusDisplayLabels[$currentStatus] ?? $currentStatus;
             $activeStepIdx = array_search($currentStatus, $statusList);
             if ($activeStepIdx === false) {
                 $activeStepIdx = 0; // Fallback
@@ -332,14 +344,25 @@ if (!empty($searchQuery) && $fastPDO !== null) {
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-bold text-primary-dark">Tracking Details - <?php echo htmlspecialchars($transaction['tracking_number']); ?></h5>
-                    <span class="badge badge-status <?php 
-                        switch($currentStatus) {
-                            case 'Released': echo 'bg-success'; break;
-                            case 'Rejected': echo 'bg-danger'; break;
-                            case 'Returned': echo 'bg-dark'; break;
-                            default: echo 'bg-warning text-dark'; break;
-                        }
-                    ?> py-2 px-3"><?php echo htmlspecialchars($currentStatus); ?></span>
+                    <div class="d-flex align-items-center gap-2">
+                        <?php 
+                        // Workflow v3: Show resubmit button if at Pending Requestor and user is requestor
+                        $currentUserId = $_SESSION['user_id'] ?? 0;
+                        if ($transaction['current_status'] === 'Pending Requestor' && (int)$transaction['requestor_id'] === (int)$currentUserId):
+                        ?>
+                            <a href="<?php echo env('APP_URL'); ?>/views/transactions/resubmit-documents.php?id=<?php echo $transaction['id']; ?>" class="btn btn-success btn-sm px-3">
+                                <i class="bi bi-upload me-1"></i> Submit Mandatory Documentary Requirements
+                            </a>
+                        <?php endif; ?>
+                        <span class="badge badge-status <?php 
+                            switch($currentStatus) {
+                                case 'Released': echo 'bg-success'; break;
+                                case 'Rejected': echo 'bg-danger'; break;
+                                case 'Returned': echo 'bg-dark'; break;
+                                default: echo 'bg-warning text-dark'; break;
+                            }
+                        ?> py-2 px-3"><?php echo htmlspecialchars($currentStatusDisplay); ?></span>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="row g-3 fs-8">
@@ -628,17 +651,19 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                             </div>
                         <?php endif; ?>
 
-                        <!-- Stage 2 Attachment Approvals Detail -->
+                        <!-- Document Inspection Details (Workflow v3) -->
                         <?php if (!empty($attachmentsList)): ?>
                             <div class="col-12 mt-3">
                                 <div class="p-3 rounded-3 bg-white border">
-                                    <h6 class="fw-bold text-primary-dark mb-3 fs-8 text-uppercase"><i class="bi bi-paperclip me-1 text-primary"></i>Attachment Approval Reviews (Stage 2)</h6>
+                                    <h6 class="fw-bold text-primary-dark mb-3 fs-8 text-uppercase"><i class="bi bi-paperclip me-1 text-primary"></i>Attachment Approval Reviews (Document Inspection)</h6>
                                     <div class="list-group list-group-flush border rounded-3 overflow-hidden">
                                         <?php foreach ($attachmentsList as $att): ?>
-                                            <div class="list-group-item p-3 d-flex justify-content-between align-items-center flex-wrap gap-2 fs-8">
+                                            <div class="list-group-item p-3 d-flex justify-content-between align-items-start flex-wrap gap-2 fs-8">
                                                 <div>
+                                                    <span class="text-muted d-block fs-9 text-uppercase fw-semibold">Mandatory Documentary Requirement</span>
                                                     <span class="fw-bold text-dark d-block"><?php echo htmlspecialchars($att['file_label']); ?></span>
-                                                    <a href="<?php echo env('APP_URL') . '/' . htmlspecialchars($att['file_path']); ?>" target="_blank" class="fs-9 text-primary text-decoration-none"><i class="bi bi-file-earmark-arrow-down me-1"></i><?php echo basename($att['file_path']); ?></a>
+                                                    <span class="text-muted d-block fs-9 mt-1"><i class="bi bi-file-earmark me-1"></i>Uploaded file:</span>
+                                                    <a href="<?php echo env('APP_URL') . '/' . htmlspecialchars($att['file_path']); ?>" target="_blank" class="fs-9 text-primary text-decoration-none"><i class="bi bi-download me-1"></i><?php echo basename($att['file_path']); ?></a>
                                                     <?php if (!empty($att['remarks'])): ?>
                                                         <div class="text-muted fs-9 mt-1">Remarks: <em><?php echo htmlspecialchars($att['remarks']); ?></em></div>
                                                     <?php endif; ?>
@@ -659,11 +684,11 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                             </div>
                         <?php endif; ?>
 
-                        <!-- Stage 3 Budget Allocation Details -->
+                        <!-- Source of Funds Verification Details (Workflow v3) -->
                         <?php if ($budgetCheckDetails): ?>
                             <div class="col-12 mt-3">
                                 <div class="p-3 rounded-3 bg-white border">
-                                    <h6 class="fw-bold text-primary-dark mb-3 fs-8 text-uppercase"><i class="bi bi-bank2 me-1 text-primary"></i>Budget Check Allocation (Stage 3)</h6>
+                                    <h6 class="fw-bold text-primary-dark mb-3 fs-8 text-uppercase"><i class="bi bi-bank2 me-1 text-primary"></i>Source of Funds Verification</h6>
                                     <div class="row g-3 fs-8">
                                         <div class="col-12 col-sm-6">
                                             <span class="text-muted d-block">Fund Source Allocated</span>
@@ -693,11 +718,11 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                             </div>
                         <?php endif; ?>
 
-                        <!-- Stage 5 Signatory Tasks Details -->
+                        <!-- Signatory Document Verification (Workflow v3) -->
                         <?php if (!empty($signatoryTasksDetails)): ?>
                             <div class="col-12 mt-3">
                                 <div class="p-3 rounded-3 bg-white border">
-                                    <h6 class="fw-bold text-primary-dark mb-3 fs-8 text-uppercase"><i class="bi bi-check2-square me-1 text-primary"></i>Signatory Document Verification (Stage 5)</h6>
+                                    <h6 class="fw-bold text-primary-dark mb-3 fs-8 text-uppercase"><i class="bi bi-check2-square me-1 text-primary"></i>Document for Approval and Signature</h6>
                                     <div class="row g-3">
                                         <?php foreach ($signatoryTasksDetails as $st): 
                                             $taskLabel = ($st['task_type'] === 'payroll_prep') ? 'Payroll Prep & Signatures' : 'DV/ORS Prep & Signatures';
@@ -916,30 +941,30 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                         <!-- Timeline items loop -->
                         <?php 
                         $knownSteps = [
-                            'Pending ACCTG Support' => [
-                                'title' => 'Disbursement Request Submitted',
-                                'subtitle' => 'Disbursement request submitted, pending ACCTG Support check',
+                            'Pending Budget' => [
+                                'title' => 'Source of Funds Verification',
+                                'subtitle' => 'Transaction submitted, pending Budget Officer verification',
                                 'role' => 'Requestor'
                             ],
-                            'Pending Budget' => [
-                                'title' => 'Endorsed to Budget Officer',
-                                'subtitle' => 'ACCTG Support review complete, pending Budget Officer check',
-                                'role' => 'ACCTG Support'
-                            ],
-                            'Pending ACCT Support' => [
-                                'title' => 'Budget Check Completed',
-                                'subtitle' => 'Fund availability verified, endorsed to ACCT Support',
+                            'Pending Requestor' => [
+                                'title' => 'Source of Funds Verified',
+                                'subtitle' => 'Budget Officer verified fund availability, pending document submission',
                                 'role' => 'Budget Officer'
                             ],
-                            'Pending Signatories' => [
-                                'title' => 'Endorsed to Signatories',
-                                'subtitle' => 'Accounting documents processed, pending payroll/DV signatures',
-                                'role' => 'ACCT Support'
+                            'Pending Accounting Support' => [
+                                'title' => 'Mandatory Documentary Requirements Submitted',
+                                'subtitle' => 'Documents submitted by requestor, pending Accounting Support inspection',
+                                'role' => 'Requestor'
                             ],
-                            'Pending Cashier Release' => [
-                                'title' => 'Signatory Endorsement Completed',
-                                'subtitle' => 'Parallel signatory tasks complete, pending Cashier payment release',
+                            'Pending Signatory Approval' => [
+                                'title' => 'Document for Approval and Signature',
+                                'subtitle' => 'Awaiting signatory approval by ASDS / SDS',
                                 'role' => 'Signatories'
+                            ],
+                            'For Payment' => [
+                                'title' => 'Release of Payment',
+                                'subtitle' => 'Signatory approved, payment processed by Cashier',
+                                'role' => 'Cashier'
                             ],
                             'Released' => [
                                 'title' => 'Payment Released',
@@ -947,7 +972,7 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                                 'role' => 'Cashier'
                             ],
                             'Rejected' => [
-                                'title' => 'Disbursement Request Rejected',
+                                'title' => 'Transaction Disapproved',
                                 'subtitle' => 'Request denied by audit staff',
                                 'role' => 'System Reviewer'
                             ],
@@ -1000,7 +1025,11 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                                         <h6 class="mb-0 fw-bold text-primary-dark"><?php echo htmlspecialchars($stepMeta['title']); ?></h6>
                                         <small class="text-muted"><i class="bi bi-clock me-1"></i><?php echo $dateStr; ?></small>
                                     </div>
-                                    <small class="text-primary-light fw-medium d-block mb-2">Processed By: <?php echo htmlspecialchars($log['changer_name'] ?: 'System Event'); ?> (<?php echo htmlspecialchars($log['changer_role'] ?: $stepMeta['role']); ?>)</small>
+                                    <?php if ($logStatus === 'Pending Signatory Approval'): ?>
+                                        <small class="text-primary-light fw-medium d-block mb-2">Processed and Approved</small>
+                                    <?php else: ?>
+                                        <small class="text-primary-light fw-medium d-block mb-2">Processed By: <?php echo htmlspecialchars($log['changer_name'] ?: 'System Event'); ?> (<?php echo htmlspecialchars($log['changer_role'] ?: $stepMeta['role']); ?>)</small>
+                                    <?php endif; ?>
                                     
                                     <p class="text-muted mb-0 fs-8 p-2 rounded-2 bg-light border-start border-3" style="border-left-color: var(--color-primary) !important;">
                                         <strong>Remarks:</strong> <?php echo htmlspecialchars($log['remarks'] ?: 'No workflow audit remarks recorded.'); ?>
@@ -1016,7 +1045,8 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                         <?php 
                         if (!in_array($currentStatus, ['Released', 'Rejected', 'Returned'])) {
                             // Find which steps are still pending
-                            $allExpectedSteps = ['Pending ACCTG Support', 'Pending Budget', 'Pending ACCT Support', 'Pending Signatories', 'Pending Cashier Release', 'Released'];
+                            // Workflow v3: expected step order
+                            $allExpectedSteps = ['Pending Budget', 'Pending Requestor', 'Pending Accounting Support', 'Pending Signatory Approval', 'For Payment', 'Released'];
                             
                             // Find index of current state
                             $currIdx = array_search($currentStatus, $allExpectedSteps);

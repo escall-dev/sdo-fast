@@ -2,6 +2,10 @@
 /**
  * Transaction Submission Processor API for SDO FAST.
  * Conducts tax computations, secure file uploads, and tracking code generation.
+ *
+ * Workflow v3: Initial submission goes directly to Budget Officer (Stage 1).
+ * No documents/attachments are submitted at this stage.
+ * Documents are uploaded separately after budget approval via resubmit-documents.php.
  */
 
 header('Content-Type: application/json');
@@ -117,14 +121,8 @@ if ($type === 'Cash Advance') {
         $inclusiveDates = $mooeStartDate . ' to ' . $mooeEndDate;
     }
 
-    // Fund Source required?
-    if (in_array($cashAdvanceCategory, $caFundSourceTypes)) {
-        if (empty($fundSource)) {
-            http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Fund source is required for ' . $cashAdvanceCategory . '.']);
-            exit;
-        }
-    }
+    // Workflow v3: Fund Source is determined by the Budget Officer during Stage 1.
+    // Requestor does not provide fund_source at initial submission.
 
     // Month required for Communication Expenses?
     if (in_array($cashAdvanceCategory, $caMonthTypes)) {
@@ -258,174 +256,44 @@ function handleSecureUpload($fileKey, $uploadDir) {
     return 'uploads/transactions/' . $filename;
 }
 
-// 4. Secure File Upload Handler
-$uploadDir = dirname(dirname(__DIR__)) . '/uploads/transactions/';
-if (!is_dir($uploadDir)) {
-    mkdir($uploadDir, 0755, true);
-}
-
+// Workflow v3: No documents are uploaded at initial submission (Stage 1).
+// All document uploads are deferred to Stage 3 via resubmit-documents.php.
+// Skip all file processing for initial submission.
 $attachmentPath = null;
-$attachmentPaths = [];
 $approvedTaPath = null;
 $travelItineraryPath = null;
 $activityProposalPath = null;
 $dtrPath = null;
 $certificatePath = null;
 $billProofPath = null;
-
-// Reimbursement-specific file paths
 $reimbApprovedTaPath = null;
 $reimbTravelItineraryPath = null;
 $reimbActivityProposalPath = null;
 $utilityBillProofPath = null;
+$attachmentPaths = [];
 
-// Enforce required uploads for Cash Advance coverage types
-if ($type === 'Cash Advance') {
-    if (in_array($cashAdvanceCategory, $caTaItineraryTypes)) {
-        // Travel: TA + Itinerary required
-        if (!isset($_FILES['approved_ta']) || $_FILES['approved_ta']['error'] === UPLOAD_ERR_NO_FILE) {
-            http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Approved TA (Travel Authority) is required for Travel cash advances.']);
-            exit;
+// Block any file upload attempt at this stage
+$hasFiles = false;
+foreach ($_FILES as $fileKey => $fileInfo) {
+    if (isset($fileInfo['error']) && is_array($fileInfo['error'])) {
+        foreach ($fileInfo['error'] as $err) {
+            if ($err !== UPLOAD_ERR_NO_FILE) $hasFiles = true;
         }
-        if (!isset($_FILES['travel_itinerary']) || $_FILES['travel_itinerary']['error'] === UPLOAD_ERR_NO_FILE) {
-            http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Travel Itinerary is required for Travel cash advances.']);
-            exit;
-        }
-        $approvedTaPath = handleSecureUpload('approved_ta', $uploadDir);
-        $travelItineraryPath = handleSecureUpload('travel_itinerary', $uploadDir);
-    }
-    if (in_array($cashAdvanceCategory, $caActivityProposalTypes)) {
-        // Training, SLAC/GAWAD: Activity Proposal required
-        if (!isset($_FILES['activity_proposal']) || $_FILES['activity_proposal']['error'] === UPLOAD_ERR_NO_FILE) {
-            http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Activity Proposal is required for ' . $cashAdvanceCategory . ' cash advances.']);
-            exit;
-        }
-        $activityProposalPath = handleSecureUpload('activity_proposal', $uploadDir);
-    }
-} elseif ($type === 'Reimbursement') {
-    if (in_array($reimbursementCategory, $reimbTaItineraryTypes)) {
-        // Travel: TA + Itinerary required
-        if (!isset($_FILES['reimb_approved_ta']) || $_FILES['reimb_approved_ta']['error'] === UPLOAD_ERR_NO_FILE) {
-            http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Approved TA (Travel Authority) is required for Travel reimbursement.']);
-            exit;
-        }
-        if (!isset($_FILES['reimb_travel_itinerary']) || $_FILES['reimb_travel_itinerary']['error'] === UPLOAD_ERR_NO_FILE) {
-            http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Travel Itinerary is required for Travel reimbursement.']);
-            exit;
-        }
-        $reimbApprovedTaPath = handleSecureUpload('reimb_approved_ta', $uploadDir);
-        $reimbTravelItineraryPath = handleSecureUpload('reimb_travel_itinerary', $uploadDir);
-    }
-    if (in_array($reimbursementCategory, $reimbActivityProposalTypes)) {
-        // Seminars/Trainings: Activity Proposal required
-        if (!isset($_FILES['reimb_activity_proposal']) || $_FILES['reimb_activity_proposal']['error'] === UPLOAD_ERR_NO_FILE) {
-            http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Activity Proposal is required for ' . $reimbursementCategory . ' reimbursement.']);
-            exit;
-        }
-        $reimbActivityProposalPath = handleSecureUpload('reimb_activity_proposal', $uploadDir);
-    }
-    if (in_array($reimbursementCategory, $reimbCommunicationsTypes)) {
-        // Communication Load: DTR + Certificate + Bill/Proof
-        if (!isset($_FILES['reimb_dtr']) || $_FILES['reimb_dtr']['error'] === UPLOAD_ERR_NO_FILE) {
-            http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'DTR document is required for Communication Load.']);
-            exit;
-        }
-        if (!isset($_FILES['reimb_certificate']) || $_FILES['reimb_certificate']['error'] === UPLOAD_ERR_NO_FILE) {
-            http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Certificate document is required for Communication Load.']);
-            exit;
-        }
-        if (!isset($_FILES['reimb_bill_proof']) || $_FILES['reimb_bill_proof']['error'] === UPLOAD_ERR_NO_FILE) {
-            http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Bill / proof of payment document is required for Communication Load.']);
-            exit;
-        }
-        $dtrPath = handleSecureUpload('reimb_dtr', $uploadDir);
-        $certificatePath = handleSecureUpload('reimb_certificate', $uploadDir);
-        $billProofPath = handleSecureUpload('reimb_bill_proof', $uploadDir);
-    }
-    if (in_array($reimbursementCategory, $reimbUtilityBillsTypes)) {
-        // Utility Bills: Bill/Proof upload required
-        if (!isset($_FILES['utility_bill_proof']) || $_FILES['utility_bill_proof']['error'] === UPLOAD_ERR_NO_FILE) {
-            http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Bill / proof of payment document is required for Utility Bills.']);
-            exit;
-        }
-        $utilityBillProofPath = handleSecureUpload('utility_bill_proof', $uploadDir);
+    } elseif (isset($fileInfo['error']) && $fileInfo['error'] !== UPLOAD_ERR_NO_FILE) {
+        $hasFiles = true;
     }
 }
-
-// Process supporting attachments if provided
-if (isset($_FILES['attachment']) && is_array($_FILES['attachment']['name']) && $_FILES['attachment']['error'][0] !== UPLOAD_ERR_NO_FILE) {
-    $fileCount = count($_FILES['attachment']['name']);
-    for ($i = 0; $i < $fileCount; $i++) {
-        if ($_FILES['attachment']['error'][$i] === UPLOAD_ERR_NO_FILE) {
-            continue;
-        }
-        
-        $fileError = $_FILES['attachment']['error'][$i];
-        if ($fileError !== UPLOAD_ERR_OK) {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'File upload error code on attachment ' . ($i + 1) . ': ' . $fileError]);
-            exit;
-        }
-
-        $fileSize = $_FILES['attachment']['size'][$i];
-        $maxSize = 10 * 1024 * 1024; // 10MB
-        if ($fileSize > $maxSize) {
-            http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Attachment file ' . ($i + 1) . ' exceeds the maximum limit of 10MB.']);
-            exit;
-        }
-
-        $fileName = $_FILES['attachment']['name'][$i];
-        $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-        $allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'docx'];
-        if (!in_array($extension, $allowedExtensions)) {
-            http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Allowed file formats for attachment ' . ($i + 1) . ': PDF, JPG, PNG, DOCX.']);
-            exit;
-        }
-
-        $tmpName = $_FILES['attachment']['tmp_name'][$i];
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $tmpName);
-        finfo_close($finfo);
-
-        $allowedMimeTypes = [
-            'application/pdf',
-            'image/jpeg',
-            'image/png',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        ];
-        if (!in_array($mimeType, $allowedMimeTypes)) {
-            http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Security check: Invalid file content type detected for attachment ' . ($i + 1) . '.']);
-            exit;
-        }
-
-        $newFilename = bin2hex(random_bytes(16)) . '.' . $extension;
-        $targetPath = $uploadDir . $newFilename;
-
-        $uploaded = defined('TEST_MODE') ? copy($tmpName, $targetPath) : move_uploaded_file($tmpName, $targetPath);
-        if (!$uploaded) {
-            http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'Failed to save uploaded attachment: ' . ($i + 1)]);
-            exit;
-        }
-
-        $attachmentPaths[] = 'uploads/transactions/' . $newFilename;
-    }
+if ($hasFiles) {
+    http_response_code(422);
+    echo json_encode(['success' => false, 'message' => 'Document uploads are not allowed at this stage. Documents must be submitted after budget approval via the resubmit page.']);
+    exit;
 }
 
-$attachmentPath = !empty($attachmentPaths) ? json_encode($attachmentPaths) : null;
+// 4. Secure File Upload Handler (kept for reference, not used at Stage 1)
+$uploadDir = dirname(dirname(__DIR__)) . '/uploads/transactions/';
+if (!is_dir($uploadDir)) {
+    mkdir($uploadDir, 0755, true);
+}
 
 // 5. Database Insertion Workflow
 try {
@@ -436,7 +304,8 @@ try {
     $uuid = bin2hex(random_bytes(16)); // simple UUID format
     $uuid = substr($uuid, 0, 8) . '-' . substr($uuid, 8, 4) . '-' . substr($uuid, 12, 4) . '-' . substr($uuid, 16, 4) . '-' . substr($uuid, 20, 12);
     
-    $status = 'Pending ACCTG Support';
+    // Workflow v3: Initial submission routes directly to Budget Officer
+    $status = 'Pending Budget';
 
     // Insert Transaction
     $insertTxSql = "
@@ -492,7 +361,7 @@ try {
             'transaction_id' => $transactionDbId,
             'category' => $cashAdvanceCategory,
             'inclusive_dates' => $caInclusiveDates,
-            'fund_source' => in_array($cashAdvanceCategory, $caFundSourceTypes) ? $fundSource : null,
+            'fund_source' => null,  // Workflow v3: Budget Officer fills this during Source of Funds Verification
             'venue' => in_array($cashAdvanceCategory, $caDateVenueTypes) ? $venue : null,
             'approved_ta_path' => $approvedTaPath,
             'travel_itinerary_path' => $travelItineraryPath,
@@ -532,69 +401,16 @@ try {
         'transaction_id' => $transactionDbId,
         'new_status' => $status,
         'changed_by' => $userId,
-        'remarks' => 'Initial submission by requestor.'
+        'remarks' => 'Transaction submitted. Pending Budget Officer verification.'
     ]);
 
     // ============================================================
-    // Workflow v2: Populate attachment_approvals for Stage 2 review
+    // Workflow v3: No attachment approvals at Stage 1.
+    // Attachments are seeded in resubmit-documents.php at Stage 3.
     // ============================================================
-    $allUploadedFiles = [];
-
-    // Supporting attachments
-    if (!empty($attachmentPaths)) {
-        foreach ($attachmentPaths as $aPath) {
-            $allUploadedFiles[] = ['path' => $aPath, 'label' => 'Supporting Attachment: ' . basename($aPath)];
-        }
-    }
-    // Cash Advance specific files
-    if (!empty($approvedTaPath)) {
-        $allUploadedFiles[] = ['path' => $approvedTaPath, 'label' => 'Approved Travel Authority'];
-    }
-    if (!empty($travelItineraryPath)) {
-        $allUploadedFiles[] = ['path' => $travelItineraryPath, 'label' => 'Travel Itinerary'];
-    }
-    if (!empty($activityProposalPath)) {
-        $allUploadedFiles[] = ['path' => $activityProposalPath, 'label' => 'Activity Proposal'];
-    }
-    // Reimbursement specific files
-    if (!empty($reimbApprovedTaPath)) {
-        $allUploadedFiles[] = ['path' => $reimbApprovedTaPath, 'label' => 'Approved Travel Authority (Reimb)'];
-    }
-    if (!empty($reimbTravelItineraryPath)) {
-        $allUploadedFiles[] = ['path' => $reimbTravelItineraryPath, 'label' => 'Travel Itinerary (Reimb)'];
-    }
-    if (!empty($reimbActivityProposalPath)) {
-        $allUploadedFiles[] = ['path' => $reimbActivityProposalPath, 'label' => 'Activity Proposal (Reimb)'];
-    }
-    if (!empty($dtrPath)) {
-        $allUploadedFiles[] = ['path' => $dtrPath, 'label' => 'DTR Document'];
-    }
-    if (!empty($certificatePath)) {
-        $allUploadedFiles[] = ['path' => $certificatePath, 'label' => 'Certificate'];
-    }
-    if (!empty($billProofPath)) {
-        $allUploadedFiles[] = ['path' => $billProofPath, 'label' => 'Bill / Proof of Payment'];
-    }
-    if (!empty($utilityBillProofPath)) {
-        $allUploadedFiles[] = ['path' => $utilityBillProofPath, 'label' => 'Utility Bill / Proof'];
-    }
-
-    if (!empty($allUploadedFiles)) {
-        $insertApproval = $fastPDO->prepare("
-            INSERT INTO attachment_approvals (transaction_id, file_path, file_label, status)
-            VALUES (:tx_id, :file_path, :file_label, 'pending')
-        ");
-        foreach ($allUploadedFiles as $f) {
-            $insertApproval->execute([
-                'tx_id' => $transactionDbId,
-                'file_path' => $f['path'],
-                'file_label' => $f['label']
-            ]);
-        }
-    }
 
     // ============================================================
-    // Workflow v2: Create signatory_tasks (Stage 5 parallel tasks)
+    // Workflow v3: Create signatory_tasks (Stage 5 parallel tasks)
     // ============================================================
     $insertTask = $fastPDO->prepare("
         INSERT INTO signatory_tasks (transaction_id, task_type, status)

@@ -39,7 +39,7 @@ if ($userTypeFilter === 'BACtrack' && !hasPermission('view_bactrack')) {
 $userRole = $_SESSION['user_role'] ?? '';
 $userPosition = $_SESSION['user_position'] ?? '';
 
-// Fetch active tax configurations for Stage 2 processor dropdown
+// Fetch active tax configurations for workflow processor dropdown
 $taxConfigurations = [];
 if ($fastPDO !== null) {
     try {
@@ -104,13 +104,13 @@ if (in_array($userRole, ['Super Admin', 'Accounting Staff']) && $fastPDO !== nul
                     <label for="filterStatus" class="form-label fs-8 fw-semibold text-muted">Current Status</label>
                     <select id="filterStatus" class="form-select">
                         <option value="">All Statuses</option>
-                        <option value="Pending ACCTG Support">Pending ACCTG Support</option>
+                        <option value="Pending Requestor">Pending Requestor</option>
                         <option value="Pending Budget">Pending Budget</option>
-                        <option value="Pending ACCT Support">Pending ACCT Support</option>
-                        <option value="Pending Signatories">Pending Signatories</option>
-                        <option value="Pending Cashier Release">Pending Cashier Release</option>
+                        <option value="Pending Accounting Support">Pending Accounting Support</option>
+                        <option value="Pending Signatory Approval">Pending Signatory Approval</option>
+                        <option value="Pending Signatory Approval">Pending Signatory Approval</option>
                         <option value="Released">Released</option>
-                        <option value="Rejected">Rejected</option>
+                        <option value="Rejected">Disapproved</option>
                         <option value="Returned">Returned</option>
                     </select>
                 </div>
@@ -263,7 +263,7 @@ if (in_array($userRole, ['Super Admin', 'Accounting Staff']) && $fastPDO !== nul
                     <div class="text-muted mt-2 fs-8">Fetching details...</div>
                 </div>
 
-                <!-- STAGE 2: Attachment approvals section -->
+                <!-- Attachment approvals section -->
                 <div id="stage2AttachmentsSection" class="mb-4" style="display:none;">
                     <div class="alert alert-info border-0 rounded-3 d-flex align-items-center mb-3">
                         <i class="bi bi-info-circle-fill me-2 fs-5 text-primary"></i>
@@ -290,7 +290,7 @@ if (in_array($userRole, ['Super Admin', 'Accounting Staff']) && $fastPDO !== nul
                     </div>
                 </div>
 
-                <!-- STAGE 3: Budget check section -->
+                <!-- Budget check section -->
                 <div id="stage3BudgetSection" class="mb-4" style="display:none;">
                     <h6 class="fw-bold text-primary-dark fs-8 text-uppercase mb-3"><i class="bi bi-bank2 me-1 text-primary"></i>Budget Allocation</h6>
                     <div class="row g-3">
@@ -311,7 +311,7 @@ if (in_array($userRole, ['Super Admin', 'Accounting Staff']) && $fastPDO !== nul
                     </div>
                 </div>
 
-                <!-- STAGE 5: Signatory tasks section -->
+                <!-- Signatory tasks section -->
                 <div id="stage5SignatorySection" class="mb-4" style="display:none;">
                     <div class="alert alert-info border-0 rounded-3 d-flex align-items-center mb-3">
                         <i class="bi bi-info-circle-fill me-2 fs-5 text-primary"></i>
@@ -467,21 +467,32 @@ function renderTable(transactions) {
     }
 
     transactions.forEach(row => {
+        // Map DB status value to display label (Workflow v3)
+        const statusLabels = {
+            'Pending Budget': 'Source of Funds Verification',
+            'Pending Requestor': 'Source of Funds Verified',
+            'Pending Accounting Support': 'Mandatory Documentary Requirements Submitted',
+            'Pending Signatory Approval': 'Document for Approval and Signature',
+            'For Payment': 'Release of Payment',
+            'Awaiting Payment': 'Release of Payment',
+            'Released': 'Payment Released',
+            'Rejected': 'Disapproved',
+            'Returned': 'Returned to Requestor'
+        };
+        const statusDisplay = statusLabels[row.current_status] || row.current_status;
+        
         let statusBadgeClass = 'bg-secondary';
         switch (row.current_status) {
-            case 'Pending ACCTG Support':
+            case 'Pending Requestor':
                 statusBadgeClass = 'bg-secondary text-white';
                 break;
             case 'Pending Budget':
                 statusBadgeClass = 'bg-warning text-dark';
                 break;
-            case 'Pending ACCT Support':
+            case 'Pending Accounting Support':
                 statusBadgeClass = 'bg-info text-dark';
                 break;
-            case 'Pending Signatories':
-                statusBadgeClass = 'bg-primary text-white';
-                break;
-            case 'Pending Cashier Release':
+            case 'Pending Signatory Approval':
                 statusBadgeClass = 'bg-danger text-white';
                 break;
             case 'Released':
@@ -511,22 +522,35 @@ function renderTable(transactions) {
         // Action Buttons Setup
         const userRole = '<?php echo $userRole; ?>';
         const userPosition = '<?php echo $userPosition; ?>';
+        const userId = <?php echo (int)$_SESSION['user_id']; ?>;
         let actionBtn = '';
+        let docUploadBtn = '';
         
         // Show Workflow action button if role or position is authorized
         const showWorkflowAction = 
             (userRole === 'Super Admin') ||
-            ((userRole === 'Accounting Staff' || userPosition === 'Accounting Support') && ['Pending ACCTG Support', 'Pending ACCT Support', 'Pending Signatories'].includes(row.current_status)) ||
+            ((userRole === 'Accounting Staff' || userPosition === 'Accounting Support') && ['Pending Requestor', 'Pending Accounting Support', 'Pending Signatory Approval'].includes(row.current_status)) ||
             ((userRole === 'Budget Officer' || userPosition === 'Budget Officer') && row.current_status === 'Pending Budget') ||
-            (userPosition === 'Accountant' && ['Pending ACCT Support', 'Pending Signatories'].includes(row.current_status)) ||
-            ((userRole === 'Approver' || userPosition === 'ASDS' || userPosition === 'SDS') && row.current_status === 'Pending Signatories') ||
-            ((userRole === 'Cashier' || userPosition === 'Cashier') && row.current_status === 'Pending Cashier Release');
+            (userPosition === 'Accountant' && ['Pending Accounting Support', 'Pending Signatory Approval'].includes(row.current_status)) ||
+            ((userPosition === 'ASDS' || userPosition === 'SDS') && row.current_status === 'Pending Signatory Approval') ||
+            ((userRole === 'Cashier' || userPosition === 'Cashier') && ['Pending Signatory Approval', 'For Payment'].includes(row.current_status));
 
         if (showWorkflowAction) {
             actionBtn = `
                 <button class="btn btn-sm btn-primary" onclick="openWorkflowModal(${JSON.stringify(row).replace(/"/g, '&quot;')})" title="Workflow Action">
                     <i class="bi bi-lightning-fill"></i>
                 </button>
+            `;
+        }
+
+        // Show "Submit Mandatory Documentary Requirements" button for Requestor when status is Pending Requestor
+        if ((userRole === 'Super Admin' || userRole === 'Requestor') && 
+            row.current_status === 'Pending Requestor' && 
+            row.requestor_id == userId) {
+            docUploadBtn = `
+                <a href="<?php echo env('APP_URL'); ?>/views/transactions/resubmit-documents.php?id=${row.id}" class="btn btn-sm btn-success" title="Submit Mandatory Documentary Requirements">
+                    <i class="bi bi-upload me-1"></i>Submit Docs
+                </a>
             `;
         }
 
@@ -545,12 +569,13 @@ function renderTable(transactions) {
                     <span class="txn-requestor-email text-muted">${row.requestor_email}</span>
                 </td>
                 <td class="fw-semibold" title="₱${gross}">₱${gross}</td>
-                <td title="${row.current_status}">
-                    <span class="badge badge-status ${statusBadgeClass}">${row.current_status}</span>
+                <td title="${statusDisplay}">
+                    <span class="badge badge-status ${statusBadgeClass}">${statusDisplay}</span>
                 </td>
                 <td class="text-muted" title="${dateFormatted}">${dateFormatted}</td>
                 <td class="text-end">
                     <div class="d-flex justify-content-end gap-1 txn-actions">
+                        ${docUploadBtn}
                         ${actionBtn}
                         <a href="<?php echo env('APP_URL'); ?>/views/tracker/index.php?tracking=${encodeURIComponent(row.tracking_number)}" class="btn btn-sm btn-light border" title="Track Timeline">
                             <i class="bi bi-geo-alt"></i>
@@ -679,7 +704,7 @@ async function openWorkflowModal(row) {
     const taxTypeSelect = document.getElementById('modalTaxType');
     if (taxTypeSelect) {
         taxTypeSelect.value = tx.tax_type || '';
-        taxTypeSelect.disabled = true; // Disabled by default, enabled only during Stage 2 review
+        taxTypeSelect.disabled = true; // Disabled by default, enabled only during Document Inspection review
     }
 
     const userRole = '<?php echo $userRole; ?>';
@@ -687,23 +712,18 @@ async function openWorkflowModal(row) {
     const actionSelect = document.getElementById('workflowAction');
     actionSelect.innerHTML = '';
     
-    // Stage 2: ACCTG Support per-attachment review
-    if (tx.current_status === 'Pending ACCTG Support' && (userRole === 'Super Admin' || userRole === 'Accounting Staff' || userPosition === 'Accounting Support')) {
-        document.getElementById('stage2AttachmentsSection').style.display = 'block';
-        renderAttachmentChecklist(details.attachments, tx.id);
-        if (taxTypeSelect) {
-            taxTypeSelect.disabled = false;
-        }
-        
+    // Workflow v3: Pending Requestor — Requestor must upload docs via resubmit page
+    if (tx.current_status === 'Pending Requestor' && (userRole === 'Super Admin' || userRole === 'Accounting Staff' || userPosition === 'Accounting Support')) {
+        // Accounting Support can still return/reject at this stage
         actionSelect.innerHTML = `
-            <option value="">-- Or Select Action (Return / Reject) --</option>
+            <option value="">-- Select Action --</option>
             <option value="Returned">Return to Requestor</option>
-            <option value="Rejected">Reject Transaction</option>
+            <option value="Rejected">Disapprove Transaction</option>
         `;
         document.getElementById('standardActionSection').style.display = 'block';
         document.getElementById('btnSubmitWorkflow').style.display = 'block';
     }
-    // Stage 3: Budget check
+    // Workflow v3: Pending Budget — Budget Officer verifies source of funds
     else if (tx.current_status === 'Pending Budget' && (userRole === 'Super Admin' || userRole === 'Budget Officer' || userPosition === 'Budget Officer')) {
         document.getElementById('stage3BudgetSection').style.display = 'block';
         document.getElementById('modalBudgetFundSource').value = details.budget_check ? details.budget_check.fund_source : '';
@@ -711,42 +731,50 @@ async function openWorkflowModal(row) {
         document.getElementById('modalBudgetFundAvailable').checked = details.budget_check ? (details.budget_check.fund_available == 1) : true;
         
         actionSelect.innerHTML = `
-            <option value="approve_budget">Approve Budget Check (Route to ACCT Support)</option>
+            <option value="approve_budget">Verify Source of Funds (Route to Requestor for Docs)</option>
             <option value="Returned">Return to Requestor</option>
-            <option value="Rejected">Reject Transaction</option>
+            <option value="Rejected">Disapprove Transaction</option>
         `;
         document.getElementById('standardActionSection').style.display = 'block';
         document.getElementById('btnSubmitWorkflow').style.display = 'block';
     }
-    // Stage 4: ACCT Support
-    else if (tx.current_status === 'Pending ACCT Support' && (userRole === 'Super Admin' || userRole === 'Accounting Staff' || userPosition === 'Accounting Support' || userPosition === 'Accountant')) {
-        actionSelect.innerHTML = `
-            <option value="Pending Signatories">Route to Signatories (Accounting Check Complete)</option>
-            <option value="Returned">Return to Requestor</option>
-            <option value="Rejected">Reject Transaction</option>
-        `;
-        document.getElementById('standardActionSection').style.display = 'block';
-        document.getElementById('btnSubmitWorkflow').style.display = 'block';
-    }
-    // Stage 5: Signatories parallel tasks
-    else if (tx.current_status === 'Pending Signatories' && (userRole === 'Super Admin' || userRole === 'Accounting Staff' || userRole === 'Approver' || ['Accounting Support', 'Accountant', 'ASDS', 'SDS'].includes(userPosition))) {
-        document.getElementById('stage5SignatorySection').style.display = 'block';
-        renderSignatoryTasks(details.signatory_tasks, tx.id);
+    // Workflow v3: Pending Accounting Support — Accounting Support inspects documents
+    else if (tx.current_status === 'Pending Accounting Support' && (userRole === 'Super Admin' || userRole === 'Accounting Staff' || userPosition === 'Accounting Support' || userPosition === 'Accountant')) {
+        // Show attachment approvals section for per-file review
+        document.getElementById('stage2AttachmentsSection').style.display = 'block';
+        renderAttachmentChecklist(details.attachments, tx.id);
+        if (taxTypeSelect) {
+            taxTypeSelect.disabled = false;
+        }
         
         actionSelect.innerHTML = `
-            <option value="">-- Or Select Action (Return / Reject) --</option>
+            <option value="">-- Select Action (Forward / Return / Disapprove) --</option>
+            <option value="Pending Signatory Approval">Route to Signatories (Document Inspection Complete)</option>
             <option value="Returned">Return to Requestor</option>
-            <option value="Rejected">Reject Transaction</option>
+            <option value="Rejected">Disapprove Transaction</option>
         `;
         document.getElementById('standardActionSection').style.display = 'block';
         document.getElementById('btnSubmitWorkflow').style.display = 'block';
     }
-    // Stage 6: Cashier payment release
-    else if (tx.current_status === 'Pending Cashier Release' && (userRole === 'Super Admin' || userRole === 'Cashier' || userPosition === 'Cashier')) {
+    // Workflow v3: Pending Signatory Approval — Approve/Disapprove by ASDS/SDS
+    else if (tx.current_status === 'Pending Signatory Approval') {
+        if (userRole === 'Super Admin' || userPosition === 'ASDS' || userPosition === 'SDS') {
+            actionSelect.innerHTML = `
+                <option value="">-- Select Action --</option>
+                <option value="For Payment">Approve — Route to Cashier</option>
+                <option value="Returned">Disapprove — Return to Requestor</option>
+            `;
+            document.getElementById('standardActionSection').style.display = 'block';
+            document.getElementById('btnSubmitWorkflow').style.display = 'block';
+        }
+    }
+    // Workflow v3: For Payment — Cashier releases payment
+    else if (tx.current_status === 'For Payment' && (userRole === 'Super Admin' || userRole === 'Cashier' || userPosition === 'Cashier')) {
         actionSelect.innerHTML = `
-            <option value="Released">Release Payment (Final Completed)</option>
+            <option value="">-- Select Action --</option>
+            <option value="Released">Release Payment</option>
             <option value="Returned">Return to Requestor</option>
-            <option value="Rejected">Reject Transaction</option>
+            <option value="Rejected">Disapprove Transaction</option>
         `;
         document.getElementById('standardActionSection').style.display = 'block';
         document.getElementById('btnSubmitWorkflow').style.display = 'block';
@@ -800,8 +828,10 @@ function renderAttachmentChecklist(attachments, transactionId) {
             <div class="list-group-item p-3 border-bottom d-flex flex-column gap-1">
                 <div class="d-flex justify-content-between align-items-start gap-2">
                     <div>
-                        <span class="fw-bold text-dark fs-8 d-block">${att.file_label || 'Attachment'}</span>
-                        <a href="${docUrl}" target="_blank" class="fs-9 text-primary text-decoration-none"><i class="bi bi-file-earmark-arrow-down me-1"></i>${filename}</a>
+                        <span class="text-muted fs-9 text-uppercase fw-semibold">Mandatory Documentary Requirement</span>
+                        <span class="fw-bold text-dark fs-8 d-block">${att.file_label || 'Unlabeled Document'}</span>
+                        <span class="text-muted fs-9 d-block mt-1"><i class="bi bi-file-earmark me-1"></i>Uploaded file:</span>
+                        <a href="${docUrl}" target="_blank" class="fs-9 text-primary text-decoration-none"><i class="bi bi-download me-1"></i>${filename}</a>
                     </div>
                     <div>${badgeHTML}</div>
                 </div>
@@ -988,7 +1018,7 @@ function toggleWorkflowFormDetails() {
     const action = document.getElementById('workflowAction').value;
     const dvSection = document.getElementById('dvDetailsSection');
     
-    const showDV = (action === 'Pending Signatories' || action === 'Released');
+    const showDV = (action === 'Pending Signatory Approval' || action === 'Released');
     
     if (showDV && currentModalTransactionData) {
         dvSection.style.display = 'block';
@@ -1007,12 +1037,12 @@ async function handleWorkflowSubmit(e) {
     const dvNumber = document.getElementById('modalDvNumber').value.trim();
     const birNumber = document.getElementById('modalBirNumber').value.trim();
 
-    if (action === '' && currentModalTransactionData.current_status !== 'Pending ACCTG Support' && currentModalTransactionData.current_status !== 'Pending Signatories') {
+    if (action === '' && currentModalTransactionData.current_status !== 'Pending Requestor' && currentModalTransactionData.current_status !== 'Pending Signatory Approval') {
         API.showToast('Please select a workflow action.', 'warning');
         return;
     }
 
-    // Special Route for Budget check (Stage 3)
+    // Special Route for Budget check
     if (action === 'approve_budget') {
         const fundSource = document.getElementById('modalBudgetFundSource').value.trim();
         const fundSourceTrackingNumber = document.getElementById('modalBudgetFundTrackingNumber').value.trim();
@@ -1051,7 +1081,7 @@ async function handleWorkflowSubmit(e) {
         return;
     }
 
-    // Handle return/rejection at Budget Check (Stage 3)
+    // Handle return/rejection at Budget Check
     if (currentModalTransactionData.current_status === 'Pending Budget' && ['Returned', 'Rejected'].includes(action)) {
         const fundSource = document.getElementById('modalBudgetFundSource').value.trim() || 'N/A';
         const fundSourceTrackingNumber = document.getElementById('modalBudgetFundTrackingNumber').value.trim();
@@ -1085,7 +1115,7 @@ async function handleWorkflowSubmit(e) {
         return;
     }
 
-    // Standard transitions (Stage 2 Return/Reject, Stage 4, Stage 5 Return/Reject, Stage 6)
+    // Standard transitions (Return/Reject, Forward to Signatories, Cashier Release)
     if (action === '') {
         // If they left it blank (meaning no Return/Reject selected for checklist stages), do nothing
         return;

@@ -174,7 +174,7 @@ if (empty($_SESSION['csrf_token'])) {
 
         <!-- SDO FAST Title -->
         <div class="text-center mb-4">
-            <h4 class="fw-bold mb-1 text-white" style="letter-spacing: 0.5px; font-size: 1.5rem;">SDO FAST</h4>
+            <h4 class="fw-bold mb-1 text-white" style="letter-spacing: 0.5px; font-size: 1.5rem;">FAST</h4>
             <div style="font-size: 0.72rem; color: #526685; letter-spacing: 0.3px; margin-top: 4px;">Financial Accounting Services and Transactions</div>
         </div>
 
@@ -230,10 +230,8 @@ if (empty($_SESSION['csrf_token'])) {
             </button>
             
             <!-- Helpdesk info -->
-            <div class="text-center mt-4">
-                <a href="javascript:void(0)" onclick="showHelpdeskAlert()" class="text-decoration-none fs-8 text-accent-link">
-                    Need help? Click <strong class="text-white">ICT Helpdesk</strong>
-                </a>
+            <div class="text-center mt-4 fs-8 text-accent-link">
+                Need help? Click <a href="https://wfh-sdospc.com/ICTHelpdesk-Online/login.php" target="_blank" class="text-decoration-none text-white fw-semibold">ICT Helpdesk</a>
             </div>
         </form>
     </div>
@@ -242,7 +240,7 @@ if (empty($_SESSION['csrf_token'])) {
 <!-- Footer Details (Division metadata) -->
 <div class="page-footer">
     <div>DepEd — Schools Division Office of San San Pedro City</div>
-    <div class="text-white-50">© 2026 ICT Unit</div>
+    <div class="text-white-50">© 2026 SDO San Pedro City</div>
 </div>
 
 <!-- Bootstrap 5 Bundle JS (Includes Popper) CDN -->
@@ -253,9 +251,7 @@ function showRegisterWarning() {
     alert("User registration is managed centrally by the SDO Accounting Unit. Please contact your system administrator to request an account.");
 }
 
-function showHelpdeskAlert() {
-    alert("For authentication support or technical concerns, please submit an ICT ticket or email helpdesk@fast.sdo.gov.ph.");
-}
+
 </script>
 </body>
 </html>

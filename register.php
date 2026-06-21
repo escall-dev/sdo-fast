@@ -446,7 +446,6 @@ if (empty($_SESSION['csrf_token'])) {
                 <p>Enter the One-Time Password (OTP) sent to your email</p>
             </div>
 
-            <!-- Dev OTP Display (Shows up for local testing convenience) -->
             <div id="devOtpBanner" class="otp-display-banner" style="display: none;"></div>
 
             <div id="otpAlert" class="error-message" style="display: none;">
@@ -458,7 +457,7 @@ if (empty($_SESSION['csrf_token'])) {
                 <div class="form-group" style="text-align: center; margin-bottom: 24px;">
                     <label for="otpCodeInput" class="form-label" style="text-align: center;">Enter Verification Code</label>
                     <input type="text" class="form-control" id="otpCodeInput" placeholder="123456" maxlength="6" pattern="\d{6}" required style="font-size: 1.5rem; letter-spacing: 0.4rem; text-align: center; max-width: 200px; margin: 0 auto;">
-                    <span class="form-hint" style="text-align: center;">Check your email client or look for <code>otp_log.txt</code> inside the scratch directory.</span>
+                    <span class="form-hint" style="text-align: center;">Check your email for the Verification Code.</span>
                 </div>
 
                 <button type="submit" id="btnOtpSubmit" class="btn btn-primary">
@@ -594,14 +593,7 @@ function handleRegisterSubmit(event) {
             document.getElementById('registerStep').style.display = 'none';
             document.getElementById('otpStep').style.display = 'block';
             
-            // Show dev OTP banner if local env output it
-            const devBanner = document.getElementById('devOtpBanner');
-            if (data.dev_otp) {
-                devBanner.innerHTML = `<i class="fas fa-bug" style="margin-right: 6px;"></i><strong>[Local Dev Mode]</strong> Generated verification OTP: <code>${data.dev_otp}</code>`;
-                devBanner.style.display = 'block';
-            } else {
-                devBanner.style.display = 'none';
-            }
+           
         } else {
             // Show error message
             alertText.textContent = data.message || "An error occurred. Please try again.";
@@ -626,11 +618,11 @@ function handleOtpSubmit(event) {
     const submitBtn = document.getElementById('btnOtpSubmit');
     const otpCode = document.getElementById('otpCodeInput').value;
     
-    alertBox.style.display = 'none';
+    if (alertBox) alertBox.style.display = 'none';
     
     if (otpCode.length !== 6 || isNaN(otpCode)) {
-        alertText.textContent = "Please enter a valid 6-digit OTP code.";
-        alertBox.style.display = 'flex';
+        if (alertText) alertText.textContent = "Please enter a valid 6-digit OTP code.";
+        if (alertBox) alertBox.style.display = 'flex';
         return;
     }
     

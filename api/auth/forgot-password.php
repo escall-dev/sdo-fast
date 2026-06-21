@@ -9,10 +9,7 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/env.php';
-require_once __DIR__ . '/../../vendor/autoload.php';
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
+require_once __DIR__ . '/../../services/MailService.php';
 
 // Only accept POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -128,21 +125,30 @@ function handleRequestOTP($input, $db, $action) {
         'token' => $otpHash
     ]);
 
-    // Send OTP via PHPMailer
-    $emailSent = sendOTPEmail($email, $user['full_name'], $otp);
+    // Send OTP via MailService
+    $emailSent = MailService::sendPasswordResetOTP($email, $user['full_name'], $otp);
+    $isLocal = env('APP_ENV', 'local') === 'local';
 
-    if ($emailSent) {
+    if ($emailSent || $isLocal) {
         $_SESSION['otp_request_count']++;
         $_SESSION['otp_attempts'] = 0; // Reset verification failure count
 
-        echo json_encode([
+        $response = [
             'success' => true,
-            'message' => 'OTP has been sent to your email address. Please check your inbox.',
+            'message' => $emailSent
+                ? 'OTP has been sent to your email address. Please check your inbox.'
+                : 'Email delivery failed. Use the verification code shown below (local dev mode).',
             'attempts_remaining' => 3,
-            'resend_remaining' => max(0, 3 - $_SESSION['otp_request_count'])
-        ]);
+            'resend_remaining' => max(0, 3 - $_SESSION['otp_request_count']),
+        ];
+
+        if ($isLocal) {
+            $response['dev_otp'] = $otp;
+        }
+
+        echo json_encode($response);
     } else {
-        echo json_encode(['success' => false, 'message' => 'Failed to send OTP email. Please try again.']);
+        echo json_encode(['success' => false, 'message' => 'Failed to send OTP email. Please try again later or contact support.']);
     }
 }
 
@@ -239,78 +245,3 @@ function handleVerifyOTP($input, $db) {
     }
 }
 
-function sendOTPEmail($email, $fullName, $otp) {
-    try {
-        $mail = new PHPMailer(true);
-
-        // SMTP settings
-        $mail->isSMTP();
-        $mail->Host       = env('SMTP_HOST', env('MAIL_HOST', 'localhost'));
-        $mail->SMTPAuth   = filter_var(env('SMTP_AUTH', !empty(env('MAIL_USERNAME'))), FILTER_VALIDATE_BOOLEAN);
-        $mail->Username   = env('MAIL_USERNAME', '');
-        $mail->Password   = env('MAIL_PASSWORD', '');
-        $mail->Port       = env('SMTP_PORT', env('MAIL_PORT', 1025));
-        
-        $encryption = env('SMTP_ENCRYPTION', '');
-        if (strtolower($encryption) === 'tls' || $mail->Port == 587) {
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        } elseif (strtolower($encryption) === 'ssl' || $mail->Port == 465) {
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-        } else {
-            $mail->SMTPSecure = '';
-            $mail->SMTPAutoTLS = false;
-        }
-
-        // Allow self-signed certs for local development/testing
-        $mail->SMTPOptions = [
-            'ssl' => [
-                'verify_peer' => false,
-                'verify_peer_name' => false,
-                'allow_self_signed' => true
-            ]
-        ];
-
-        // Sender
-        $mail->setFrom(env('MAIL_FROM_ADDRESS', 'noreply@sdo-fast.gov.ph'), 'SDO FAST');
-        $mail->addAddress($email, $fullName);
-
-        $mail->isHTML(true);
-        $mail->Subject = 'SDO FAST - Password Reset OTP';
-
-        // Embed logo if exists
-        $sdoLogoPath = __DIR__ . '/../../assets/img/sdo_logo.jpg';
-        if (file_exists($sdoLogoPath)) {
-            $mail->addEmbeddedImage($sdoLogoPath, 'sdo-logo', 'sdo_logo.jpg');
-        }
-
-        // Body
-        $mail->Body = "
-            <div style=\"font-family: sans-serif; max-width: 500px; margin: 20px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;\">
-                <div style=\"background: #214da2; padding: 24px; text-align: center; color: white;\">
-                    <h2 style=\"margin: 0; font-size: 22px; font-weight: 700;\">SDO FAST</h2>
-                    <p style=\"margin: 4px 0 0; font-size: 12px; color: rgba(255,255,255,0.8);\">Financial Accounting Services and Transactions</p>
-                </div>
-                <div style=\"padding: 30px;\">
-                    <p style=\"margin-top: 0; color: #334155; font-size: 15px;\">Hello <strong>" . htmlspecialchars($fullName) . "</strong>,</p>
-                    <p style=\"color: #475569; font-size: 14px; line-height: 1.6;\">We received a request to reset your password. Use the verification code (OTP) below to verify your request:</p>
-                    
-                    <div style=\"text-align: center; margin: 30px 0;\">
-                        <div style=\"display: inline-block; background: #f1f5f9; border: 2px dashed #cbd5e1; border-radius: 8px; padding: 12px 30px;\">
-                            <span style=\"font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #1e293b;\">{$otp}</span>
-                        </div>
-                    </div>
-                    
-                    <p style=\"color: #ef4444; font-size: 13px; text-align: center; font-weight: 500;\">⏱ This code is valid for 5 minutes.</p>
-                    <hr style=\"border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;\">
-                    <p style=\"margin: 0; color: #94a3b8; font-size: 12px;\">If you did not request this, you can safely ignore this email.</p>
-                </div>
-            </div>
-        ";
-
-        $mail->send();
-        return true;
-    } catch (Exception $e) {
-        error_log("Failed to send password reset OTP: " . $e->getMessage());
-        return false;
-    }
-}

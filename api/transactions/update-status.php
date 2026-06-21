@@ -1,18 +1,19 @@
 <?php
 /**
  * Transaction Workflow Status Update API for SDO FAST.
- * Updated for 6-Stage Workflow v2.
+ * Updated for 6-Stage Workflow v3.
  *
- * Stage Flow:
- *   Stage 1: Requestor submits         → Pending ACCTG Support
- *   Stage 2: ACCTG Support reviews     → Pending Budget          (via approve-attachment.php auto-advance)
- *   Stage 3: Budget checks funds       → Pending ACCT Support    (via budget-check.php)
- *   Stage 4: ACCT Support processes    → Pending Signatories
- *   Stage 5: Signatories complete      → Pending Cashier Release (via complete-signatory-task.php auto-advance)
- *   Stage 6: Cashier releases          → Released
+ * Stage Flow (v3):
+ *   Stage 1: Requestor submits (no docs)     → Pending Budget
+ *   Stage 2: Budget verifies funds           → Pending Requestor  (back to Requestor)
+ *   Stage 3: Requestor uploads docs          → Pending Accounting Support   (via resubmit-documents.php)
+ *   Stage 4: ACCTG Support inspects docs     → Pending Signatories
+ *   Stage 5: Signatories approve             → Pending Signatory Approval
+ *   Stage 6a: Cashier accepts                → Awaiting Payment
+ *   Stage 6b: Cashier releases               → Released
  *
  * This endpoint handles:
- *   - Stage 4: ACCT Support → Pending Signatories (forward), Returned, Rejected
+ *   - Stage 4: ACCTG Support → Pending Signatories (forward), Returned, Rejected
  *   - Stage 6: Cashier → Released, Returned, Rejected
  *   - Any stage: Return or Reject (by authorized role)
  *   - Super Admin: any transition
@@ -65,16 +66,16 @@ $userId = $_SESSION['user_id'];
 $userRole = $_SESSION['user_role'];
 $userPosition = $_SESSION['user_position'] ?? '';
 
-// Valid Status List (new 6-stage workflow)
+// Valid Status List (5-stage workflow v3)
 $allowedStatuses = [
-    'Pending ACCTG Support',    // Stage 2
-    'Pending Budget',           // Stage 3
-    'Pending ACCT Support',     // Stage 4
-    'Pending Signatories',      // Stage 5
-    'Pending Cashier Release',  // Stage 6
-    'Released',                 // Final
-    'Rejected',                 // Terminal
-    'Returned'                  // Terminal
+    'Pending Budget',              // Stage 1
+    'Pending Requestor',           // Stage 2
+    'Pending Accounting Support',  // Stage 3
+    'Pending Signatory Approval',  // Stage 4 — Document for Approval and Signature
+    'For Payment',                 // Stage 5 — awaiting Cashier release
+    'Released',                    // Stage 6 — Payment Released
+    'Rejected',
+    'Returned'
 ];
 
 if (!in_array($newStatus, $allowedStatuses)) {
@@ -103,41 +104,40 @@ try {
 
     $oldStatus = $transaction['current_status'];
     
-    // 2. Validate Role-Based Transition Permissions (6-Stage Workflow v2)
+    // 2. Validate Role-Based Transition Permissions (6-Stage Workflow v3)
     $authorized = false;
 
     if ($userRole === 'Super Admin') {
         // Super Admin can do anything
         $authorized = true;
     } elseif ($userRole === 'Accounting Staff' || $userPosition === 'Accounting Support') {
-        // Stage 2: ACCTG Support reviews attachments (auto-advanced via approve-attachment.php)
-        // They can also return/reject at Stage 2
-        if ($oldStatus === 'Pending ACCTG Support' && in_array($newStatus, ['Returned', 'Rejected'])) {
+        // Stage 3 (Pending Accounting Support): Document Inspection → forward to Signatory Approval, return, reject
+        if ($oldStatus === 'Pending Accounting Support' && in_array($newStatus, ['Pending Signatory Approval', 'Returned', 'Rejected'])) {
             $authorized = true;
         }
-        // Stage 4: ACCT Support processes → Pending Signatories
-        if ($oldStatus === 'Pending ACCT Support' && in_array($newStatus, ['Pending Signatories', 'Returned', 'Rejected'])) {
+        // Can return/reject at any stage they have visibility of
+        if (in_array($oldStatus, ['Pending Requestor', 'Pending Budget']) && in_array($newStatus, ['Returned', 'Rejected'])) {
             $authorized = true;
         }
     } elseif ($userPosition === 'Accountant') {
-        // Accountant can also handle Stage 4 (ACCT Support)
-        if ($oldStatus === 'Pending ACCT Support' && in_array($newStatus, ['Pending Signatories', 'Returned', 'Rejected'])) {
+        // Accountant handles Stage 3 (Pending Accounting Support) — Document Inspection
+        if ($oldStatus === 'Pending Accounting Support' && in_array($newStatus, ['Pending Signatory Approval', 'Returned', 'Rejected'])) {
             $authorized = true;
         }
     } elseif ($userRole === 'Budget Officer' || $userPosition === 'Budget Officer') {
-        // Stage 3: Budget check (handled primarily via budget-check.php)
-        // Can also return/reject at Stage 3
-        if ($oldStatus === 'Pending Budget' && in_array($newStatus, ['Pending ACCT Support', 'Returned', 'Rejected'])) {
+        // Stage 1 (Pending Budget): Budget Officer uses budget-check.php for forward,
+        // but can also return/reject via this endpoint
+        if ($oldStatus === 'Pending Budget' && in_array($newStatus, ['Returned', 'Rejected'])) {
             $authorized = true;
         }
-    } elseif ($userRole === 'Approver' || $userPosition === 'ASDS' || $userPosition === 'SDS') {
-        // Stage 5: Signatories can return/reject
-        if ($oldStatus === 'Pending Signatories' && in_array($newStatus, ['Returned', 'Rejected'])) {
+    } elseif ($userPosition === 'ASDS' || $userPosition === 'SDS') {
+        // Stage 4 (Pending Signatory Approval): Signatories approve → For Payment
+        if ($oldStatus === 'Pending Signatory Approval' && in_array($newStatus, ['For Payment', 'Returned'])) {
             $authorized = true;
         }
     } elseif ($userRole === 'Cashier' || $userPosition === 'Cashier') {
-        // Stage 6: Cashier releases payment
-        if ($oldStatus === 'Pending Cashier Release' && in_array($newStatus, ['Released', 'Returned', 'Rejected'])) {
+        // Stage 5 (For Payment): Cashier releases → Released
+        if ($oldStatus === 'For Payment' && in_array($newStatus, ['Released', 'Returned', 'Rejected'])) {
             $authorized = true;
         }
     }
@@ -201,17 +201,57 @@ try {
     }
 
     // 6. Insert Status Log
-    $logStmt = $fastPDO->prepare("
-        INSERT INTO transaction_status_logs (transaction_id, previous_status, new_status, changed_by, remarks) 
-        VALUES (:transaction_id, :prev_status, :new_status, :changed_by, :remarks)
-    ");
-    $logStmt->execute([
-        'transaction_id' => $transactionId,
-        'prev_status' => $oldStatus,
-        'new_status' => $newStatus,
-        'changed_by' => $userId,
-        'remarks' => $remarks
-    ]);
+    // Signatory approval stays under Document for Approval and Signature (same-status log).
+    // Cashier release additionally creates a For Payment entry to attribute Release of Payment to Cashier.
+    if ($oldStatus === 'Pending Signatory Approval' && $newStatus === 'For Payment') {
+        // Signatory approval: log as same-status so it appears under Document for Approval and Signature
+        $logStmt = $fastPDO->prepare("
+            INSERT INTO transaction_status_logs (transaction_id, previous_status, new_status, changed_by, remarks) 
+            VALUES (:transaction_id, :prev_status, :prev_status2, :changed_by, :remarks)
+        ");
+        $logStmt->execute([
+            'transaction_id' => $transactionId,
+            'prev_status' => $oldStatus,
+            'prev_status2' => $oldStatus,
+            'changed_by' => $userId,
+            'remarks' => $remarks
+        ]);
+    } elseif ($oldStatus === 'For Payment' && $newStatus === 'Released') {
+        // Cashier release: add a For Payment entry attributed to Cashier, then the Released entry
+        $cashierLogStmt = $fastPDO->prepare("
+            INSERT INTO transaction_status_logs (transaction_id, previous_status, new_status, changed_by, remarks) 
+            VALUES (:transaction_id, 'Pending Signatory Approval', 'For Payment', :changed_by, :remarks)
+        ");
+        $cashierLogStmt->execute([
+            'transaction_id' => $transactionId,
+            'changed_by' => $userId,
+            'remarks' => 'Payment processed and released by Cashier.'
+        ]);
+
+        $logStmt = $fastPDO->prepare("
+            INSERT INTO transaction_status_logs (transaction_id, previous_status, new_status, changed_by, remarks) 
+            VALUES (:transaction_id, :prev_status, :new_status, :changed_by, :remarks)
+        ");
+        $logStmt->execute([
+            'transaction_id' => $transactionId,
+            'prev_status' => $oldStatus,
+            'new_status' => $newStatus,
+            'changed_by' => $userId,
+            'remarks' => $remarks
+        ]);
+    } else {
+        $logStmt = $fastPDO->prepare("
+            INSERT INTO transaction_status_logs (transaction_id, previous_status, new_status, changed_by, remarks) 
+            VALUES (:transaction_id, :prev_status, :new_status, :changed_by, :remarks)
+        ");
+        $logStmt->execute([
+            'transaction_id' => $transactionId,
+            'prev_status' => $oldStatus,
+            'new_status' => $newStatus,
+            'changed_by' => $userId,
+            'remarks' => $remarks
+        ]);
+    }
 
     // 7. Audit System Change
     AuditLogService::log(

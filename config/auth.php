@@ -131,6 +131,12 @@ if (!function_exists('get_data_scope_filter')) {
             return "1=1";
         } elseif ($scope === 'assigned') {
             // Determine the pending status(es) assigned to this user role or position dynamically
+            // Workflow v3 mapping:
+            //   Pending Budget           → Stage 1: Budget Officer
+            //   Pending Requestor    → Stage 2: Requestor (own transactions, docs needed)
+            //   Pending Accounting Support     → Stage 3: Accounting Support / Accountant
+            //   Pending Signatories      → Stage 4: ASDS / SDS only
+            //   Pending Signatory Approval  → Stage 5: Cashier
             $userPosition = $_SESSION['user_position'] ?? '';
             
             // If user position is empty/not set in session (e.g. running in CLI or background sync), look it up in DB
@@ -153,17 +159,19 @@ if (!function_exists('get_data_scope_filter')) {
             $statuses = [];
             if ($userRole === 'Budget Officer' || $userPosition === 'Budget Officer') {
                 $statuses[] = "'Pending Budget'";
-            } elseif ($userRole === 'Approver' || $userPosition === 'ASDS' || $userPosition === 'SDS') {
-                $statuses[] = "'Pending Signatories'";
+            } elseif ($userPosition === 'ASDS' || $userPosition === 'SDS') {
+                $statuses[] = "'Pending Signatory Approval'";
             } elseif ($userPosition === 'Accounting Support' || ($userRole === 'Accounting Staff' && $userPosition !== 'Accountant')) {
-                $statuses[] = "'Pending ACCTG Support'";
-                $statuses[] = "'Pending Signatories'";
+                // Workflow v3: Accounting Support handles Document Inspection (Pending Accounting Support)
+                $statuses[] = "'Pending Accounting Support'";
             } elseif ($userPosition === 'Accountant') {
-                $statuses[] = "'Pending ACCT Support'";
+                // Workflow v3: Accountant handles Document Inspection
+                $statuses[] = "'Pending Accounting Support'";
             } elseif ($userRole === 'Cashier' || $userPosition === 'Cashier') {
-                $statuses[] = "'Pending Cashier Release'";
+                $statuses[] = "'For Payment'";
             } else {
-                $statuses[] = "'Pending ACCTG Support'";
+                // Fallback: show first stage transactions (Pending Budget — awaiting Budget Officer)
+                $statuses[] = "'Pending Budget'";
             }
 
             $statusCondition = "{$prefix}current_status IN (" . implode(',', $statuses) . ")";

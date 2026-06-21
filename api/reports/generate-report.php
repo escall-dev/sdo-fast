@@ -160,7 +160,7 @@ try {
             FROM transactions t
             LEFT JOIN users u ON t.requestor_id = u.id
             LEFT JOIN budget_checks bc ON t.id = bc.transaction_id
-            WHERE t.current_status IN ('Pending ACCTG Support', 'Pending Budget', 'Pending ACCT Support', 'Pending Signatories', 'Pending Cashier Release')
+            WHERE t.current_status IN ('Pending Requestor', 'Pending Budget', 'Pending Accounting Support', 'Pending Signatories', 'Pending Signatory Approval')
               AND {$pendingWhereSql}
             ORDER BY aging_days DESC
         ";

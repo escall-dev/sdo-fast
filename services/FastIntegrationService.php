@@ -264,7 +264,7 @@ class FastIntegrationService {
                 $statusCheck->execute([$existingId]);
                 $currStatus = $statusCheck->fetchColumn();
                 
-                if ($currStatus === 'Pending ACCTG Support') {
+                if ($currStatus === 'Pending Requestor') {
                     self::seedWorkflowDetails($pdo, $existingId, $filePath, $originalFilename);
                 }
 
@@ -304,7 +304,7 @@ class FastIntegrationService {
             
             // Map default requestor to Super Admin (User ID 1) for automated entries
             $requestorId = 1; 
-            $status = 'Pending ACCTG Support';
+            $status = 'Pending Requestor';
 
             // 5. Insert Transaction Draft
             $transactionRemarks = "Automatically generated draft from SDO-BAC procurement link: {$refNumber}.";

@@ -307,6 +307,17 @@ $email = $_GET['email'] ?? '';
 
         .hidden { display: none; }
 
+        .dev-otp-banner {
+            background: rgba(33, 77, 162, 0.15);
+            border: 1px dashed rgba(33, 77, 162, 0.4);
+            border-radius: 8px;
+            color: #93c5fd;
+            font-size: 0.85rem;
+            padding: 10px 15px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
         .step-indicator {
             display: flex;
             justify-content: center;
@@ -396,6 +407,7 @@ $email = $_GET['email'] ?? '';
                 </div>
 
                 <div id="verify-alert" class="hidden"></div>
+                <div id="dev-otp-banner" class="dev-otp-banner hidden"></div>
 
                 <form id="verify-form" onsubmit="return handleVerifyOTP(event)">
                     <input type="hidden" id="verify-email" value="<?php echo htmlspecialchars($email); ?>">
@@ -559,6 +571,8 @@ $email = $_GET['email'] ?? '';
             }, 1000);
         }
 
+      
+
         async function handleRequestOTP(e) {
             e.preventDefault();
             hideAlert('request-alert');
@@ -584,7 +598,8 @@ $email = $_GET['email'] ?? '';
                 if (data.success) {
                     document.getElementById('verify-email').value = email;
                     showStep('verify');
-                    showAlert('verify-alert', 'success', data.message);
+                    showAlert('verify-alert', data.dev_otp ? 'warning' : 'success', data.message);
+                    showDevOtp(data.dev_otp || null);
                     startOTPTimer(300); // 5 minutes
                     startResendTimer();
                     setTimeout(() => document.querySelector('.otp-input').focus(), 100);
@@ -667,7 +682,8 @@ $email = $_GET['email'] ?? '';
                 const data = await resp.json();
 
                 if (data.success) {
-                    showAlert('verify-alert', 'success', 'New OTP sent! Check your email.');
+                    showAlert('verify-alert', data.dev_otp ? 'warning' : 'success', data.message || 'New OTP sent! Check your email.');
+                    showDevOtp(data.dev_otp || null);
                     clearOTPInputs();
                     startOTPTimer(300);
                     startResendTimer();

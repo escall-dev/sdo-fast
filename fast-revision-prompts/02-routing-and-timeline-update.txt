@@ -17,10 +17,10 @@ Stage 4, Accounting Support account
 Transaction appears in the Accounting Support account. Accounting Support scans and verifies all attachments. On verification, route the transaction to the Signatory Personnel account(s). Status label: "Document Inspection."
 
 Stage 5, Signatory Personnel account(s)
-Transaction appears in the Signatory Personnel account(s) for approval and signature. Status label: "Document for Approval and Signature (Internal Process)." Do not display individual signatory names. On approval, route the transaction to the Cashier account.
+Transaction appears in the Signatory Personnel account(s) for approval and signature. Status label: "Document for Approval and Signature." Do not display individual signatory names. On approval, route the transaction to the Cashier account.
 
 Stage 6, Cashier account
-Transaction appears in the Cashier account. Cashier processes and releases payment. Status label: "Release of Payment." This is the final stage.
+Transaction appears in the Cashier account. Cashier processes and releases payment. Status label when the cash wasn't release: "Release of Payment.". But when the payment was released, labeled must be : "Payment Released" This is the final stage.
 
 Implementation notes
 - Each stage must update the transaction owner field so it shows under the correct role account at each point.

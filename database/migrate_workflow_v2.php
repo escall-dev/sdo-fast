@@ -11,12 +11,12 @@
  *   - Cashier role, position, and permissions
  *
  * Remaps:
- *   Pending Accountant 1  → Pending ACCTG Support
- *   Pending Support       → Pending ACCTG Support
+ *   Pending Accountant 1  → Pending Requestor
+ *   Pending Support       → Pending Requestor
  *   Pending Budget Check  → Pending Budget
- *   Pending Accountant 2  → Pending ACCT Support
+ *   Pending Accountant 2  → Pending Accounting Support
  *   Pending Final Approval→ Pending Signatories
- *   Approved              → Pending Cashier Release
+ *   Approved              → Pending Signatory Approval
  *
  * Run via CLI:  php database/migrate_workflow_v2.php
  * Run via web:  http://localhost/fast/database/migrate_workflow_v2.php
@@ -229,12 +229,12 @@ logMsg("");
 logMsg("[STEP 3] Remapping transaction status values...");
 
 $statusMap = [
-    'Pending Accountant 1'  => 'Pending ACCTG Support',
-    'Pending Support'       => 'Pending ACCTG Support',
+    'Pending Accountant 1'  => 'Pending Requestor',
+    'Pending Support'       => 'Pending Requestor',
     'Pending Budget Check'  => 'Pending Budget',
-    'Pending Accountant 2'  => 'Pending ACCT Support',
+    'Pending Accountant 2'  => 'Pending Accounting Support',
     'Pending Final Approval'=> 'Pending Signatories',
-    'Approved'              => 'Pending Cashier Release',
+    'Approved'              => 'Pending Signatory Approval',
 ];
 
 try {
@@ -343,8 +343,8 @@ try {
 
         // Determine approval status: if transaction is past Stage 2, mark all as approved
         $pastStage2 = in_array($tx['current_status'], [
-            'Pending Budget', 'Pending ACCT Support', 'Pending Signatories', 
-            'Pending Cashier Release', 'Released'
+            'Pending Budget', 'Pending Accounting Support', 'Pending Signatories', 
+            'Pending Signatory Approval', 'Released'
         ]);
 
         foreach ($files as $file) {
@@ -381,7 +381,7 @@ try {
     $taskCount = 0;
     foreach ($tasksAll as $tx) {
         // If past Stage 5, mark tasks as completed
-        $pastStage5 = in_array($tx['current_status'], ['Pending Cashier Release', 'Released']);
+        $pastStage5 = in_array($tx['current_status'], ['Pending Signatory Approval', 'Released']);
         $atStage5 = ($tx['current_status'] === 'Pending Signatories');
 
         $taskStatus = ($pastStage5) ? 'completed' : 'pending';

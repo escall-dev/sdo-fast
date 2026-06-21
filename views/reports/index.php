@@ -101,13 +101,13 @@ if (in_array($userRole, ['Super Admin', 'Accounting Staff']) && $fastPDO !== nul
                             <label for="filterStatus" class="form-label fs-8 fw-semibold text-muted">Workflow Status</label>
                             <select id="filterStatus" class="form-select">
                                 <option value="">All Statuses</option>
-                                <option value="Pending ACCTG Support">Pending ACCTG Support</option>
+                                <option value="Pending Requestor">Pending Requestor</option>
                                 <option value="Pending Budget">Pending Budget</option>
-                                <option value="Pending ACCT Support">Pending ACCT Support</option>
+                                <option value="Pending Accounting Support">Pending Accounting Support</option>
                                 <option value="Pending Signatories">Pending Signatories</option>
-                                <option value="Pending Cashier Release">Pending Cashier Release</option>
+                                <option value="Pending Signatory Approval">Pending Signatory Approval</option>
                                 <option value="Released">Released</option>
-                                <option value="Rejected">Rejected</option>
+                                <option value="Rejected">Disapproved</option>
                                 <option value="Returned">Returned</option>
                             </select>
                         </div>

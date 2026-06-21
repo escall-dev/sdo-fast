@@ -1,8 +1,8 @@
 <?php
 /**
- * Update Tax Classification API for Stage 2 (ACCTG Support).
- * Sets/updates the tax classification on the fly, computes tax & net amounts,
- * and auto-advances the status to Stage 3 if all attachments are already approved.
+ * Update Tax Classification API — Workflow v3 Stage 3→4 transition.
+ * Accounting Support sets the tax classification during Document Inspection.
+ * Auto-advances to Pending Signatories if all attachments are already approved.
  */
 
 header('Content-Type: application/json');
@@ -39,16 +39,16 @@ $userId = $_SESSION['user_id'];
 $userRole = $_SESSION['user_role'];
 $userPosition = $_SESSION['user_position'] ?? '';
 
-// Only ACCTG Support / Accounting Staff / Super Admin can set tax classification
-$authorized = ($userRole === 'Super Admin' || $userRole === 'Accounting Staff' || $userPosition === 'Accounting Support');
+// Only Accounting Support / Accounting Staff / Super Admin can set tax classification
+$authorized = ($userRole === 'Super Admin' || $userRole === 'Accounting Staff' || $userPosition === 'Accounting Support' || $userPosition === 'Accountant');
 if (!$authorized) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Forbidden: Only ACCTG Support staff can set tax classification.']);
+    echo json_encode(['success' => false, 'message' => 'Forbidden: Only Accounting Support staff can set tax classification.']);
     exit;
 }
 
 try {
-    // 1. Verify transaction is at Stage 2 and fetch its gross amount
+    // 1. Verify transaction is at Stage 3 (Pending Accounting Support — Document Inspection)
     $stmt = $fastPDO->prepare("SELECT id, current_status, amount, tracking_number FROM transactions WHERE id = :id LIMIT 1");
     $stmt->execute(['id' => $transactionId]);
     $transaction = $stmt->fetch();
@@ -59,9 +59,9 @@ try {
         exit;
     }
 
-    if ($transaction['current_status'] !== 'Pending ACCTG Support') {
+    if ($transaction['current_status'] !== 'Pending Accounting Support') {
         http_response_code(422);
-        echo json_encode(['success' => false, 'message' => 'Transaction is not at Stage 2 (Pending ACCTG Support). Current status: ' . $transaction['current_status']]);
+        echo json_encode(['success' => false, 'message' => 'Transaction is not at Stage 3 (Pending Accounting Support — Document Inspection). Current status: ' . $transaction['current_status']]);
         exit;
     }
 
@@ -119,26 +119,29 @@ try {
     $autoAdvanced = false;
 
     if ($allApproved) {
-        // Auto-advance to Stage 3: Pending Budget
-        $advanceStmt = $fastPDO->prepare("UPDATE transactions SET current_status = 'Pending Budget' WHERE id = :id");
+        // Workflow v3: Auto-advance to Stage 4: Pending Signatories
+        $advanceStmt = $fastPDO->prepare("UPDATE transactions SET current_status = 'Pending Signatory Approval' WHERE id = :id");
         $advanceStmt->execute(['id' => $transactionId]);
 
-        // Log the status change
-        $logStmt = $fastPDO->prepare("
-            INSERT INTO transaction_status_logs (transaction_id, previous_status, new_status, changed_by, remarks) 
-            VALUES (:tx_id, 'Pending ACCTG Support', 'Pending Budget', :user_id, :remarks)
+        // Append Accounting Support's tax classification to the existing Mandatory Documentary Requirements Submitted log entry
+        $updateRemarksStmt = $fastPDO->prepare("
+            UPDATE transaction_status_logs 
+            SET remarks = CONCAT(COALESCE(remarks, ''), '\n', :review_remarks),
+                changed_by = :user_id
+            WHERE transaction_id = :tx_id AND new_status = 'Pending Accounting Support'
+            ORDER BY id DESC LIMIT 1
         ");
-        $logStmt->execute([
-            'tx_id' => $transactionId,
+        $updateRemarksStmt->execute([
+            'review_remarks' => "Tax classification set to '{$taxType}'. All attachments approved. Routed to Signatories.",
             'user_id' => $userId,
-            'remarks' => "Tax classification set to '{$taxType}'. All attachments approved. Auto-advanced to Stage 3 (Budget)."
+            'tx_id' => $transactionId
         ]);
 
         AuditLogService::log(
             $fastPDO, $userId,
             "Tax classification set and transaction auto-advanced: {$transaction['tracking_number']}",
-            ['status' => 'Pending ACCTG Support', 'tax_type' => null],
-            ['status' => 'Pending Budget', 'tax_type' => $taxType]
+            ['status' => 'Pending Accounting Support', 'tax_type' => null],
+            ['status' => 'Pending Signatories', 'tax_type' => $taxType]
         );
 
         $autoAdvanced = true;

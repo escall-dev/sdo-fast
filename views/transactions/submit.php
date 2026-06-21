@@ -33,7 +33,7 @@ if ($fastPDO !== null) {
                 <h5 class="mb-0 fw-bold text-primary-dark">New Transaction Submission Form</h5>
             </div>
             <div class="card-body">
-                <form id="submitTransactionForm" onsubmit="handleFormSubmit(event)" enctype="multipart/form-data">
+                <form id="submitTransactionForm" onsubmit="handleFormSubmit(event)">
                     <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                     
                     <!-- Basic details -->
@@ -49,7 +49,7 @@ if ($fastPDO !== null) {
                         </div>
                         
                         <div class="col-12 col-sm-6">
-                            <label for="targetDate" class="form-label fs-8 fw-semibold text-muted">Target Completion Date</label>
+                            <label for="targetDate" class="form-label fs-8 fw-semibold text-muted">Target Implementation Date</label>
                             <input type="date" name="target_date" id="targetDate" class="form-control" min="<?php echo date('Y-m-d'); ?>">
                         </div>
 
@@ -106,52 +106,25 @@ if ($fastPDO !== null) {
                             </div>
                         </div>
 
-                        <!-- CA: Fund Source Field (Travel, School MOOE, SBFP) -->
-                        <div id="caFundSourceContainer" class="d-none mt-3">
-                            <div class="border-top pt-3">
-                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-wallet2 me-1"></i>Fund Source</h6>
-                                <div class="row g-3 mb-3">
-                                    <div class="col-12">
-                                        <label for="caFundSource" class="form-label fs-8 fw-semibold text-muted">Fund Source <span class="text-danger">*</span></label>
-                                        <input type="text" name="fund_source" id="caFundSource" class="form-control" placeholder="e.g. School MOOE, Division MOOE, SEF">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <!-- CA: Fund Source Field — MOVED to Budget Officer in Workflow v3 -->
+                        
 
-                        <!-- CA: TA + Itinerary Uploads (Travel only) -->
+                        <!-- CA: TA + Itinerary Uploads (Travel only) — DEFERRED in Workflow v3 -->
                         <div id="caTaItineraryContainer" class="d-none mt-3">
                             <div class="border-top pt-3">
-                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-airplane-engines me-1"></i>Travel Documents</h6>
-                                <div class="alert alert-info border-0 shadow-sm d-flex align-items-center gap-2 mb-3 py-2 px-3" style="font-size: 0.8rem;">
-                                    <i class="bi bi-info-circle-fill fs-6 text-primary"></i>
-                                    <div><strong>Note:</strong> For Travel Cash Advance, the attached documents you must upload below are your <strong>Approved TA (Travel Authority)</strong> and <strong>Travel Itinerary</strong>.</div>
-                                </div>
-                                <div class="row g-3 mb-3">
-                                    <div class="col-12 col-sm-6">
-                                        <label for="approvedTa" class="form-label fs-8 fw-semibold text-muted">Upload Approved TA (Travel Authority) <span class="text-danger">*</span></label>
-                                        <input type="file" name="approved_ta" id="approvedTa" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
-                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
-                                    </div>
-                                    <div class="col-12 col-sm-6">
-                                        <label for="travelItinerary" class="form-label fs-8 fw-semibold text-muted">Upload Travel Itinerary <span class="text-danger">*</span></label>
-                                        <input type="file" name="travel_itinerary" id="travelItinerary" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
-                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
-                                    </div>
+                                <div class="alert alert-info border-0 d-flex align-items-center gap-2 mb-0 py-2 px-3 fs-8">
+                                    <i class="bi bi-info-circle-fill text-primary"></i>
+                                    <span><strong>Travel documents (Approved TA, Travel Itinerary)</strong> will be uploaded after the Budget Officer approves the source of funds for this transaction.</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- CA: Activity Proposal Upload (Training, SLAC/GAWAD) -->
+                        <!-- CA: Activity Proposal Upload (Training, SLAC/GAWAD) — DEFERRED in Workflow v3 -->
                         <div id="caActivityProposalContainer" class="d-none mt-3">
                             <div class="border-top pt-3">
-                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-journal-check me-1"></i>Activity Proposal</h6>
-                                <div class="row g-3 mb-3">
-                                    <div class="col-12">
-                                        <label for="caActivityProposal" class="form-label fs-8 fw-semibold text-muted">Upload Activity Proposal <span class="text-danger">*</span></label>
-                                        <input type="file" name="activity_proposal" id="caActivityProposal" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
-                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
-                                    </div>
+                                <div class="alert alert-info border-0 d-flex align-items-center gap-2 mb-0 py-2 px-3 fs-8">
+                                    <i class="bi bi-info-circle-fill text-primary"></i>
+                                    <span><strong>Activity Proposal</strong> will be uploaded after the Budget Officer approves the source of funds for this transaction.</span>
                                 </div>
                             </div>
                         </div>
@@ -239,53 +212,30 @@ if ($fastPDO !== null) {
                             </div>
                         </div>
 
-                        <!-- Reimb: TA + Itinerary Uploads (Travel only) -->
+                        <!-- Reimb: TA + Itinerary Uploads (Travel only) — DEFERRED in Workflow v3 -->
                         <div id="reimbTaItineraryContainer" class="d-none mt-3">
                             <div class="border-top pt-3">
-                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-airplane-engines me-1"></i>Travel Documents</h6>
-                                <div class="alert alert-info border-0 shadow-sm d-flex align-items-center gap-2 mb-3 py-2 px-3" style="font-size: 0.8rem;">
-                                    <i class="bi bi-info-circle-fill fs-6 text-primary"></i>
-                                    <div><strong>Note:</strong> For Travel Reimbursement, please upload your <strong>Approved TA (Travel Authority)</strong> and <strong>Travel Itinerary</strong>.</div>
-                                </div>
-                                <div class="row g-3 mb-3">
-                                    <div class="col-12 col-sm-6">
-                                        <label for="reimbApprovedTa" class="form-label fs-8 fw-semibold text-muted">Upload Approved TA (Travel Authority) <span class="text-danger">*</span></label>
-                                        <input type="file" name="reimb_approved_ta" id="reimbApprovedTa" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
-                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
-                                    </div>
-                                    <div class="col-12 col-sm-6">
-                                        <label for="reimbTravelItinerary" class="form-label fs-8 fw-semibold text-muted">Upload Travel Itinerary <span class="text-danger">*</span></label>
-                                        <input type="file" name="reimb_travel_itinerary" id="reimbTravelItinerary" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
-                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
-                                    </div>
+                                <div class="alert alert-info border-0 d-flex align-items-center gap-2 mb-0 py-2 px-3 fs-8">
+                                    <i class="bi bi-info-circle-fill text-primary"></i>
+                                    <span><strong>Travel documents (Approved TA, Travel Itinerary)</strong> will be uploaded after the Budget Officer approves the source of funds for this transaction.</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Reimb: Activity Proposal Upload (Seminars/Trainings) -->
+                        <!-- Reimb: Activity Proposal Upload (Seminars/Trainings) — DEFERRED in Workflow v3 -->
                         <div id="reimbActivityProposalContainer" class="d-none mt-3">
                             <div class="border-top pt-3">
-                                <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-journal-check me-1"></i>Activity Proposal</h6>
-                                <div class="row g-3 mb-3">
-                                    <div class="col-12">
-                                        <label for="reimbActivityProposal" class="form-label fs-8 fw-semibold text-muted">Upload Activity Proposal <span class="text-danger">*</span></label>
-                                        <input type="file" name="reimb_activity_proposal" id="reimbActivityProposal" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
-                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
-                                    </div>
+                                <div class="alert alert-info border-0 d-flex align-items-center gap-2 mb-0 py-2 px-3 fs-8">
+                                    <i class="bi bi-info-circle-fill text-primary"></i>
+                                    <span><strong>Activity Proposal</strong> will be uploaded after the Budget Officer approves the source of funds for this transaction.</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Reimb: Communications Load Fields (Month, DTR, Certificate, Bill/Proof) -->
+                        <!-- Reimb: Communications Load Fields — DEFERRED in Workflow v3 -->
                         <div id="reimbCommunicationsContainer" class="d-none mt-3">
                             <div class="border-top pt-3">
                                 <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-telephone-inbound me-1"></i>Communications Load Details</h6>
-                                
-                                <div class="alert alert-info border-0 shadow-sm d-flex align-items-center gap-2 mb-3 py-2 px-3" style="font-size: 0.8rem;">
-                                    <i class="bi bi-info-circle-fill fs-6 text-primary"></i>
-                                    <div><strong>Note:</strong> All three documents (DTR, Certificate, and Bill / Proof of Payment) are strictly required.</div>
-                                </div>
-                                
                                 <div class="row g-3 mb-3">
                                     <div class="col-12">
                                         <label for="reimbursementMonth" class="form-label fs-8 fw-semibold text-muted">Select Month <span class="text-danger">*</span></label>
@@ -302,28 +252,14 @@ if ($fastPDO !== null) {
                                         </select>
                                     </div>
                                 </div>
-
-                                <div class="row g-3 mb-3">
-                                    <div class="col-12 col-sm-4">
-                                        <label for="reimbDtr" class="form-label fs-8 fw-semibold text-muted">Upload DTR <span class="text-danger">*</span></label>
-                                        <input type="file" name="reimb_dtr" id="reimbDtr" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
-                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
-                                    </div>
-                                    <div class="col-12 col-sm-4">
-                                        <label for="reimbCertificate" class="form-label fs-8 fw-semibold text-muted">Upload Certificate <span class="text-danger">*</span></label>
-                                        <input type="file" name="reimb_certificate" id="reimbCertificate" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
-                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
-                                    </div>
-                                    <div class="col-12 col-sm-4">
-                                        <label for="reimbBillProof" class="form-label fs-8 fw-semibold text-muted">Upload Bill / Proof of Payment <span class="text-danger">*</span></label>
-                                        <input type="file" name="reimb_bill_proof" id="reimbBillProof" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
-                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
-                                    </div>
+                                <div class="alert alert-info border-0 d-flex align-items-center gap-2 mb-0 py-2 px-3 fs-8">
+                                    <i class="bi bi-info-circle-fill text-primary"></i>
+                                    <span><strong>Supporting documents (DTR, Certificate, Bill/Proof of Payment)</strong> will be uploaded after the Budget Officer approves the source of funds for this transaction.</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Reimb: Utility Bills Fields (Month + Bill/Proof only) -->
+                        <!-- Reimb: Utility Bills Fields — DEFERRED in Workflow v3 -->
                         <div id="reimbUtilityBillsContainer" class="d-none mt-3">
                             <div class="border-top pt-3">
                                 <h6 class="fw-bold text-primary-dark mb-3 fs-7"><i class="bi bi-lightning-charge me-1"></i>Utility Bill Details</h6>
@@ -342,28 +278,31 @@ if ($fastPDO !== null) {
                                             ?>
                                         </select>
                                     </div>
-                                    <div class="col-12 col-sm-6">
-                                        <label for="utilityBillProof" class="form-label fs-8 fw-semibold text-muted">Upload Bill / Proof of Payment <span class="text-danger">*</span></label>
-                                        <input type="file" name="utility_bill_proof" id="utilityBillProof" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx" style="padding-top: 10px;">
-                                        <small class="text-muted fs-9">PDF, JPG, PNG, DOCX up to 10MB.</small>
-                                    </div>
+                                </div>
+                                <div class="alert alert-info border-0 d-flex align-items-center gap-2 mb-0 py-2 px-3 fs-8">
+                                    <i class="bi bi-info-circle-fill text-primary"></i>
+                                    <span><strong>Bill / Proof of Payment</strong> will be uploaded after the Budget Officer approves the source of funds for this transaction.</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- DM 214 Documents Checklist (Cash Advance / Reimbursement) -->
+                    <!-- DM 214 Documents Checklist — Reference list (Workflow v3: uploads happen after budget approval) -->
                     <div id="documentChecklistSection" class="mb-4 d-none">
                         <div class="card border border-primary-subtle bg-white shadow-sm">
                             <div class="card-header bg-primary-subtle py-2 px-3 border-bottom border-primary-subtle">
                                 <h6 class="mb-0 fw-bold text-primary-dark d-flex align-items-center gap-2 fs-7">
                                     <i class="bi bi-clipboard2-check"></i>
-                                    <span>Documents Checklist</span>
+                                    <span>Mandatory Documentary Requirements</span>
                                     <span class="badge bg-primary fs-9" id="documentChecklistCategoryLabel"></span>
                                 </h6>
-                                <small class="text-muted fs-9 d-block mt-1">Per DM No. 214, S. 2026 — prepare and attach the documents below.</small>
+                                <small class="text-muted fs-9 d-block mt-1">Per DM No. 214, S. 2026 — prepare these documents. You will upload them after the Budget Officer approves the source of funds.</small>
                             </div>
                             <div class="card-body p-3">
+                                <div class="alert alert-info border-0 py-2 px-3 mb-3 fs-8">
+                                    <i class="bi bi-info-circle-fill text-primary me-2"></i>
+                                    <span>You will submit the <em>Mandatory Documentary Requirements</em> after the Budget Officer has verified and approved the source of funds for this transaction.</span>
+                                </div>
                                 <div id="documentChecklistNote" class="d-none alert alert-info border-0 py-2 px-3 mb-3 fs-9"></div>
                                 <div id="documentChecklistSource" class="d-none text-muted fs-9 mb-2"></div>
                                 <div id="documentChecklistContent"></div>
@@ -374,34 +313,21 @@ if ($fastPDO !== null) {
                     <!-- Financial and Tax details -->
                     <div class="row g-3 mb-4">
                         <div class="col-12">
-                            <label for="amount" class="form-label fs-8 fw-semibold text-muted">Gross Amount (₱) <span class="text-danger">*</span></label>
+                            <label for="amount" class="form-label fs-8 fw-semibold text-muted"> Amount Requested (₱) <span class="text-danger">*</span></label>
                             <input type="number" name="amount" id="amount" class="form-control" placeholder="0.00" step="0.01" min="1" required>
                         </div>
                     </div>
 
-                    <!-- Upload attachment -->
+                    <!-- Upload attachment — REMOVED in Workflow v3 -->
+                    <!-- Documents are submitted AFTER budget approval via the resubmit page -->
                     <div class="mb-4">
-                        <label class="form-label fs-8 fw-semibold text-muted">Supporting Attachment Document(s) <span class="text-muted fw-normal">(Optional)</span></label>
-                        
-                        <!-- Drag and Drop Area -->
-                        <div id="dropzone" class="border border-2 border-dashed rounded-3 p-4 text-center bg-light position-relative" style="cursor: pointer; transition: background-color 0.2s, border-color 0.2s;">
-                            <input type="file" name="attachment[]" id="attachment" class="position-absolute top-0 start-0 w-100 h-100 opacity-0" accept=".pdf,.jpg,.jpeg,.png,.docx" multiple style="cursor: pointer; z-index: 10;">
-                            <div class="dz-message">
-                                <i class="bi bi-cloud-arrow-up-fill fs-2 text-primary mb-2 d-block"></i>
-                                <span class="fw-bold text-dark d-block">Drag & Drop files here or click to upload</span>
-                                <span class="text-muted fs-9">Accepts PDF, JPG, PNG, DOCX (Max 10MB per file)</span>
+                        <div class="alert alert-info border-0 d-flex align-items-center gap-2 mb-0">
+                            <i class="bi bi-info-circle-fill fs-5"></i>
+                            <div>
+                                <strong>Document uploads are not required at this stage.</strong><br>
+                                <span class="fs-8">You will submit the <em>Mandatory Documentary Requirements</em> after the Budget Officer has verified and approved the source of funds for this transaction.</span>
                             </div>
                         </div>
-
-                        <!-- Selected Files List -->
-                        <div id="fileListContainer" class="mt-3 d-none">
-                            <span class="fs-9 fw-semibold text-muted text-uppercase d-block mb-2">Selected Attachment(s):</span>
-                            <div class="list-group list-group-flush border rounded-3 overflow-hidden bg-white shadow-sm" id="selectedFilesList">
-                                <!-- Dynamically loaded files -->
-                            </div>
-                        </div>
-                        
-                        <small class="text-muted fs-9 d-block mt-1">Upload any general supporting document(s) if applicable.</small>
                     </div>
 
                     <!-- Remarks -->
@@ -452,11 +378,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const documentChecklistSource = document.getElementById('documentChecklistSource');
     const documentChecklistCategoryLabel = document.getElementById('documentChecklistCategoryLabel');
 
-    // Map of document key -> array of attached file names (frontend only, for UX grouping)
-    let docFileMap = {};
-    let currentAttachDocKey = null;
-    let currentChecklistDocs = [];
-
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
@@ -487,25 +408,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return { entry, note, sourceLabel, category };
     }
 
-    function buildDocKey(doc) {
-        const section = doc.sectionTitle || '';
-        return `${doc.title}__${section}`;
-    }
-
-    function normalizeText(text) {
-        return (text || '')
-            .toLowerCase()
-            .replace(/[^a-z0-9\s]/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-    }
-
-    function tokenize(text) {
-        return normalizeText(text)
-            .split(' ')
-            .filter(token => token.length > 2);
-    }
-
     function renderDocumentRows(documents) {
         if (!documents || !documents.length) return '';
 
@@ -514,23 +416,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const badgeClass = required ? 'bg-danger-subtle text-danger' : 'bg-secondary-subtle text-secondary';
             const badgeText = required ? 'Required' : 'Optional';
             const condition = doc.condition ? ` <small class="text-muted">(${escapeHtml(doc.condition)})</small>` : '';
-            const docKey = buildDocKey(doc);
             return `
-                <li class="list-group-item d-flex flex-column gap-1 py-2 px-3 fs-8" data-doc-key="${escapeHtml(docKey)}">
-                    <div class="d-flex justify-content-between align-items-start gap-2">
-                        <span class="text-dark">
-                            ${escapeHtml(doc.title)}${condition}
-                            ${doc.sectionTitle ? `<br><small class="text-muted">Section: ${escapeHtml(doc.sectionTitle)}</small>` : ''}
-                        </span>
-                        <span class="badge ${badgeClass} fs-9 flex-shrink-0">${badgeText}</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center gap-2 mt-1">
-                        <small class="text-muted fs-9" data-doc-files-summary data-doc-key="${escapeHtml(docKey)}">No files attached yet.</small>
-                        <button type="button" class="btn btn-outline-primary btn-xs py-0 px-2 fs-9" data-doc-attach-btn data-doc-key="${escapeHtml(docKey)}">
-                            <i class="bi bi-paperclip me-1"></i>Attach
-                        </button>
-                    </div>
-                    <div class="mt-1" data-doc-files-list data-doc-key="${escapeHtml(docKey)}"></div>
+                <li class="list-group-item d-flex justify-content-between align-items-start gap-2 py-2 px-3 fs-8">
+                    <span class="text-dark">
+                        ${escapeHtml(doc.title)}${condition}
+                        ${doc.sectionTitle ? `<br><small class="text-muted">Section: ${escapeHtml(doc.sectionTitle)}</small>` : ''}
+                    </span>
+                    <span class="badge ${badgeClass} fs-9 flex-shrink-0">${badgeText}</span>
                 </li>
             `;
         }).join('');
@@ -570,10 +462,6 @@ document.addEventListener('DOMContentLoaded', function() {
         );
 
         const allDocs = baseDocs.concat(sectionDocs);
-        currentChecklistDocs = allDocs.map(doc => ({
-            key: buildDocKey(doc),
-            title: doc.title
-        }));
         const requiredDocs = allDocs.filter(d => d.required);
         const optionalDocs = allDocs.filter(d => !d.required);
         const reqCount = allDocs.filter(d => d.required).length;
@@ -614,122 +502,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         documentChecklistContent.innerHTML = html;
-
-        wireChecklistAttachButtons();
-        autoAssignUnmappedFiles();
-        refreshDocFileSummaries();
-    }
-
-    function autoAssignUnmappedFiles() {
-        if (!currentChecklistDocs.length || !selectedFiles.length) return;
-
-        const assignedSet = new Set(Object.values(docFileMap).flat());
-        const unassigned = selectedFiles.filter(file => !assignedSet.has(file.name));
-
-        unassigned.forEach(file => {
-            const fileTokens = tokenize(file.name);
-            if (!fileTokens.length) return;
-
-            let bestKey = null;
-            let bestScore = 0;
-
-            currentChecklistDocs.forEach(doc => {
-                const titleTokens = tokenize(doc.title);
-                if (!titleTokens.length) return;
-
-                let score = 0;
-                titleTokens.forEach(token => {
-                    if (fileTokens.some(ft => ft.includes(token) || token.includes(ft))) {
-                        score += 1;
-                    }
-                });
-
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestKey = doc.key;
-                }
-            });
-
-            if (bestKey && bestScore > 0) {
-                const existing = docFileMap[bestKey] || [];
-                if (!existing.includes(file.name)) {
-                    existing.push(file.name);
-                    docFileMap[bestKey] = existing;
-                }
-            }
-        });
-    }
-
-    function wireChecklistAttachButtons() {
-        const buttons = document.querySelectorAll('[data-doc-attach-btn]');
-        buttons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const key = btn.getAttribute('data-doc-key');
-                currentAttachDocKey = key;
-                if (fileInput) {
-                    fileInput.click();
-                }
-            });
-        });
-    }
-
-    window.removeChecklistFile = function(docKey, fileName) {
-        // Remove file association from the checklist row
-        docFileMap[docKey] = (docFileMap[docKey] || []).filter(name => name !== fileName);
-
-        // Remove from selected files pool (first exact name match)
-        const fileIdx = selectedFiles.findIndex(f => f.name === fileName);
-        if (fileIdx !== -1) {
-            selectedFiles.splice(fileIdx, 1);
-        }
-
-        syncFileInput();
-        renderSelectedFiles();
-        refreshDocFileSummaries();
-    };
-
-    function refreshDocFileSummaries() {
-        const summaryEls = document.querySelectorAll('[data-doc-files-summary]');
-        summaryEls.forEach(el => {
-            const key = el.getAttribute('data-doc-key');
-            const list = docFileMap[key] || [];
-            const attachBtn = document.querySelector(`[data-doc-attach-btn][data-doc-key="${CSS.escape(key)}"]`);
-            if (!list.length) {
-                el.textContent = 'No files attached yet.';
-                if (attachBtn) {
-                    attachBtn.className = 'btn btn-outline-primary btn-xs py-0 px-2 fs-9';
-                    attachBtn.innerHTML = '<i class="bi bi-paperclip me-1"></i>Attach';
-                }
-            } else {
-                el.textContent = `${list.length} file(s) attached.`;
-                if (attachBtn) {
-                    attachBtn.className = 'btn btn-success btn-xs py-0 px-2 fs-9';
-                    attachBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Attached';
-                }
-            }
-        });
-
-        const listEls = document.querySelectorAll('[data-doc-files-list]');
-        listEls.forEach(el => {
-            const key = el.getAttribute('data-doc-key');
-            const list = docFileMap[key] || [];
-            if (!list.length) {
-                el.innerHTML = '';
-                return;
-            }
-
-            const chips = list.map(name => {
-                const jsKey = JSON.stringify(key);
-                const jsName = JSON.stringify(name);
-                return `
-                <span class="badge bg-light text-dark border me-1 mb-1 d-inline-flex align-items-center gap-1">
-                    <span class="text-truncate" style="max-width: 240px;" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
-                    <button type="button" class="btn btn-link p-0 text-danger text-decoration-none fw-bold" onclick='removeChecklistFile(${jsKey}, ${jsName})' title="Remove file">×</button>
-                </span>
-            `;
-            }).join('');
-            el.innerHTML = chips;
-        });
     }
 
     // Coverage type → sub-field mapping

@@ -59,7 +59,7 @@ foreach ($oldStatuses as $old) {
 }
 
 echo "\n--- New Status Values ---\n";
-$newStatuses = ['Pending ACCTG Support', 'Pending Budget', 'Pending ACCT Support', 'Pending Signatories', 'Pending Cashier Release', 'Released', 'Rejected', 'Returned'];
+$newStatuses = ['Pending Requestor', 'Pending Budget', 'Pending Accounting Support', 'Pending Signatories', 'Pending Signatory Approval', 'Released', 'Rejected', 'Returned'];
 foreach ($newStatuses as $new) {
     $stmt = $fastPDO->prepare("SELECT COUNT(*) FROM transactions WHERE current_status = ?");
     $stmt->execute([$new]);

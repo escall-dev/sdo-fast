@@ -1,7 +1,8 @@
 <?php
 /**
- * Budget Check API for Stage 3 (Budget Officer).
- * Records fund source and availability, then advances or rejects.
+ * Budget Check API — Workflow v3 Stage 1→2 transition.
+ * Budget Officer verifies fund availability, then routes back to Requestor
+ * for Mandatory Documentary Requirements submission.
  */
 
 header('Content-Type: application/json');
@@ -72,7 +73,7 @@ if (!$authorized) {
 }
 
 try {
-    // 1. Verify transaction is at Stage 3
+    // 1. Verify transaction is at Stage 1 (Pending Budget — awaiting funds verification)
     $stmt = $fastPDO->prepare("SELECT id, current_status, tracking_number FROM transactions WHERE id = :id LIMIT 1");
     $stmt->execute(['id' => $transactionId]);
     $transaction = $stmt->fetch();
@@ -85,7 +86,7 @@ try {
 
     if ($transaction['current_status'] !== 'Pending Budget') {
         http_response_code(422);
-        echo json_encode(['success' => false, 'message' => 'Transaction is not at Stage 3 (Pending Budget). Current status: ' . $transaction['current_status']]);
+        echo json_encode(['success' => false, 'message' => 'Transaction is not at Stage 1 (Pending Budget — Source of Funds Verification). Current status: ' . $transaction['current_status']]);
         exit;
     }
 
@@ -114,7 +115,8 @@ try {
 
     // 3. Advance or reject
     if ($action === 'approve' && $fundAvailable) {
-        $newStatus = 'Pending ACCT Support';
+        // Workflow v3: Route back to Requestor for document submission
+        $newStatus = 'Pending Requestor';
         $updateStmt = $fastPDO->prepare("UPDATE transactions SET current_status = :status, remarks = :remarks WHERE id = :id");
         $updateStmt->execute(['status' => $newStatus, 'remarks' => $remarks, 'id' => $transactionId]);
 
@@ -126,7 +128,7 @@ try {
             'tx_id' => $transactionId,
             'new_status' => $newStatus,
             'user_id' => $userId,
-            'remarks' => "Budget approved. Fund source: $fundSource." . ($fundSourceTrackingNumber !== '' ? " Tracking No: $fundSourceTrackingNumber." : "") . " " . $remarks
+            'remarks' => "Source of funds verified. Fund source: $fundSource." . ($fundSourceTrackingNumber !== '' ? " Tracking No: $fundSourceTrackingNumber." : "") . " Routed to Requestor for Mandatory Documentary Requirements. " . $remarks
         ]);
 
         AuditLogService::log($fastPDO, $userId,

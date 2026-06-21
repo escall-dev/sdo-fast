@@ -1,23 +1,38 @@
-Content: the Workflow Timeline Chart.
+Content: Workflow Timeline Chart
 
-Workflow Timeline Chart, 
+Process flow: Requestor → Budget Officer → Requestor → Accounting Support → Signatory Personnel(s) → Cashier
 
-Process flow: Requestor, then Budget, then Requestor, then Accounting Support, then Signatories, then Cashier.
+Stage 1, REQUESTOR
+Status label: "Transaction Submitted"
+Requestor fills out the transaction submission form only. No attachment field is present. No documents can be uploaded at this stage. On submission, the transaction is routed to the Budget Officer account.
 
-Step 1, REQUESTOR
-Requestor fills up the transaction submission form. No attachments yet. Mandatory Documentary Requirements are not submitted at this stage.
+Stage 2, BUDGET OFFICER
+Status label: "Source of Funds Verification"
+Budget Officer verifies whether a source of funds exists for the proposed program or project. On approval, the transaction is routed back to the Requestor account and the attachment upload field is unlocked.
 
-Step 2, BUDGET OFFICER
-Budget Officer scans the proposed program or project. Checks if it has a source of funds for that program or project.
+Stage 3, REQUESTOR
+Status label: "Mandatory Documentary Requirements Submitted"
+The attachment field is now visible and enabled (only after budget approval). Requestor submits the Mandatory Documentary Requirements. On submission, the transaction is routed to the Accounting Support account.
 
-Step 3, REQUESTOR
-Once the Budget Officer approves and confirms allotted budget or funds, the Requestor proceeds to submit the Mandatory Documentary Requirements.
+Stage 4, ACCOUNTING SUPPORT
+Status label: "Document Inspection"
+Accounting Support scans and verifies all submitted attachments. On verification, the transaction is routed to the Signatory Personnel account(s).
 
-Step 4, ACCOUNTING SUPPORT
-Accounting Support scans and inspects all attachments submitted.
+Stage 5, SIGNATORY PERSONNEL(S)
+Status label: "Document for Approval and Signature (Internal Process)"
+Signatory Personnel(s) review, approve, and sign the transaction. Individual signatory names are not displayed. On approval, the transaction is routed to the Cashier account.
 
-Step 5, ACCOUNTING SUPPORT
-Once all attachments are approved, Accounting Support endorses the transaction to the Signatory Personnel(s) for Document Approval and Signature.
+Stage 6, CASHIER
+Status label: "Release of Payment"
+Cashier processes and releases the payment. This is the final stage.
 
-Step 6, CASHIER
-Once approved by the Signatory Personnel(s), the transaction proceeds to the Cashier for Release of Payment.
+Implementation Notes
+- Each stage updates the transaction owner field so it appears under the correct role account.
+- Each role only sees transactions currently assigned to their stage.
+- The attachment upload field is removed from the initial submission form and rendered only when transaction status is "Budget Approved" or later.
+- Document uploads are blocked before budget approval, even via direct API calls or form manipulation.
+- Form validation does not require document fields on initial submission.
+- Timestamps are kept for every stage transition.
+- The database schema or status enum must match these six stages.
+- The Work Auditing Timeline component renders these stages and status labels in order.
+- No signatory name field is shown in the timeline display.

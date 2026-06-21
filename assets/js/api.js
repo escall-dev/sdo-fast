@@ -66,57 +66,46 @@ const API = {
     },
 
     /**
-     * Displays a dynamic Bootstrap 5 Toast alert.
+     * Displays a centered popup notification modal.
      */
     showToast(message, type = 'success', duration = 4000) {
-        // Ensure container exists
-        let container = document.getElementById('toast-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'toast-container';
-            container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-            container.style.zIndex = '1090';
-            document.body.appendChild(container);
-        }
+        const iconMap = {
+            success: 'success',
+            danger: 'error',
+            error: 'error',
+            warning: 'warning',
+            info: 'info',
+        };
 
-        const toastId = 'toast_' + Date.now();
-        const icon = type === 'success' 
-            ? '<i class="bi bi-check-circle-fill text-success me-2"></i>' 
-            : '<i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>';
-            
-        const borderClass = type === 'success' ? 'border-success' : 'border-danger';
+        const titleMap = {
+            success: 'Success',
+            danger: 'Error',
+            error: 'Error',
+            warning: 'Notice',
+            info: 'Information',
+        };
 
-        const toastHTML = `
-            <div id="${toastId}" class="toast align-items-center bg-white border-0 border-start border-4 ${borderClass} shadow" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex">
-                    <div class="toast-body d-flex align-items-center">
-                        ${icon}
-                        <div>${message}</div>
-                    </div>
-                    <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-            </div>
-        `;
-
-        container.insertAdjacentHTML('beforeend', toastHTML);
-        const toastEl = document.getElementById(toastId);
-        
-        if (typeof bootstrap !== 'undefined') {
-            const toast = new bootstrap.Toast(toastEl, { delay: duration });
-            toast.show();
-            
-            // Remove from DOM after hidden
-            toastEl.addEventListener('hidden.bs.toast', function() {
-                toastEl.remove();
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: titleMap[type] || 'Notification',
+                text: message,
+                icon: iconMap[type] || 'info',
+                position: 'center',
+                showConfirmButton: true,
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#1b4a9a',
+                timer: duration > 0 ? duration : undefined,
+                timerProgressBar: duration > 0,
+                customClass: {
+                    popup: 'fast-notification-popup',
+                    confirmButton: 'fast-notification-confirm',
+                },
             });
-        } else {
-            // Fallback if bootstrap JS is not loaded
-            toastEl.classList.add('show');
-            setTimeout(() => {
-                toastEl.classList.remove('show');
-                setTimeout(() => toastEl.remove(), 500);
-            }, duration);
+            return;
         }
+
+        // Fallback if SweetAlert2 is not loaded
+        alert(message);
     },
 
     /**
@@ -163,16 +152,24 @@ const API = {
                 title: title,
                 text: text,
                 icon: type,
+                position: 'center',
                 showCancelButton: true,
                 confirmButtonColor: '#1b4a9a',
-                cancelButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
                 confirmButtonText: confirmButtonText,
-                reverseButtons: true
+                cancelButtonText: 'Cancel',
+                reverseButtons: true,
+                focusCancel: false,
+                customClass: {
+                    popup: 'fast-notification-popup',
+                    confirmButton: 'fast-notification-confirm',
+                    cancelButton: 'fast-notification-cancel',
+                },
             });
             return result.isConfirmed;
-        } else {
-            // Fallback to native confirm if SweetAlert2 fails to load
-            return window.confirm(`${title}\n\n${text}`);
         }
+
+        // Fallback to native confirm if SweetAlert2 fails to load
+        return window.confirm(`${title}\n\n${text}`);
     }
 };
