@@ -197,9 +197,28 @@ function handleSecureUpload($fileKey, $uploadDir) {
         exit;
     }
 
-    $finfo = finfo_open(FILEINFO_MIME_TYPE);
-    $mimeType = finfo_file($finfo, $file['tmp_name']);
-    finfo_close($finfo);
+    // Robust MIME type detection with extension-based fallback
+    $mimeType = null;
+    $mimeMap = [
+        'pdf'  => 'application/pdf',
+        'jpg'  => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png'  => 'image/png',
+        'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+    if (function_exists('finfo_open') && function_exists('finfo_file')) {
+        $finfo = @finfo_open(FILEINFO_MIME_TYPE);
+        if ($finfo) {
+            $detected = @finfo_file($finfo, $file['tmp_name']);
+            if ($detected !== false) {
+                $mimeType = $detected;
+            }
+            @finfo_close($finfo);
+        }
+    }
+    if ($mimeType === null) {
+        $mimeType = $mimeMap[$extension] ?? 'application/octet-stream';
+    }
 
     $allowedMimeTypes = [
         'application/pdf',
