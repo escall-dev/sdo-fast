@@ -21,7 +21,7 @@ $userPosition = $_SESSION['user_position'] ?? '';
 $showDashboard = true;
 $showTransactions = true;
 $showTracker = true;
-$showReports = hasPermission('view');
+$showReports = hasPermission('view') && $userRole !== 'Requestor';
 $showAuditLogs = hasPermission('configure_system');
 $showUserManagement = hasPermission('manage_users');
 $showIntegrationMonitor = hasPermission('configure_system');

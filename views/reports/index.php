@@ -7,19 +7,24 @@ $currentPage = 'reports';
 $pageTitle = 'Reports Module';
 $pageHeader = 'Reports Module';
 
-require_once __DIR__ . '/../../includes/header.php';
-require_once __DIR__ . '/../../includes/navbar.php';
-require_once __DIR__ . '/../../includes/sidebar.php';
-require_once __DIR__ . '/../../config/database.php';
+// Load session and auth BEFORE any HTML output (required for permission checks)
+require_once __DIR__ . '/../../config/session.php';
+require_once __DIR__ . '/../../config/auth.php';
 
 $userRole = $_SESSION['user_role'] ?? '';
 
 // Double check permission (Requestors have no access)
+// MUST be before header/navbar/sidebar includes which output HTML
 if ($userRole === 'Requestor') {
     $_SESSION['flash_error'] = 'Access denied: Requestors do not have access to reports.';
     header('Location: ' . env('APP_URL') . '/views/dashboard/index.php');
     exit;
 }
+
+// Now safe to output HTML
+require_once __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/navbar.php';
+require_once __DIR__ . '/../../includes/sidebar.php';
 
 // Fetch active requestor list for filters
 $requestors = [];
@@ -279,7 +284,7 @@ function renderReportTable(data, type) {
                 </thead>
                 <tbody>
         `;
-        let totCount = 0; $totGross = 0; $totTax = 0; $totNet = 0;
+        let totCount = 0, totGross = 0, totTax = 0, totNet = 0;
         data.forEach(row => {
             const count = parseInt(row.count);
             const gross = parseFloat(row.total_amount);
@@ -287,9 +292,9 @@ function renderReportTable(data, type) {
             const net = parseFloat(row.total_net);
             
             totCount += count;
-            $totGross += gross;
-            $totTax += tax;
-            $totNet += net;
+            totGross += gross;
+            totTax += tax;
+            totNet += net;
 
             tableHTML += `
                 <tr>
@@ -306,9 +311,9 @@ function renderReportTable(data, type) {
                 <tr class="table-dark fw-bold">
                     <td colspan="2">GRAND TOTALS</td>
                     <td class="text-center">${totCount}</td>
-                    <td class="text-end">₱${$totGross.toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
-                    <td class="text-end">₱${$totTax.toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
-                    <td class="text-end">₱${$totNet.toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
+                    <td class="text-end">₱${totGross.toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
+                    <td class="text-end">₱${totTax.toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
+                    <td class="text-end">₱${totNet.toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
                 </tr>
             </tbody>
         </table>`;
@@ -327,7 +332,7 @@ function renderReportTable(data, type) {
                 </thead>
                 <tbody>
         `;
-        let totCount = 0; $totGross = 0; $totTax = 0; $totNet = 0;
+        let totCount = 0, totGross = 0, totTax = 0, totNet = 0;
         data.forEach(row => {
             const count = parseInt(row.transaction_count);
             const gross = parseFloat(row.total_amount);
@@ -335,9 +340,9 @@ function renderReportTable(data, type) {
             const net = parseFloat(row.total_net);
             
             totCount += count;
-            $totGross += gross;
-            $totTax += tax;
-            $totNet += net;
+            totGross += gross;
+            totTax += tax;
+            totNet += net;
             
             const monthName = new Date(row.year_num, row.month_num - 1, 1).toLocaleString('default', { month: 'long' });
 
@@ -355,9 +360,9 @@ function renderReportTable(data, type) {
                 <tr class="table-dark fw-bold">
                     <td>GRAND TOTALS</td>
                     <td class="text-center">${totCount}</td>
-                    <td class="text-end">₱${$totGross.toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
-                    <td class="text-end">₱${$totTax.toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
-                    <td class="text-end">₱${$totNet.toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
+                    <td class="text-end">₱${totGross.toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
+                    <td class="text-end">₱${totTax.toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
+                    <td class="text-end">₱${totNet.toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
                 </tr>
             </tbody>
         </table>`;
