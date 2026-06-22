@@ -396,24 +396,25 @@ try {
     $checklistFilesDetected = false;
     $checklistFilesProcessed = 0;
     $checklistFilesSkipped = 0;
+    $skipReasons = [];
     if (isset($_FILES['checklist_files']) && is_array($_FILES['checklist_files']['name'])) {
         $fileCount = count($_FILES['checklist_files']['name']);
         $checklistFilesDetected = true;
         for ($i = 0; $i < $fileCount; $i++) {
             if ($_FILES['checklist_files']['error'][$i] === UPLOAD_ERR_NO_FILE) {
-                $checklistFilesSkipped++;
+                // Ignore empty file inputs
                 continue;
             }
             $fileError = $_FILES['checklist_files']['error'][$i];
             if ($fileError !== UPLOAD_ERR_OK) {
-                error_log("Resubmit: checklist file index {$i} upload error code: {$fileError}");
+                $skipReasons[] = "File {$i} upload error code: {$fileError}";
                 $checklistFilesSkipped++;
                 continue;
             }
 
             $fileSize = $_FILES['checklist_files']['size'][$i];
             if ($fileSize > 10 * 1024 * 1024) {
-                error_log("Resubmit: checklist file index {$i} exceeds 10MB limit (size: {$fileSize})");
+                $skipReasons[] = "File {$i} exceeds 10MB limit (size: {$fileSize})";
                 $checklistFilesSkipped++;
                 continue;
             }
@@ -421,7 +422,7 @@ try {
             $fileName = $_FILES['checklist_files']['name'][$i];
             $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
             if (!in_array($extension, ['pdf', 'jpg', 'jpeg', 'png', 'docx'])) {
-                error_log("Resubmit: checklist file index {$i} invalid extension: {$extension}");
+                $skipReasons[] = "File '{$fileName}' has invalid extension: {$extension}";
                 $checklistFilesSkipped++;
                 continue;
             }
@@ -456,18 +457,28 @@ try {
                 error_log("Resubmit: checklist file index {$i} using extension-based MIME fallback: {$mimeType}");
             }
 
-            $allowedMimeTypes = ['application/pdf', 'image/jpeg', 'image/png', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+            // Normalize mimeType (sometimes finfo returns extra metadata like "image/jpeg; charset=binary")
+            $mimeType = explode(';', $mimeType)[0];
+            $mimeType = trim($mimeType);
+
+            $allowedMimeTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/pjpeg', 'image/x-png', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
             if (!in_array($mimeType, $allowedMimeTypes)) {
-                error_log("Resubmit: checklist file index {$i} rejected MIME type: {$mimeType}");
+                $skipReasons[] = "File '{$fileName}' rejected MIME type: {$mimeType}";
                 $checklistFilesSkipped++;
                 continue;
             }
 
             $newFilename = bin2hex(random_bytes(16)) . '.' . $extension;
             $targetPath = $uploadDir . $newFilename;
+            
+            if (!is_dir($uploadDir)) {
+                @mkdir($uploadDir, 0777, true);
+            }
+            
             $uploaded = defined('TEST_MODE') ? copy($tmpName, $targetPath) : move_uploaded_file($tmpName, $targetPath);
             if (!$uploaded) {
-                error_log("Resubmit: checklist file index {$i} move_uploaded_file failed to: {$targetPath}");
+                $errDetail = error_get_last();
+                $skipReasons[] = "File '{$fileName}' could not be saved to server. Permission issue or disk full. PHP Error: " . ($errDetail ? $errDetail['message'] : 'Unknown');
                 $checklistFilesSkipped++;
                 continue;
             }
@@ -482,11 +493,12 @@ try {
     // If checklist files were detected in the request BUT none were successfully processed,
     // block the submission — the transaction must not advance with zero attachments.
     if ($checklistFilesDetected && $checklistFilesProcessed === 0 && empty($allUploadedFiles)) {
-        error_log("Resubmit blocked: {$checklistFilesSkipped} checklist file(s) detected but ALL failed validation/upload for transaction {$transactionId}. Check PHP error log for details.");
+        $reasonStr = empty($skipReasons) ? "Unknown error." : implode("; ", array_unique($skipReasons));
+        error_log("Resubmit blocked for transaction {$transactionId}: " . $reasonStr);
         http_response_code(422);
         echo json_encode([
             'success' => false,
-            'message' => 'Upload failed: ' . $checklistFilesSkipped . ' file(s) were detected but could not be processed. Please ensure files are valid PDF, JPG, PNG, or DOCX under 10MB each, and try again. If the issue persists, contact your system administrator.'
+            'message' => "Upload failed: {$checklistFilesSkipped} file(s) were detected but could not be processed. Reasons:\n" . $reasonStr
         ]);
         exit;
     }
