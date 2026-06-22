@@ -708,7 +708,7 @@ async function handleFormSubmit(e) {
     API.showSpinner();
 
     // Call Submit Endpoint
-    const response = await fetch('<?php echo env('APP_URL'); ?>/api/transactions/submit-transaction.php', {
+    const response = await fetch('../../api/transactions/submit-transaction.php', {
         method: 'POST',
         headers: {
             'X-CSRF-Token': '<?php echo $_SESSION['csrf_token']; ?>'

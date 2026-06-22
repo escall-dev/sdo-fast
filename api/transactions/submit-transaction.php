@@ -332,7 +332,7 @@ try {
             'category' => $cashAdvanceCategory,
             'inclusive_dates' => $caInclusiveDates,
             'fund_source' => null,  // Workflow v3: Budget Officer fills this during Source of Funds Verification
-            'venue' => in_array($cashAdvanceCategory, $caDateVenueTypes) ? $venue : null,
+            'venue' => !empty($caFields['dateVenue']) ? $venue : null,
             'approved_ta_path' => $approvedTaPath,
             'travel_itinerary_path' => $travelItineraryPath,
             'activity_proposal_path' => $activityProposalPath
@@ -351,7 +351,7 @@ try {
             'category' => $reimbursementCategory,
             'reimbursement_month' => $reimbursementMonth ?: null,
             'inclusive_dates' => $reimbInclusiveDates,
-            'venue' => in_array($reimbursementCategory, $reimbDateVenueTypes) ? $reimbVenue : null,
+            'venue' => !empty($reimbFields['dateVenue']) ? $reimbVenue : null,
             'approved_ta_path' => $reimbApprovedTaPath,
             'travel_itinerary_path' => $reimbTravelItineraryPath,
             'activity_proposal_path' => $reimbActivityProposalPath,
@@ -413,8 +413,9 @@ try {
             'tracking_number' => $trackingNumber
         ]
     ]);
+    exit;
 
-} catch (Exception $e) {
+} catch (Throwable $e) {
     if ($fastPDO->inTransaction()) {
         $fastPDO->rollBack();
     }
@@ -433,5 +434,5 @@ try {
     error_log("Transaction submission database failure: " . $e->getMessage());
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Database error occurred during transaction submission.']);
+    exit;
 }
-?>
