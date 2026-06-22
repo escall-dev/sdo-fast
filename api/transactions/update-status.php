@@ -135,9 +135,9 @@ try {
         if ($oldStatus === 'Pending Signatory Approval' && in_array($newStatus, ['For Payment', 'Returned'])) {
             $authorized = true;
         }
-    } elseif ($userRole === 'Cashier' || $userPosition === 'Cashier') {
-        // Stage 5 (For Payment): Cashier releases → Released
-        if ($oldStatus === 'For Payment' && in_array($newStatus, ['Released', 'Returned', 'Rejected'])) {
+    } elseif ($userRole === 'Cashier' || stripos($userPosition, 'Cashier') !== false) {
+        // Stage 5 (For Payment / Awaiting Payment): Cashier releases → Released
+        if (in_array($oldStatus, ['For Payment', 'Awaiting Payment']) && in_array($newStatus, ['Released', 'Returned', 'Rejected'])) {
             $authorized = true;
         }
     }
@@ -268,7 +268,7 @@ try {
             'changed_by' => $userId,
             'remarks' => $remarks
         ]);
-    } elseif ($oldStatus === 'For Payment' && $newStatus === 'Released') {
+    } elseif (in_array($oldStatus, ['For Payment', 'Awaiting Payment']) && $newStatus === 'Released') {
         // Cashier release: add a For Payment entry attributed to Cashier, then the Released entry
         $cashierLogStmt = $fastPDO->prepare("
             INSERT INTO transaction_status_logs (transaction_id, previous_status, new_status, changed_by, remarks) 

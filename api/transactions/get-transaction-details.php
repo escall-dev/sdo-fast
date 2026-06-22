@@ -52,9 +52,13 @@ try {
     // Check data visibility permission
     // Admin/Staff can see it, Requestor can only see their own
     $userRole = $_SESSION['user_role'] ?? '';
+    $userPosition = $_SESSION['user_position'] ?? '';
     $userId = $_SESSION['user_id'] ?? 0;
     
-    if ($userRole !== 'Super Admin' && $userRole !== 'Accounting Staff' && $userRole !== 'Budget Officer' && $userRole !== 'Cashier' && $userRole !== 'Approver') {
+    $isAuthorizedRole = in_array($userRole, ['Super Admin', 'Accounting Staff', 'Budget Officer', 'Cashier', 'Approver']);
+    $isCashierByPosition = (stripos($userPosition, 'Cashier') !== false);
+    
+    if (!$isAuthorizedRole && !$isCashierByPosition) {
         if ($transaction['requestor_id'] != $userId) {
             http_response_code(403);
             echo json_encode(['success' => false, 'message' => 'Forbidden: You do not have permission to view this transaction.']);

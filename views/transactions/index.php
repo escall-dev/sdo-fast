@@ -533,7 +533,7 @@ function renderTable(transactions) {
             ((userRole === 'Budget Officer' || userPosition === 'Budget Officer') && row.current_status === 'Pending Budget') ||
             (userPosition === 'Accountant' && ['Pending Accounting Support', 'Pending Signatory Approval'].includes(row.current_status)) ||
             ((userPosition === 'ASDS' || userPosition === 'SDS') && row.current_status === 'Pending Signatory Approval') ||
-            ((userRole === 'Cashier' || userPosition === 'Cashier') && ['Pending Signatory Approval', 'For Payment'].includes(row.current_status));
+            ((userRole === 'Cashier' || userPosition.toLowerCase().includes('cashier')) && ['Pending Signatory Approval', 'For Payment', 'Awaiting Payment'].includes(row.current_status));
 
         if (showWorkflowAction) {
             actionBtn = `
@@ -768,8 +768,8 @@ async function openWorkflowModal(row) {
             document.getElementById('btnSubmitWorkflow').style.display = 'block';
         }
     }
-    // Workflow v3: For Payment — Cashier releases payment
-    else if (tx.current_status === 'For Payment' && (userRole === 'Super Admin' || userRole === 'Cashier' || userPosition === 'Cashier')) {
+    // Workflow v3: For Payment / Awaiting Payment — Cashier releases payment
+    else if ((tx.current_status === 'For Payment' || tx.current_status === 'Awaiting Payment') && (userRole === 'Super Admin' || userRole === 'Cashier' || userPosition.toLowerCase().includes('cashier'))) {
         actionSelect.innerHTML = `
             <option value="">-- Select Action --</option>
             <option value="Released">Release Payment</option>
