@@ -151,6 +151,58 @@ try {
         exit;
     }
 
+    // 2b. Pre-flight validation: When forwarding from Pending Accounting Support → Pending Signatory Approval,
+    // ensure ALL attachments are approved and tax classification is set (matching auto-advance rules
+    // in approve-attachment.php and update-tax-classification.php).
+    if ($oldStatus === 'Pending Accounting Support' && $newStatus === 'Pending Signatory Approval') {
+        // Check attachments exist and are all approved
+        $attCheckStmt = $fastPDO->prepare("
+            SELECT COUNT(*) as total,
+                   SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved_count,
+                   SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count,
+                   SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected_count
+            FROM attachment_approvals
+            WHERE transaction_id = :tx_id
+        ");
+        $attCheckStmt->execute(['tx_id' => $transactionId]);
+        $attCounts = $attCheckStmt->fetch();
+
+        if ((int)$attCounts['total'] === 0) {
+            http_response_code(422);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Cannot forward: No attachments have been uploaded for this transaction. All Mandatory Documentary Requirements must be submitted and approved before routing to Signatories.'
+            ]);
+            exit;
+        }
+
+        if ((int)$attCounts['pending_count'] > 0 || (int)$attCounts['rejected_count'] > 0) {
+            $pendingMsg = (int)$attCounts['pending_count'] > 0 ? $attCounts['pending_count'] . ' pending' : '';
+            $rejectedMsg = (int)$attCounts['rejected_count'] > 0 ? $attCounts['rejected_count'] . ' rejected' : '';
+            $detailMsg = implode(' and ', array_filter([$pendingMsg, $rejectedMsg]));
+            http_response_code(422);
+            echo json_encode([
+                'success' => false,
+                'message' => "Cannot forward: {$detailMsg} attachment(s) require review. All attachments must be approved before routing to Signatories."
+            ]);
+            exit;
+        }
+
+        // Check tax classification is set
+        $taxCheckStmt = $fastPDO->prepare("SELECT tax_type FROM document_details WHERE transaction_id = :tx_id LIMIT 1");
+        $taxCheckStmt->execute(['tx_id' => $transactionId]);
+        $existingTaxType = $taxCheckStmt->fetchColumn();
+
+        if (empty($existingTaxType)) {
+            http_response_code(422);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Cannot forward: Tax classification must be set before routing to Signatories.'
+            ]);
+            exit;
+        }
+    }
+
     // 3. Begin Database Transaction
     $fastPDO->beginTransaction();
 

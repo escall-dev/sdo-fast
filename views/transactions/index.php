@@ -1115,6 +1115,29 @@ async function handleWorkflowSubmit(e) {
         return;
     }
 
+    // Pre-flight validation: Forward to Signatories from Accounting Support
+    if (action === 'Pending Signatory Approval' && currentModalTransactionData.current_status === 'Pending Accounting Support') {
+        // Check attachments exist
+        const container = document.getElementById('attachmentsChecklistContainer');
+        const attachmentItems = container ? container.querySelectorAll('.list-group-item:not(.text-center)') : [];
+        if (attachmentItems.length === 0) {
+            API.showToast('Cannot forward: No attachments have been uploaded for this transaction. All Mandatory Documentary Requirements must be submitted and approved before routing to Signatories.', 'warning');
+            return;
+        }
+        // Check all attachments are approved (look for non-approved badges)
+        const pendingOrRejected = container.querySelectorAll('.badge.bg-warning, .badge.bg-danger');
+        if (pendingOrRejected.length > 0) {
+            API.showToast('Cannot forward: All attachments must be approved before routing to Signatories.', 'warning');
+            return;
+        }
+        // Check tax classification is set
+        const taxSelect = document.getElementById('modalTaxType');
+        if (!taxSelect || taxSelect.value === '') {
+            API.showToast('Cannot forward: Tax classification must be set before routing to Signatories.', 'warning');
+            return;
+        }
+    }
+
     // Standard transitions (Return/Reject, Forward to Signatories, Cashier Release)
     if (action === '') {
         // If they left it blank (meaning no Return/Reject selected for checklist stages), do nothing

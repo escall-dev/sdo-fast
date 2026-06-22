@@ -405,7 +405,6 @@ function wireAttachButtons() {
                     selectedChecklistFiles.push(f);
                 });
                 renderChecklist();
-                syncHiddenFileInputs();
             };
             input.click();
         });
@@ -419,28 +418,18 @@ window.removeChecklistFile = function(docKey, index) {
         if (poolIdx > -1) selectedChecklistFiles.splice(poolIdx, 1);
     }
     renderChecklist();
-    syncHiddenFileInputs();
 };
 
-function syncHiddenFileInputs() {
-    // Remove old hidden inputs
-    document.querySelectorAll('.checklist-file-input').forEach(el => el.remove());
-    const labelInput = document.getElementById('attachmentLabelsJson');
-    if (labelInput) labelInput.remove();
-    
+renderChecklist();
+
+async function handleResubmit(e) {
+    e.preventDefault();
+    const form = document.getElementById('resubmitDocumentsForm');
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    // Build labels array matching the order of checklist files
     const labels = [];
-    
-    selectedChecklistFiles.forEach((file, i) => {
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.name = 'checklist_files[]';
-        input.className = 'checklist-file-input';
-        input.style.display = 'none';
-        input.files = dt.files;
-        document.getElementById('resubmitDocumentsForm').appendChild(input);
-        
+    selectedChecklistFiles.forEach((file) => {
         let label = file.name;
         for (const [docKey, files] of Object.entries(checklistFileMap)) {
             if (files.includes(file)) {
@@ -450,33 +439,55 @@ function syncHiddenFileInputs() {
         }
         labels.push(label);
     });
-    
-    const jsonInput = document.createElement('input');
-    jsonInput.type = 'hidden';
-    jsonInput.name = 'attachment_labels_json';
-    jsonInput.id = 'attachmentLabelsJson';
-    jsonInput.value = JSON.stringify(labels);
-    document.getElementById('resubmitDocumentsForm').appendChild(jsonInput);
-}
 
-renderChecklist();
+    // Build FormData manually — avoid DataTransfer browser compatibility issues
+    // with hidden <input type="file"> elements
+    const formData = new FormData();
 
-async function handleResubmit(e) {
-    e.preventDefault();
-    const form = document.getElementById('resubmitDocumentsForm');
-    const formData = new FormData(form);
-    const submitBtn = form.querySelector('button[type="submit"]');
-    
+    // Append CSRF token and transaction ID
+    formData.append('csrf_token', form.querySelector('[name="csrf_token"]').value);
+    formData.append('transaction_id', form.querySelector('[name="transaction_id"]').value);
+    formData.append('remarks', form.querySelector('[name="remarks"]').value);
+
+    // Append general attachment[] files (from the drag-drop zone)
+    const generalInput = document.getElementById('attachment');
+    if (generalInput && generalInput.files.length > 0) {
+        for (let i = 0; i < generalInput.files.length; i++) {
+            formData.append('attachment[]', generalInput.files[i]);
+        }
+    }
+
+    // Append checklist files directly from JS memory (selectedChecklistFiles)
+    if (selectedChecklistFiles.length > 0) {
+        for (let i = 0; i < selectedChecklistFiles.length; i++) {
+            formData.append('checklist_files[]', selectedChecklistFiles[i]);
+        }
+    }
+
+    // Append special document fields (TA, itinerary, activity proposal, etc.)
+    const specialFields = ['approved_ta', 'travel_itinerary', 'activity_proposal',
+        'reimb_approved_ta', 'reimb_travel_itinerary', 'reimb_activity_proposal',
+        'reimb_dtr', 'reimb_certificate', 'reimb_bill_proof', 'utility_bill_proof'];
+    specialFields.forEach(fieldName => {
+        const input = form.querySelector('[name="' + fieldName + '"]');
+        if (input && input.files && input.files.length > 0) {
+            formData.append(fieldName, input.files[0]);
+        }
+    });
+
+    // Append attachment labels JSON
+    formData.append('attachment_labels_json', JSON.stringify(labels));
+
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
-    
+
     try {
         const response = await fetch('<?php echo env('APP_URL'); ?>/api/transactions/resubmit-documents.php', {
             method: 'POST',
             body: formData
         });
         const data = await response.json();
-        
+
         if (data.success) {
             API.showToast('Documents submitted successfully! The transaction has been routed to Accounting Support for Document Inspection.', 'success');
             setTimeout(() => {
