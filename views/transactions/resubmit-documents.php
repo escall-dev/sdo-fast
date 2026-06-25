@@ -484,6 +484,9 @@ async function handleResubmit(e) {
     try {
         const response = await fetch('<?php echo env('APP_URL'); ?>/api/transactions/resubmit-documents.php', {
             method: 'POST',
+            headers: {
+                'X-CSRF-Token': '<?php echo $_SESSION['csrf_token']; ?>'
+            },
             body: formData
         });
         const data = await response.json();
