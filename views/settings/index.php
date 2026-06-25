@@ -311,7 +311,7 @@ if ($fastPDO !== null) {
             <form id="editCategoryForm" onsubmit="handleCategorySave(event)">
                 <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 <input type="hidden" name="id" id="catId">
-                <div class="modal-body">
+                <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
                             <label class="form-label fs-8 fw-semibold">Transaction Type</label>
@@ -821,6 +821,13 @@ function addDocumentRow(doc = {}) {
         </div>
     `;
     container.appendChild(row);
+    // Scroll the modal body to show the newly added row
+    const modalBody = container.closest('.modal-body');
+    if (modalBody) {
+        setTimeout(() => {
+            row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 50);
+    }
 }
 
 function resetDocumentRows(docs = []) {
