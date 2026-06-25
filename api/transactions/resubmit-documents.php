@@ -33,6 +33,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+if (empty($_POST) && isset($_SERVER['CONTENT_LENGTH']) && $_SERVER['CONTENT_LENGTH'] > 0) {
+    http_response_code(413);
+    $maxSize = ini_get('post_max_size');
+    echo json_encode(['success' => false, 'message' => "Total upload size exceeds the server's post_max_size ($maxSize). Please upload smaller or fewer files."]);
+    exit;
+}
+
 $transactionId = (int)($_POST['transaction_id'] ?? 0);
 $remarks = trim($_POST['remarks'] ?? '');
 

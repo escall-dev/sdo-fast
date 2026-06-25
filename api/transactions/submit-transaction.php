@@ -34,6 +34,13 @@ if (!in_array($userRole, ['Super Admin', 'Requestor']) && $userPosition !== 'Per
     exit;
 }
 
+if (empty($_POST) && isset($_SERVER['CONTENT_LENGTH']) && $_SERVER['CONTENT_LENGTH'] > 0) {
+    http_response_code(413);
+    $maxSize = ini_get('post_max_size');
+    echo json_encode(['success' => false, 'message' => "Total upload size exceeds the server's post_max_size ($maxSize). Please upload smaller or fewer files."]);
+    exit;
+}
+
 // 1. Parse and sanitize POST parameters
 $type = trim($_POST['transaction_type'] ?? '');
 $eventName = trim($_POST['event_name'] ?? '');
