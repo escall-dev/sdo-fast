@@ -590,7 +590,17 @@ try {
     if ($fastPDO->inTransaction()) {
         $fastPDO->rollBack();
     }
-    error_log("Resubmit documents failure: " . $e->getMessage());
+    $errorDetail = $e->getMessage();
+    // Log full detail for debugging
+    error_log("Resubmit documents failure for tx {$transactionId}: " . $errorDetail);
+    // Check for common column-size issues and give a clearer message
+    if (stripos($errorDetail, 'Data too long for column') !== false) {
+        error_log("Resubmit: Likely attachment_path VARCHAR(255) overflow — need ALTER TABLE document_details CHANGE attachment_path attachment_path TEXT;");
+    }
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Database error during document submission.']);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Database error during document submission. The system administrator has been notified.',
+        'debug' => $errorDetail   // helps frontend show the real cause during development
+    ]);
 }
