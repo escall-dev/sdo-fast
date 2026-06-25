@@ -440,40 +440,16 @@ async function handleResubmit(e) {
         labels.push(label);
     });
 
-    // Build FormData manually — avoid DataTransfer browser compatibility issues
-    // with hidden <input type="file"> elements
-    const formData = new FormData();
+    // Build FormData from the form — includes csrf_token, transaction_id, remarks,
+    // and all visible file inputs (attachment[], approved_ta, travel_itinerary, etc.)
+    const formData = new FormData(form);
 
-    // Append CSRF token and transaction ID
-    formData.append('csrf_token', form.querySelector('[name="csrf_token"]').value);
-    formData.append('transaction_id', form.querySelector('[name="transaction_id"]').value);
-    formData.append('remarks', form.querySelector('[name="remarks"]').value);
-
-    // Append general attachment[] files (from the drag-drop zone)
-    const generalInput = document.getElementById('attachment');
-    if (generalInput && generalInput.files.length > 0) {
-        for (let i = 0; i < generalInput.files.length; i++) {
-            formData.append('attachment[]', generalInput.files[i]);
-        }
-    }
-
-    // Append checklist files directly from JS memory (selectedChecklistFiles)
+    // Append checklist files from JS memory (selectedChecklistFiles — not in DOM inputs)
     if (selectedChecklistFiles.length > 0) {
         for (let i = 0; i < selectedChecklistFiles.length; i++) {
             formData.append('checklist_files[]', selectedChecklistFiles[i]);
         }
     }
-
-    // Append special document fields (TA, itinerary, activity proposal, etc.)
-    const specialFields = ['approved_ta', 'travel_itinerary', 'activity_proposal',
-        'reimb_approved_ta', 'reimb_travel_itinerary', 'reimb_activity_proposal',
-        'reimb_dtr', 'reimb_certificate', 'reimb_bill_proof', 'utility_bill_proof'];
-    specialFields.forEach(fieldName => {
-        const input = form.querySelector('[name="' + fieldName + '"]');
-        if (input && input.files && input.files.length > 0) {
-            formData.append(fieldName, input.files[0]);
-        }
-    });
 
     // Append attachment labels JSON
     formData.append('attachment_labels_json', JSON.stringify(labels));
