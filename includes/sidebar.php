@@ -23,6 +23,7 @@ $showTransactions = true;
 $showTracker = true;
 $showReports = hasPermission('view') && $userRole !== 'Requestor';
 $showAuditLogs = hasPermission('configure_system');
+$showLoginLogs = hasPermission('configure_system');
 $showUserManagement = hasPermission('manage_users');
 $showIntegrationMonitor = hasPermission('configure_system');
 $showSettings = hasPermission('configure_system');
@@ -73,7 +74,7 @@ $renderUserProfileSection = function() {
 // Navigation HTML content generator
 $renderSidebarMenu = function($isMobile = false) use (
     $showDashboard, $showTransactions, $showTracker, $showReports, 
-    $showAuditLogs, $showUserManagement, $showIntegrationMonitor, $showSettings, $userRole, $userPosition
+    $showAuditLogs, $showLoginLogs, $showUserManagement, $showIntegrationMonitor, $showSettings, $userRole, $userPosition
 ) {
     $baseUrl = env('APP_URL');
     ?>
@@ -176,6 +177,16 @@ $renderSidebarMenu = function($isMobile = false) use (
                 <a href="<?php echo $baseUrl; ?>/views/settings/index.php">
                     <i class="fas fa-sliders-h"></i>
                     <span>System Settings</span>
+                </a>
+            </li>
+        <?php endif; ?>
+
+        <!-- Login Logs -->
+        <?php if ($showLoginLogs): ?>
+            <li class="<?php echo isPageActive('login_logs'); ?>">
+                <a href="<?php echo $baseUrl; ?>/views/settings/login-logs.php">
+                    <i class="fas fa-history"></i>
+                    <span>Login Logs</span>
                 </a>
             </li>
         <?php endif; ?>

@@ -5,6 +5,9 @@
 
 require_once __DIR__ . '/env.php';
 
+// Set default timezone to Philippines (Manila)
+date_default_timezone_set('Asia/Manila');
+
 // Inactivity timeout limit in seconds (30 minutes)
 define('SESSION_TIMEOUT_LIMIT', 1800); 
 
