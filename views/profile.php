@@ -137,15 +137,24 @@ $baseUrl = env('APP_URL');
                     <div class="row g-3">
                         <div class="col-12">
                             <label for="currentPassword" class="form-label fw-semibold">Current Password</label>
-                            <input type="password" class="form-control" id="currentPassword" name="current_password" required autocomplete="current-password">
+                            <div class="position-relative">
+                                <input type="password" class="form-control" id="currentPassword" name="current_password" required autocomplete="current-password" style="padding-right: 40px;">
+                                <i class="bi bi-eye position-absolute toggle-password" data-target="currentPassword" style="right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #a1a1aa;"></i>
+                            </div>
                         </div>
                         <div class="col-12 col-md-6">
                             <label for="newPassword" class="form-label fw-semibold">New Password</label>
-                            <input type="password" class="form-control" id="newPassword" name="new_password" required minlength="6" autocomplete="new-password">
+                            <div class="position-relative">
+                                <input type="password" class="form-control" id="newPassword" name="new_password" required minlength="6" autocomplete="new-password" style="padding-right: 40px;">
+                                <i class="bi bi-eye position-absolute toggle-password" data-target="newPassword" style="right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #a1a1aa;"></i>
+                            </div>
                         </div>
                         <div class="col-12 col-md-6">
                             <label for="confirmPassword" class="form-label fw-semibold">Confirm New Password</label>
-                            <input type="password" class="form-control" id="confirmPassword" name="confirm_password" required minlength="6" autocomplete="new-password">
+                            <div class="position-relative">
+                                <input type="password" class="form-control" id="confirmPassword" name="confirm_password" required minlength="6" autocomplete="new-password" style="padding-right: 40px;">
+                                <i class="bi bi-eye position-absolute toggle-password" data-target="confirmPassword" style="right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #a1a1aa;"></i>
+                            </div>
                         </div>
                     </div>
                     <div class="mt-4 d-flex justify-content-end">
@@ -212,6 +221,24 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             API.showToast(response.message || 'Failed to update password.', 'danger');
         }
+    });
+
+    // ── Toggle Password Visibility ──
+    const togglePasswords = document.querySelectorAll('.toggle-password');
+    togglePasswords.forEach(function(toggle) {
+        toggle.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                this.classList.remove('bi-eye');
+                this.classList.add('bi-eye-slash');
+            } else {
+                input.type = 'password';
+                this.classList.remove('bi-eye-slash');
+                this.classList.add('bi-eye');
+            }
+        });
     });
 });
 </script>

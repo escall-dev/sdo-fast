@@ -407,13 +407,19 @@ if (empty($_SESSION['csrf_token'])) {
                 <div class="form-row">
                     <div class="form-group">
                         <label for="passwordInput" class="form-label">Password <span class="required">*</span></label>
-                        <input type="password" name="password" class="form-control" id="passwordInput" placeholder="Min. 8 characters" required minlength="8">
+                        <div style="position: relative;">
+                            <input type="password" name="password" class="form-control" id="passwordInput" placeholder="Min. 8 characters" required minlength="8" style="padding-right: 40px;">
+                            <i class="fas fa-eye toggle-password" data-target="passwordInput" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #a1a1aa;"></i>
+                        </div>
                         <span class="form-hint">Minimum 8 characters</span>
                     </div>
                     
                     <div class="form-group">
                         <label for="confirmPasswordInput" class="form-label">Confirm Password <span class="required">*</span></label>
-                        <input type="password" name="confirm_password" class="form-control" id="confirmPasswordInput" placeholder="Re-enter password" required minlength="8">
+                        <div style="position: relative;">
+                            <input type="password" name="confirm_password" class="form-control" id="confirmPasswordInput" placeholder="Re-enter password" required minlength="8" style="padding-right: 40px;">
+                            <i class="fas fa-eye toggle-password" data-target="confirmPasswordInput" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #a1a1aa;"></i>
+                        </div>
                     </div>
                 </div>
 
@@ -663,6 +669,25 @@ function goBackToRegister() {
     document.getElementById('otpStep').style.display = 'none';
     document.getElementById('registerStep').style.display = 'block';
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const togglePasswords = document.querySelectorAll('.toggle-password');
+    togglePasswords.forEach(function(toggle) {
+        toggle.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                this.classList.remove('fa-eye');
+                this.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                this.classList.remove('fa-eye-slash');
+                this.classList.add('fa-eye');
+            }
+        });
+    });
+});
 </script>
 
 </body>

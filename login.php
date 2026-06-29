@@ -205,7 +205,10 @@ if (empty($_SESSION['csrf_token'])) {
             <!-- Password Input -->
             <div class="mb-2">
                 <label for="passwordInput" class="form-label">Password</label>
-                <input type="password" name="password" class="form-control dark-input" id="passwordInput" placeholder="Enter your password" required autocomplete="current-password">
+                <div class="position-relative">
+                    <input type="password" name="password" class="form-control dark-input" id="passwordInput" placeholder="Enter your password" required autocomplete="current-password" style="padding-right: 40px;">
+                    <i class="bi bi-eye position-absolute toggle-password" data-target="passwordInput" style="right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #a1a1aa;"></i>
+                </div>
             </div>
 
             <!-- Forgot Password Link -->
@@ -251,7 +254,24 @@ function showRegisterWarning() {
     alert("User registration is managed centrally by the SDO Accounting Unit. Please contact your system administrator to request an account.");
 }
 
-
+document.addEventListener('DOMContentLoaded', function() {
+    const togglePasswords = document.querySelectorAll('.toggle-password');
+    togglePasswords.forEach(function(toggle) {
+        toggle.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                this.classList.remove('bi-eye');
+                this.classList.add('bi-eye-slash');
+            } else {
+                input.type = 'password';
+                this.classList.remove('bi-eye-slash');
+                this.classList.add('bi-eye');
+            }
+        });
+    });
+});
 </script>
 </body>
 </html>

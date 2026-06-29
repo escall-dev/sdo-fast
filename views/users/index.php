@@ -197,15 +197,17 @@ if (!hasPermission('manage_users')) {
                             </div>
                         </div>
                         <div class="col-12 col-md-6">
-                            <div class="form-floating">
-                                <input type="password" name="password" class="form-control" id="regPassword" placeholder="Password" required autocomplete="new-password" minlength="8">
+                            <div class="form-floating position-relative">
+                                <input type="password" name="password" class="form-control" id="regPassword" placeholder="Password" required autocomplete="new-password" minlength="8" style="padding-right: 40px;">
                                 <label for="regPassword">Password <span class="text-danger">*</span></label>
+                                <i class="bi bi-eye position-absolute toggle-password" data-target="regPassword" style="right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #a1a1aa; z-index: 10;"></i>
                             </div>
                         </div>
                         <div class="col-12 col-md-6">
-                            <div class="form-floating">
-                                <input type="password" name="confirm_password" class="form-control" id="regConfirmPassword" placeholder="Confirm Password" required autocomplete="new-password" minlength="8">
+                            <div class="form-floating position-relative">
+                                <input type="password" name="confirm_password" class="form-control" id="regConfirmPassword" placeholder="Confirm Password" required autocomplete="new-password" minlength="8" style="padding-right: 40px;">
                                 <label for="regConfirmPassword">Confirm Password <span class="text-danger">*</span></label>
+                                <i class="bi bi-eye position-absolute toggle-password" data-target="regConfirmPassword" style="right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #a1a1aa; z-index: 10;"></i>
                             </div>
                         </div>
                         <div class="col-12">
@@ -294,15 +296,17 @@ if (!hasPermission('manage_users')) {
                         
                         <?php if ($userRole === 'Super Admin'): ?>
                         <div class="col-12 col-md-6">
-                            <div class="form-floating">
-                                <input type="password" name="password" class="form-control" id="editPassword" placeholder="New Password" autocomplete="new-password" minlength="8">
+                            <div class="form-floating position-relative">
+                                <input type="password" name="password" class="form-control" id="editPassword" placeholder="New Password" autocomplete="new-password" minlength="8" style="padding-right: 40px;">
                                 <label for="editPassword">New Password (optional)</label>
+                                <i class="bi bi-eye position-absolute toggle-password" data-target="editPassword" style="right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #a1a1aa; z-index: 10;"></i>
                             </div>
                         </div>
                         <div class="col-12 col-md-6">
-                            <div class="form-floating">
-                                <input type="password" name="confirm_password" class="form-control" id="editConfirmPassword" placeholder="Confirm Password" autocomplete="new-password" minlength="8">
+                            <div class="form-floating position-relative">
+                                <input type="password" name="confirm_password" class="form-control" id="editConfirmPassword" placeholder="Confirm Password" autocomplete="new-password" minlength="8" style="padding-right: 40px;">
                                 <label for="editConfirmPassword">Confirm New Password</label>
+                                <i class="bi bi-eye position-absolute toggle-password" data-target="editConfirmPassword" style="right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #a1a1aa; z-index: 10;"></i>
                             </div>
                         </div>
                         <?php endif; ?>
@@ -1086,6 +1090,25 @@ async function deleteUser(userId, userName) {
         API.showToast(data.message || 'Failed to delete user account.', 'danger');
     }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const togglePasswords = document.querySelectorAll('.toggle-password');
+    togglePasswords.forEach(function(toggle) {
+        toggle.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                this.classList.remove('bi-eye');
+                this.classList.add('bi-eye-slash');
+            } else {
+                input.type = 'password';
+                this.classList.remove('bi-eye-slash');
+                this.classList.add('bi-eye');
+            }
+        });
+    });
+});
 </script>
 
 <?php 
