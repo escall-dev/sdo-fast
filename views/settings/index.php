@@ -332,7 +332,7 @@ if ($fastPDO !== null) {
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fs-8 fw-semibold">Category Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" id="catName" class="form-control" maxlength="100" required>
+                            <input type="text" name="name" id="catName" class="form-control" maxlength="100" required onkeyup="toggleCategoryFieldConfig()">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fs-8 fw-semibold">Display Label</label>
@@ -408,9 +408,28 @@ if ($fastPDO !== null) {
                         </div>
                     </div>
 
+                    <div id="adminModeFilterContainer" class="mb-3 d-none p-3 bg-light rounded border">
+                        <label class="form-label fw-bold text-primary"><i class="bi bi-funnel-fill me-1"></i> Filter by Mode of Travel</label>
+                        <p class="fs-9 text-muted mb-2">Select a mode to view and edit its specific documents. Documents must have a mode checked to appear on the submit form.</p>
+                        <select id="adminModeFilter" class="form-select form-select-sm" onchange="filterAdminDocuments()">
+                            <option value="">-- Select Mode to View/Edit Documents --</option>
+                            <option value="UNASSIGNED">-- View Unassigned/Standalone Documents --</option>
+                            <option value="GLOBAL">All Modes (documents checked for every mode)</option>
+                            <option value="Plane (airfare)">Plane (airfare)</option>
+                            <option value="Bus">Bus</option>
+                            <option value="Taxi/ride-hailing">Taxi/ride-hailing</option>
+                            <option value="Van rental">Van rental</option>
+                            <option value="Ferry/boat">Ferry/boat</option>
+                            <option value="Motorcycle/ride-hailing">Motorcycle/ride-hailing</option>
+                            <option value="Train (MRT, LRT, PNR)">Train (MRT, LRT, PNR)</option>
+                            <option value="Jeep">Jeep</option>
+                            <option value="Tricycle">Tricycle</option>
+                        </select>
+                    </div>
+
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <h6 class="fw-bold text-secondary mb-0">Required Documents</h6>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addDocumentRow()">
+                        <button type="button" id="btnAddDocument" class="btn btn-sm btn-outline-primary" onclick="addDocumentRow()">
                             <i class="bi bi-plus-lg me-1"></i>Add Document
                         </button>
                     </div>
@@ -740,7 +759,10 @@ function renderCategoryTable(type, tbodyId) {
                 <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="openCategoryModal(${cat.id})">
                     <i class="bi bi-pencil"></i> Edit
                 </button>
-                ${cat.is_active ? `<button type="button" class="btn btn-sm btn-outline-warning" onclick="deactivateCategory(${cat.id})">Deactivate</button>` : ''}
+                ${cat.is_active ? `<button type="button" class="btn btn-sm btn-outline-warning me-1" onclick="deactivateCategory(${cat.id})">Deactivate</button>` : ''}
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCoverageCategory(${cat.id})">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
             </td>
         </tr>
     `).join('');
@@ -789,12 +811,112 @@ function toggleCategoryFieldConfig() {
         caGroup.querySelectorAll('input').forEach(cb => { cb.checked = false; cb.disabled = true; });
         reimbGroup.querySelectorAll('input').forEach(cb => { cb.disabled = false; });
     }
+    
+    // Toggle Admin Mode Filter visibility for Reimbursement -> Travel
+    const catName = document.getElementById('catName').value.trim();
+    if (txType === 'Reimbursement' && catName === 'Travel') {
+        document.getElementById('adminModeFilterContainer').classList.remove('d-none');
+    } else {
+        document.getElementById('adminModeFilterContainer').classList.add('d-none');
+    }
+    filterAdminDocuments();
 }
 
-function addDocumentRow(doc = {}) {
+function filterAdminDocuments() {
+    const filterContainer = document.getElementById('adminModeFilterContainer');
+    const filterSelect = document.getElementById('adminModeFilter');
+    const btnAddDocument = document.getElementById('btnAddDocument');
+    const docRowsContainer = document.getElementById('documentRowsContainer');
+    const isFilterVisible = !filterContainer.classList.contains('d-none');
+    
+    if (isFilterVisible) {
+        const mode = filterSelect.value;
+        if (!mode) {
+            docRowsContainer.style.display = 'none';
+            btnAddDocument.disabled = true;
+            return;
+        } else {
+            docRowsContainer.style.display = 'flex';
+            btnAddDocument.disabled = false;
+        }
+        
+        const docRows = docRowsContainer.querySelectorAll('.doc-row');
+        const totalModes = 9; // Total number of mode checkboxes
+        docRows.forEach(row => {
+            const checkboxes = row.querySelectorAll('.doc-mode-cb:checked');
+            const checkedModes = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (mode === 'GLOBAL') {
+                // Show documents that have ALL modes checked (universal docs)
+                if (checkedModes.length === totalModes) {
+                    row.classList.remove('d-none');
+                } else {
+                    row.classList.add('d-none');
+                }
+            } else if (mode === 'UNASSIGNED') {
+                // Show documents that have NO modes checked
+                if (checkedModes.length === 0) {
+                    row.classList.remove('d-none');
+                } else {
+                    row.classList.add('d-none');
+                }
+            } else {
+                if (checkedModes.includes(mode)) {
+                    row.classList.remove('d-none');
+                } else {
+                    row.classList.add('d-none');
+                }
+            }
+        });
+    } else {
+        docRowsContainer.style.display = 'flex';
+        btnAddDocument.disabled = false;
+        const docRows = docRowsContainer.querySelectorAll('.doc-row');
+        docRows.forEach(row => row.classList.remove('d-none'));
+    }
+}
+
+function addDocumentRow(doc = {}, isNew = false) {
     const container = document.getElementById('documentRowsContainer');
     const row = document.createElement('div');
     row.className = 'border rounded-3 p-2 doc-row';
+    const allModes = [
+        'Plane (airfare)', 'Bus', 'Taxi/ride-hailing', 'Van rental',
+        'Ferry/boat', 'Motorcycle/ride-hailing', 'Train (MRT, LRT, PNR)',
+        'Jeep', 'Tricycle'
+    ];
+    let selectedModes = doc.modes_of_travel || doc.modesOfTravel || [];
+    
+    const filterContainer = document.getElementById('adminModeFilterContainer');
+    if (isNew && filterContainer && !filterContainer.classList.contains('d-none')) {
+        const mode = document.getElementById('adminModeFilter').value;
+        if (mode && mode !== 'GLOBAL') {
+            selectedModes = [mode];
+        }
+    }
+    const modeCheckboxes = allModes.map(m => {
+        const sel = selectedModes.includes(m) ? 'checked' : '';
+        return `
+            <div class="form-check form-check-inline mb-1">
+                <input class="form-check-input doc-mode-cb" type="checkbox" value="${escapeHtml(m)}" ${sel}>
+                <label class="form-check-label fs-9">${escapeHtml(m)}</label>
+            </div>
+        `;
+    }).join('');
+
+    const txType = document.getElementById('catTransactionType').value;
+    const catName = document.getElementById('catName').value.trim();
+    const isTravelCategory = (txType === 'Reimbursement' && catName === 'Travel');
+
+    const modeHTML = isTravelCategory ? `
+            <div class="col-md-11 mt-2">
+                <label class="form-label fs-9 text-muted mb-1 d-block">Modes of Travel</label>
+                <div class="d-flex flex-wrap gap-2">
+                    ${modeCheckboxes}
+                </div>
+            </div>
+    ` : '';
+
     row.innerHTML = `
         <div class="row g-2 align-items-end">
             <div class="col-md-5">
@@ -815,8 +937,9 @@ function addDocumentRow(doc = {}) {
                     <label class="form-check-label fs-9">Req</label>
                 </div>
             </div>
-            <div class="col-12 text-end">
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.doc-row').remove()"><i class="bi bi-trash"></i></button>
+            ${modeHTML}
+            <div class="col-md-1 text-end mt-2">
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeDocumentRow(this)"><i class="bi bi-trash"></i></button>
             </div>
         </div>
     `;
@@ -836,7 +959,25 @@ function resetDocumentRows(docs = []) {
     if (docs.length) {
         docs.forEach(doc => addDocumentRow(doc));
     } else {
-        addDocumentRow();
+        addDocumentRow({}, true);
+    }
+}
+
+async function removeDocumentRow(btn) {
+    const row = btn.closest('.doc-row');
+    const titleInput = row.querySelector('input[name="doc_title[]"]');
+    const title = titleInput && titleInput.value.trim() ? titleInput.value.trim() : 'this document';
+    
+    const confirmed = await API.confirmAction(
+        'Delete Document?',
+        `Are you sure you want to remove "${title}" from the required documents?`,
+        'Yes, remove it',
+        'danger'
+    );
+    
+    if (confirmed) {
+        row.remove();
+        API.showToast(`Removed "${title}". Make sure to click Save to apply changes.`, 'info');
     }
 }
 
@@ -875,6 +1016,7 @@ function openCategoryModal(id = null) {
         toggleCategoryFieldConfig();
         setFieldConfigCheckboxes(cat.transaction_type, cat.field_config);
         resetDocumentRows(cat.documents || []);
+        filterAdminDocuments();
     } else {
         document.getElementById('editCategoryModalLabel').textContent = 'Add Coverage Category';
         const activePill = document.querySelector('#categoryTypeTabs .nav-link.active');
@@ -927,6 +1069,13 @@ async function handleCategorySave(e) {
         formData.append('doc_section[]', row.querySelector('input[name="doc_section[]"]')?.value || '');
         formData.append('doc_condition[]', row.querySelector('input[name="doc_condition[]"]')?.value || '');
         formData.append('doc_required[]', row.querySelector('input[name="doc_required[]"]')?.checked ? '1' : '0');
+
+        const modeCheckboxes = row.querySelectorAll('.doc-mode-cb:checked');
+        let selectedModes = [];
+        if (modeCheckboxes.length > 0) {
+            selectedModes = Array.from(modeCheckboxes).map(cb => cb.value);
+        }
+        formData.append('doc_modes_of_travel[]', selectedModes.length ? JSON.stringify(selectedModes) : '');
     });
 
     API.showSpinner();
@@ -950,7 +1099,15 @@ async function handleCategorySave(e) {
 async function deactivateCategory(id) {
     const cat = coverageCategories.find(c => c.id === id);
     const name = cat ? cat.name : 'this category';
-    if (!confirm(`Deactivate "${name}"? It will be hidden from new submissions but existing transactions are unaffected.`)) {
+    
+    const confirmed = await API.confirmAction(
+        'Deactivate Category?',
+        `Deactivate "${name}"? It will be hidden from new submissions but existing transactions are unaffected.`,
+        'Yes, deactivate',
+        'warning'
+    );
+    
+    if (!confirmed) {
         return;
     }
     const formData = new FormData();
@@ -972,6 +1129,42 @@ async function deactivateCategory(id) {
         await loadCoverageCategories();
     } else {
         API.showToast(data.message || 'Failed to deactivate category.', 'danger');
+    }
+}
+
+async function deleteCoverageCategory(id) {
+    const cat = coverageCategories.find(c => c.id === id);
+    const name = cat ? cat.name : 'this category';
+    
+    const confirmed = await API.confirmAction(
+        'Delete Category?',
+        `Are you sure you want to completely delete "${name}"? This will permanently remove the category and its documents.`,
+        'Yes, delete it',
+        'danger'
+    );
+    
+    if (!confirmed) {
+        return;
+    }
+    const formData = new FormData();
+    formData.append('action', 'delete');
+    formData.append('id', id);
+    formData.append('csrf_token', '<?php echo $_SESSION['csrf_token']; ?>');
+
+    API.showSpinner();
+    const response = await fetch('<?php echo env('APP_URL'); ?>/api/categories/manage-category.php', {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': '<?php echo $_SESSION['csrf_token']; ?>' },
+        body: formData
+    });
+    const data = await response.json();
+    API.hideSpinner();
+
+    if (data.success) {
+        API.showToast(data.message, 'success');
+        await loadCoverageCategories();
+    } else {
+        API.showToast(data.message || 'Failed to delete category.', 'danger');
     }
 }
 

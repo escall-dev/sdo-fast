@@ -205,7 +205,7 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                    cad.approved_ta_path as ca_approved_ta_path, cad.travel_itinerary_path as ca_travel_itinerary_path, cad.activity_proposal_path as ca_activity_proposal_path,
                    rd.category as reimbursement_category, rd.reimbursement_month, rd.inclusive_dates as reimb_inclusive_dates, rd.venue as reimb_venue,
                    rd.approved_ta_path as reimb_approved_ta_path, rd.travel_itinerary_path as reimb_travel_itinerary_path, rd.activity_proposal_path as reimb_activity_proposal_path,
-                   rd.dtr_path, rd.certificate_path, rd.bill_proof_path
+                   rd.dtr_path, rd.certificate_path, rd.bill_proof_path, rd.mode_of_travel as reimb_mode_of_travel
             FROM transactions t
             LEFT JOIN users u ON t.requestor_id = u.id
             LEFT JOIN document_details d ON t.id = d.transaction_id
@@ -537,6 +537,15 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                                             <div class="col-12 col-sm-6">
                                                 <small class="text-muted d-block text-uppercase fw-semibold mb-1" style="font-size: 0.7rem;">Venue</small>
                                                 <strong class="text-dark fs-8 d-block"><?php echo htmlspecialchars($transaction['reimb_venue'] ?: 'N/A'); ?></strong>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if ($reimbCat === 'Travel' && !empty($transaction['reimb_mode_of_travel'])): ?>
+                                            <div class="col-12 col-sm-6">
+                                                <small class="text-muted d-block text-uppercase fw-semibold mb-1" style="font-size: 0.7rem;">Mode of Travel</small>
+                                                <strong class="text-dark fs-8 d-block">
+                                                    <i class="bi bi-ticket-detailed text-primary me-1"></i>
+                                                    <?php echo htmlspecialchars($transaction['reimb_mode_of_travel']); ?>
+                                                </strong>
                                             </div>
                                         <?php endif; ?>
                                         <?php if (in_array($reimbCat, $reimbTaTypes, true)): ?>

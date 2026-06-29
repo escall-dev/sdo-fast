@@ -26,7 +26,8 @@ if ($transactionId > 0 && $fastPDO !== null) {
     try {
         $stmt = $fastPDO->prepare("
             SELECT t.*, cad.category as ca_category, cad.inclusive_dates as ca_inclusive_dates,
-                   rd.category as reimb_category, rd.reimbursement_month, rd.inclusive_dates as reimb_inclusive_dates
+                   rd.category as reimb_category, rd.reimbursement_month, rd.inclusive_dates as reimb_inclusive_dates,
+                   rd.mode_of_travel as reimb_mode_of_travel
             FROM transactions t
             LEFT JOIN cash_advance_details cad ON t.id = cad.transaction_id
             LEFT JOIN reimbursement_details rd ON t.id = rd.transaction_id
@@ -131,6 +132,7 @@ if ($transactionId > 0 && $fastPDO !== null) {
                         $type = $transaction['transaction_type'];
                         $caCategory = $transaction['ca_category'] ?? '';
                         $reimbCategory = $transaction['reimb_category'] ?? '';
+                        $reimbModeOfTravel = $transaction['reimb_mode_of_travel'] ?? '';
 
                         $caFieldConfig = [];
                         $reimbFieldConfig = [];
@@ -143,6 +145,13 @@ if ($transactionId > 0 && $fastPDO !== null) {
                             $reimbFieldConfig = $reimbCatRow['field_config'] ?? [];
                         }
                         ?>
+
+                        <?php if ($type === 'Reimbursement' && $reimbCategory === 'Travel' && !empty($reimbModeOfTravel)): ?>
+                        <div class="alert alert-light border d-flex align-items-center gap-2 mb-4 py-2 px-3 fs-8">
+                            <i class="bi bi-ticket-detailed text-primary"></i>
+                            <span><strong>Mode of Travel:</strong> <?php echo htmlspecialchars($reimbModeOfTravel); ?></span>
+                        </div>
+                        <?php endif; ?>
 
                         <?php if ($type === 'Cash Advance' && !empty($caFieldConfig['taItinerary'])): ?>
                             <!-- Travel Documents -->

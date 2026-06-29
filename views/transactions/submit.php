@@ -200,6 +200,34 @@ if ($fastPDO !== null) {
                                         <input type="text" name="reimb_venue" id="reimbVenue" class="form-control" placeholder="e.g. SDO Conference Hall, School Gym">
                                     </div>
                                 </div>
+
+                                <!-- Mode of Travel — visible only for Travel reimbursement -->
+                                <div id="modeOfTravelSection" class="d-none">
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-12">
+                                            <label for="modeOfTravel" class="form-label fs-8 fw-semibold text-muted">Mode of Travel <span class="text-danger">*</span></label>
+                                            <select name="mode_of_travel" id="modeOfTravel" class="form-select">
+                                                <option value="" disabled selected>Select Mode of Travel</option>
+                                                <optgroup label="With Official Receipt (OR) Required">
+                                                    <option value="Plane (airfare)">✈ Plane (airfare)</option>
+                                                    <option value="Bus">🚌 Bus</option>
+                                                    <option value="Taxi/ride-hailing">🚕 Taxi / Ride-hailing</option>
+                                                    <option value="Van rental">🚐 Van rental</option>
+                                                    <option value="Ferry/boat">⛴ Ferry / Boat</option>
+                                                    <option value="Motorcycle/ride-hailing">🏍 Motorcycle / Ride-hailing</option>
+                                                    <option value="Train (MRT, LRT, PNR)">🚆 Train (MRT, LRT, PNR)</option>
+                                                </optgroup>
+                                                <optgroup label="No Official Receipt Required">
+                                                    <option value="Jeep">🛻 Jeep</option>
+                                                    <option value="Tricycle">🛺 Tricycle</option>
+                                                </optgroup>
+                                            </select>
+                                        </div>
+                                    </div>
+
+
+                                </div>
+
                             </div>
                         </div>
 
@@ -369,6 +397,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const documentChecklistSource = document.getElementById('documentChecklistSource');
     const documentChecklistCategoryLabel = document.getElementById('documentChecklistCategoryLabel');
 
+    // Mode of Travel elements
+    const modeOfTravelSection = document.getElementById('modeOfTravelSection');
+    const modeOfTravelSelect = document.getElementById('modeOfTravel');
+
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
@@ -434,11 +466,30 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        if (txType === 'Reimbursement' && category === 'Travel') {
+            const selectedMode = modeOfTravelSelect ? modeOfTravelSelect.value : '';
+            if (!selectedMode) {
+                documentChecklistSection.classList.add('d-none');
+                documentChecklistContent.innerHTML = '';
+                return;
+            }
+        }
+
         const resolved = resolveChecklistClient(txType, category);
         if (!resolved) {
             documentChecklistSection.classList.add('d-none');
             documentChecklistContent.innerHTML = '';
             return;
+        }
+
+        if (txType === 'Reimbursement' && category === 'Travel') {
+            const selectedMode = modeOfTravelSelect ? modeOfTravelSelect.value : '';
+            if (!selectedMode) {
+                // Completely hide checklist until a mode is selected
+                documentChecklistSection.classList.add('d-none');
+                documentChecklistContent.innerHTML = '';
+                return;
+            }
         }
 
         documentChecklistSection.classList.remove('d-none');
@@ -452,7 +503,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }))
         );
 
-        const allDocs = baseDocs.concat(sectionDocs);
+        const allDocs = baseDocs.concat(sectionDocs).filter(d => {
+            if (txType === 'Reimbursement' && category === 'Travel') {
+                const selectedMode = modeOfTravelSelect ? modeOfTravelSelect.value : '';
+                if (!selectedMode) return true;
+                // Only show documents explicitly assigned to the selected mode
+                if (!d.modesOfTravel || d.modesOfTravel.length === 0) return false;
+                return d.modesOfTravel.includes(selectedMode);
+            }
+            return true;
+        });
         const requiredDocs = allDocs.filter(d => d.required);
         const optionalDocs = allDocs.filter(d => !d.required);
         const reqCount = allDocs.filter(d => d.required).length;
@@ -568,6 +628,18 @@ document.addEventListener('DOMContentLoaded', function() {
             cfg.activityProposal ? showAndEnable(reimbActivityProposal) : hideAndDisable(reimbActivityProposal);
             cfg.communications ? showAndEnable(reimbCommunications) : hideAndDisable(reimbCommunications);
             cfg.utilityBills ? showAndEnable(reimbUtilityBills) : hideAndDisable(reimbUtilityBills);
+
+            // Mode of Travel: only show for Travel category
+            const isTravel = reimbCat === 'Travel';
+            if (isTravel && cfg.dateVenue) {
+                modeOfTravelSection.classList.remove('d-none');
+                modeOfTravelSelect.disabled = false;
+                modeOfTravelSelect.required = true;
+            } else {
+                modeOfTravelSection.classList.add('d-none');
+                modeOfTravelSelect.disabled = true;
+                modeOfTravelSelect.required = false;
+            }
         } else {
             reimbSection.classList.add('d-none');
             reimbCategorySelect.disabled = true;
@@ -577,6 +649,9 @@ document.addEventListener('DOMContentLoaded', function() {
             hideAndDisable(reimbActivityProposal);
             hideAndDisable(reimbCommunications);
             hideAndDisable(reimbUtilityBills);
+            modeOfTravelSection.classList.add('d-none');
+            modeOfTravelSelect.disabled = true;
+            modeOfTravelSelect.required = false;
         }
 
         updateDocumentChecklist();
@@ -585,7 +660,10 @@ document.addEventListener('DOMContentLoaded', function() {
     txTypeSelect.addEventListener('change', toggleFormFields);
     caCategorySelect.addEventListener('change', toggleFormFields);
     reimbCategorySelect.addEventListener('change', toggleFormFields);
-    
+    if (modeOfTravelSelect) {
+        modeOfTravelSelect.addEventListener('change', updateDocumentChecklist);
+    }
+
     // Initial call
     toggleFormFields();
 

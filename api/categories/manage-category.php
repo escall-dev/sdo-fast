@@ -32,7 +32,7 @@ if (!hasPermission('configure_system')) {
 $adminId = (int)$_SESSION['user_id'];
 $action = $_POST['action'] ?? '';
 
-if ($action === 'deactivate') {
+if ($action === 'deactivate' || $action === 'delete') {
     $id = (int)($_POST['id'] ?? 0);
     if ($id <= 0) {
         http_response_code(422);
@@ -48,20 +48,35 @@ if ($action === 'deactivate') {
     }
 
     try {
-        CoverageCategoryService::deactivateCategory($fastPDO, $id);
-        $updated = CoverageCategoryService::getCategoryById($fastPDO, $id);
-        AuditLogService::log(
-            $fastPDO,
-            $adminId,
-            'Deactivated coverage category: ' . $existing['name'],
-            $existing,
-            $updated
-        );
-        echo json_encode(['success' => true, 'message' => 'Category deactivated successfully.', 'data' => $updated]);
+        if ($action === 'delete') {
+            CoverageCategoryService::deleteCategory($fastPDO, $id);
+            AuditLogService::log(
+                $fastPDO,
+                $adminId,
+                'Deleted coverage category: ' . $existing['name'],
+                $existing,
+                null
+            );
+            echo json_encode(['success' => true, 'message' => 'Category deleted successfully.']);
+        } else {
+            CoverageCategoryService::deactivateCategory($fastPDO, $id);
+            $updated = CoverageCategoryService::getCategoryById($fastPDO, $id);
+            AuditLogService::log(
+                $fastPDO,
+                $adminId,
+                'Deactivated coverage category: ' . $existing['name'],
+                $existing,
+                $updated
+            );
+            echo json_encode(['success' => true, 'message' => 'Category deactivated successfully.', 'data' => $updated]);
+        }
+    } catch (InvalidArgumentException $e) {
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     } catch (Throwable $e) {
-        error_log('manage-category deactivate failed: ' . $e->getMessage());
+        error_log("manage-category $action failed: " . $e->getMessage());
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Failed to deactivate category.']);
+        echo json_encode(['success' => false, 'message' => "Failed to $action category."]);
     }
     exit;
 }
@@ -94,6 +109,7 @@ if ($action === 'save') {
     $docRequired = $_POST['doc_required'] ?? [];
     $docConditions = $_POST['doc_condition'] ?? [];
     $docSections = $_POST['doc_section'] ?? [];
+    $docModes = $_POST['doc_modes_of_travel'] ?? [];
 
     if (is_array($docTitles)) {
         foreach ($docTitles as $i => $title) {
@@ -101,12 +117,22 @@ if ($action === 'save') {
             if ($title === '') {
                 continue;
             }
+            
+            $modes = null;
+            if (!empty($docModes[$i])) {
+                $decoded = json_decode($docModes[$i], true);
+                if (is_array($decoded) && !empty($decoded)) {
+                    $modes = $decoded;
+                }
+            }
+
             $payload['documents'][] = [
                 'title' => $title,
                 'is_required' => isset($docRequired[$i]) && (int)$docRequired[$i] === 1,
                 'condition_text' => trim((string)($docConditions[$i] ?? '')),
                 'section_title' => trim((string)($docSections[$i] ?? '')),
                 'sort_order' => $i,
+                'modes_of_travel' => $modes,
             ];
         }
     }

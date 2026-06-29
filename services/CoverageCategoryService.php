@@ -118,7 +118,7 @@ class CoverageCategoryService
     public static function getDocumentsForCategory(PDO $pdo, int $categoryId): array
     {
         $stmt = $pdo->prepare("
-            SELECT id, section_title, sort_order, title, is_required, condition_text
+            SELECT id, section_title, sort_order, title, is_required, condition_text, modes_of_travel
             FROM coverage_category_documents
             WHERE category_id = :category_id
             ORDER BY COALESCE(section_title, ''), sort_order ASC, id ASC
@@ -127,6 +127,13 @@ class CoverageCategoryService
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return array_map(function ($row) {
+            $modes = null;
+            if (!empty($row['modes_of_travel'])) {
+                $decoded = json_decode($row['modes_of_travel'], true);
+                if (is_array($decoded)) {
+                    $modes = $decoded;
+                }
+            }
             return [
                 'id' => (int)$row['id'],
                 'section_title' => $row['section_title'],
@@ -134,6 +141,7 @@ class CoverageCategoryService
                 'title' => $row['title'],
                 'is_required' => (int)$row['is_required'],
                 'condition_text' => $row['condition_text'],
+                'modes_of_travel' => $modes,
             ];
         }, $rows);
     }
@@ -194,6 +202,9 @@ class CoverageCategoryService
                 ];
                 if (!empty($doc['condition_text'])) {
                     $item['condition'] = $doc['condition_text'];
+                }
+                if (!empty($doc['modes_of_travel'])) {
+                    $item['modesOfTravel'] = $doc['modes_of_travel'];
                 }
 
                 if ($doc['section_title'] === null || $doc['section_title'] === '') {
@@ -265,6 +276,27 @@ class CoverageCategoryService
     {
         $stmt = $pdo->prepare("UPDATE coverage_categories SET is_active = 0 WHERE id = :id");
         $stmt->execute(['id' => $id]);
+    }
+
+    public static function deleteCategory(PDO $pdo, int $id): void
+    {
+        if (self::isCategoryInUse($pdo, $id)) {
+            throw new InvalidArgumentException('Cannot delete a category that is already used by existing transactions.');
+        }
+
+        $pdo->beginTransaction();
+        try {
+            $stmt1 = $pdo->prepare("DELETE FROM coverage_category_documents WHERE category_id = :id");
+            $stmt1->execute(['id' => $id]);
+
+            $stmt2 = $pdo->prepare("DELETE FROM coverage_categories WHERE id = :id");
+            $stmt2->execute(['id' => $id]);
+
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
     }
 
     public static function saveCategory(PDO $pdo, array $payload): int
@@ -381,9 +413,9 @@ class CoverageCategoryService
 
             $insertDoc = $pdo->prepare("
                 INSERT INTO coverage_category_documents
-                    (category_id, section_title, sort_order, title, is_required, condition_text)
+                    (category_id, section_title, sort_order, title, is_required, condition_text, modes_of_travel)
                 VALUES
-                    (:category_id, :section_title, :sort_order, :title, :is_required, :condition_text)
+                    (:category_id, :section_title, :sort_order, :title, :is_required, :condition_text, :modes_of_travel)
             ");
 
             foreach ($documents as $sort => $doc) {
@@ -392,6 +424,12 @@ class CoverageCategoryService
                     continue;
                 }
                 $sectionTitle = trim((string)($doc['section_title'] ?? ''));
+                
+                $modesOfTravel = null;
+                if (!empty($doc['modes_of_travel']) && is_array($doc['modes_of_travel'])) {
+                    $modesOfTravel = json_encode($doc['modes_of_travel']);
+                }
+
                 $insertDoc->execute([
                     'category_id' => $id,
                     'section_title' => $sectionTitle !== '' ? $sectionTitle : null,
@@ -399,6 +437,7 @@ class CoverageCategoryService
                     'title' => $title,
                     'is_required' => !empty($doc['is_required']) ? 1 : 0,
                     'condition_text' => trim((string)($doc['condition_text'] ?? '')) ?: null,
+                    'modes_of_travel' => $modesOfTravel,
                 ]);
             }
 
@@ -449,6 +488,9 @@ class CoverageCategoryService
             ];
             if (!empty($doc['condition_text'])) {
                 $item['condition'] = $doc['condition_text'];
+            }
+            if (!empty($doc['modes_of_travel'])) {
+                $item['modesOfTravel'] = $doc['modes_of_travel'];
             }
 
             if ($doc['section_title'] === null || $doc['section_title'] === '') {

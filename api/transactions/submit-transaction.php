@@ -67,6 +67,7 @@ $reimbStartDate = trim($_POST['reimb_start_date'] ?? '');
 $reimbEndDate = trim($_POST['reimb_end_date'] ?? '');
 $reimbVenue = trim($_POST['reimb_venue'] ?? '');
 $utilityMonth = trim($_POST['utility_month'] ?? '');
+$modeOfTravel = trim($_POST['mode_of_travel'] ?? '');
 
 // 2. Validate Inputs
 if (empty($type) || empty($eventName) || $amount <= 0) {
@@ -149,7 +150,21 @@ if ($type === 'Reimbursement') {
         }
         $reimbursementMonth = $utilityMonth;
     }
-}
+
+    // Mode of Travel is required for Travel category
+    $allowedModes = [
+        'Plane (airfare)', 'Bus', 'Taxi/ride-hailing', 'Van rental',
+        'Ferry/boat', 'Motorcycle/ride-hailing', 'Train (MRT, LRT, PNR)',
+        'Jeep', 'Tricycle'
+    ];
+    if ($reimbursementCategory === 'Travel') {
+        if (empty($modeOfTravel) || !in_array($modeOfTravel, $allowedModes)) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'A valid Mode of Travel is required for Travel reimbursement.']);
+            exit;
+        }
+    }
+} // end if ($type === 'Reimbursement')
 
 // Fetch active tax configurations to validate and calculate tax
 $taxPercentage = 0.00;
@@ -368,13 +383,14 @@ try {
     // Insert Reimbursement Details
     if ($type === 'Reimbursement') {
         $insertReimbSql = "
-            INSERT INTO reimbursement_details (transaction_id, category, reimbursement_month, inclusive_dates, venue, approved_ta_path, travel_itinerary_path, activity_proposal_path, dtr_path, certificate_path, bill_proof_path) 
-            VALUES (:transaction_id, :category, :reimbursement_month, :inclusive_dates, :venue, :approved_ta_path, :travel_itinerary_path, :activity_proposal_path, :dtr_path, :certificate_path, :bill_proof_path)
+            INSERT INTO reimbursement_details (transaction_id, category, mode_of_travel, reimbursement_month, inclusive_dates, venue, approved_ta_path, travel_itinerary_path, activity_proposal_path, dtr_path, certificate_path, bill_proof_path) 
+            VALUES (:transaction_id, :category, :mode_of_travel, :reimbursement_month, :inclusive_dates, :venue, :approved_ta_path, :travel_itinerary_path, :activity_proposal_path, :dtr_path, :certificate_path, :bill_proof_path)
         ";
         $reimbStmt = $fastPDO->prepare($insertReimbSql);
         $reimbStmt->execute([
             'transaction_id' => $transactionDbId,
             'category' => $reimbursementCategory,
+            'mode_of_travel' => !empty($modeOfTravel) ? $modeOfTravel : null,
             'reimbursement_month' => $reimbursementMonth ?: null,
             'inclusive_dates' => $reimbInclusiveDates,
             'venue' => !empty($reimbFields['dateVenue']) ? $reimbVenue : null,
