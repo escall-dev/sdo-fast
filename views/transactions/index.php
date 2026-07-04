@@ -49,6 +49,20 @@ if ($fastPDO !== null) {
     }
 }
 
+// Fetch system settings
+$systemSettings = [];
+if ($fastPDO !== null) {
+    try {
+        $stmt = $fastPDO->query("SELECT setting_key, setting_value FROM system_settings");
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $systemSettings[$row['setting_key']] = $row['setting_value'];
+        }
+    } catch (PDOException $e) {
+        // Table might not exist yet, ignore
+    }
+}
+$enableBirNumber = (isset($systemSettings['enable_bir_number']) && $systemSettings['enable_bir_number'] === '1');
+
 // Fetch active requestor list for admin/staff filter dropdown
 $requestors = [];
 if (in_array($userRole, ['Super Admin', 'Accounting Staff']) && $fastPDO !== null) {
@@ -253,6 +267,18 @@ if (in_array($userRole, ['Super Admin', 'Accounting Staff']) && $fastPDO !== nul
                                 <small class="text-muted d-block fs-9">Event Name</small>
                                 <strong id="modalEventName" class="text-dark fs-8">-</strong>
                             </div>
+                            
+                            <!-- DV and BIR details in the approval card -->
+                            <div class="col-12 col-sm-6" id="modalTopDvSection" style="display: none;">
+                                <small class="text-muted d-block fs-9">DV Number</small>
+                                <strong id="modalTopDvNumber" class="text-dark fs-8">-</strong>
+                            </div>
+                            <?php if ($enableBirNumber): ?>
+                            <div class="col-12 col-sm-6" id="modalTopBirSection" style="display: none;">
+                                <small class="text-muted d-block fs-9">BIR 2307 Number</small>
+                                <strong id="modalTopBirNumber" class="text-dark fs-8">-</strong>
+                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -337,14 +363,16 @@ if (in_array($userRole, ['Super Admin', 'Accounting Staff']) && $fastPDO !== nul
                         <!-- DV details input -->
                         <div id="dvDetailsSection" style="display: none;">
                             <div class="row g-3 mb-3">
-                                <div class="col-12 col-sm-6">
+                                <div class="col-12 <?php echo $enableBirNumber ? 'col-sm-6' : 'col-sm-12'; ?>">
                                     <label for="modalDvNumber" class="form-label fs-8 fw-semibold text-muted">DV Number</label>
                                     <input type="text" id="modalDvNumber" class="form-control" placeholder="e.g. DV-2026-0032">
                                 </div>
+                                <?php if ($enableBirNumber): ?>
                                 <div class="col-12 col-sm-6">
                                     <label for="modalBirNumber" class="form-label fs-8 fw-semibold text-muted">BIR 2307 Number</label>
                                     <input type="text" id="modalBirNumber" class="form-control" placeholder="e.g. BIR-2307-8891">
                                 </div>
+                                <?php endif; ?>
                             </div>
                         </div>
 
@@ -476,6 +504,8 @@ function renderTable(transactions) {
             'For Payment': 'Release of Payment',
             'Awaiting Payment': 'Release of Payment',
             'Released': 'Payment Released',
+            'Pending Liquidation': 'Pending Liquidation',
+            'Liquidated': 'Liquidated',
             'Rejected': 'Disapproved',
             'Returned': 'Returned to Requestor'
         };
@@ -498,12 +528,30 @@ function renderTable(transactions) {
             case 'Released':
                 statusBadgeClass = 'bg-success';
                 break;
+            case 'Pending Liquidation':
+                statusBadgeClass = 'bg-warning text-dark';
+                break;
+            case 'Liquidated':
+                statusBadgeClass = 'bg-success';
+                break;
             case 'Rejected':
                 statusBadgeClass = 'bg-danger';
                 break;
             case 'Returned':
                 statusBadgeClass = 'bg-dark';
                 break;
+        }
+
+        // Check for overdue liquidation
+        let overdueBadge = '';
+        if (row.current_status === 'Pending Liquidation' && row.transaction_type === 'Cash Advance' && row.liquidation_start_date) {
+            const liqStart = new Date(row.liquidation_start_date);
+            const now = new Date();
+            const diffTime = Math.abs(now - liqStart);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            if (diffDays > 60) {
+                overdueBadge = `<span class="badge bg-danger ms-1" title="Over 60 days pending">Overdue</span>`;
+            }
         }
 
         const dateFormatted = new Date(row.created_at).toLocaleString('en-US', {
@@ -529,7 +577,7 @@ function renderTable(transactions) {
         // Show Workflow action button if role or position is authorized
         const showWorkflowAction = 
             (userRole === 'Super Admin') ||
-            ((userRole === 'Accounting Staff' || userPosition === 'Accounting Support') && ['Pending Requestor', 'Pending Accounting Support', 'Pending Signatory Approval'].includes(row.current_status)) ||
+            ((userRole === 'Accounting Staff' || userPosition === 'Accounting Support') && ['Pending Requestor', 'Pending Accounting Support', 'Pending Signatory Approval', 'Released', 'Pending Liquidation'].includes(row.current_status)) ||
             ((userRole === 'Budget Officer' || userPosition === 'Budget Officer') && row.current_status === 'Pending Budget') ||
             (userPosition === 'Accountant' && ['Pending Accounting Support', 'Pending Signatory Approval'].includes(row.current_status)) ||
             ((userPosition === 'ASDS' || userPosition === 'SDS') && row.current_status === 'Pending Signatory Approval') ||
@@ -543,13 +591,13 @@ function renderTable(transactions) {
             `;
         }
 
-        // Show "Submit Mandatory Documentary Requirements" button for Requestor when status is Pending Requestor
+        // Show "Submit Mandatory Documentary Requirements" button for Requestor when status is Pending Requestor or Pending Liquidation
         if ((userRole === 'Super Admin' || userRole === 'Requestor') && 
-            row.current_status === 'Pending Requestor' && 
+            ['Pending Requestor', 'Pending Liquidation'].includes(row.current_status) && 
             row.requestor_id == userId) {
             docUploadBtn = `
-                <a href="<?php echo env('APP_URL'); ?>/views/transactions/resubmit-documents.php?id=${row.id}" class="btn btn-sm btn-success" title="Submit Mandatory Documentary Requirements">
-                    <i class="bi bi-upload me-1"></i>Submit Docs
+                <a href="<?php echo env('APP_URL'); ?>/views/transactions/resubmit-documents.php?id=${row.id}" class="btn btn-sm btn-success" title="Submit ${row.current_status === 'Pending Liquidation' ? 'Liquidation' : 'Mandatory Documentary'} Requirements">
+                    <i class="bi bi-upload me-1"></i>Submit ${row.current_status === 'Pending Liquidation' ? 'Liquidation' : ''} Docs
                 </a>
             `;
         }
@@ -571,6 +619,7 @@ function renderTable(transactions) {
                 <td class="fw-semibold" title="₱${gross}">₱${gross}</td>
                 <td title="${statusDisplay}">
                     <span class="badge badge-status ${statusBadgeClass}">${statusDisplay}</span>
+                    ${overdueBadge}
                 </td>
                 <td class="text-muted" title="${dateFormatted}">${dateFormatted}</td>
                 <td class="text-end">
@@ -701,6 +750,27 @@ async function openWorkflowModal(row) {
     const tx = details.transaction;
     currentModalTransactionData = tx; // use updated info
 
+    // Update top card DV info again with fresh data
+    if (tx.dv_number) {
+        document.getElementById('modalTopDvSection').style.display = 'block';
+        document.getElementById('modalTopDvNumber').innerText = tx.dv_number;
+    } else {
+        document.getElementById('modalTopDvSection').style.display = 'none';
+        document.getElementById('modalTopDvNumber').innerText = '-';
+    }
+    
+    const topBirSection = document.getElementById('modalTopBirSection');
+    const topBirNumber = document.getElementById('modalTopBirNumber');
+    if (topBirSection && topBirNumber) {
+        if (tx.bir_2307_number) {
+            topBirSection.style.display = 'block';
+            topBirNumber.innerText = tx.bir_2307_number;
+        } else {
+            topBirSection.style.display = 'none';
+            topBirNumber.innerText = '-';
+        }
+    }
+
     const taxTypeSelect = document.getElementById('modalTaxType');
     if (taxTypeSelect) {
         taxTypeSelect.value = tx.tax_type || '';
@@ -779,6 +849,30 @@ async function openWorkflowModal(row) {
         document.getElementById('standardActionSection').style.display = 'block';
         document.getElementById('btnSubmitWorkflow').style.display = 'block';
     }
+    // Workflow v3: Released (Cash Advance only) -> Pending Liquidation
+    else if (tx.current_status === 'Released' && tx.transaction_type === 'Cash Advance' && (userRole === 'Super Admin' || userRole === 'Accounting Staff' || userPosition === 'Accounting Support')) {
+        actionSelect.innerHTML = `
+            <option value="">-- Select Action --</option>
+            <option value="Pending Liquidation">Mark as Pending Liquidation</option>
+        `;
+        document.getElementById('standardActionSection').style.display = 'block';
+        document.getElementById('btnSubmitWorkflow').style.display = 'block';
+    }
+    // Workflow v3: Pending Liquidation (Cash Advance only) -> Liquidated
+    else if (tx.current_status === 'Pending Liquidation' && tx.transaction_type === 'Cash Advance' && (userRole === 'Super Admin' || userRole === 'Accounting Staff' || userPosition === 'Accounting Support')) {
+        // Show liquidation attachments for per-document review (same as normal Document Inspection)
+        document.getElementById('stage2AttachmentsSection').style.display = 'block';
+        renderAttachmentChecklist(details.attachments, tx.id);
+        
+        actionSelect.innerHTML = `
+            <option value="">-- Select Action --</option>
+            <option value="Liquidated">Approve Liquidation</option>
+            <option value="Returned">Return Liquidation Documents</option>
+            <option value="Rejected">Disapprove Liquidation</option>
+        `;
+        document.getElementById('standardActionSection').style.display = 'block';
+        document.getElementById('btnSubmitWorkflow').style.display = 'block';
+    }
 
     toggleWorkflowFormDetails();
 }
@@ -804,6 +898,19 @@ function renderAttachmentChecklist(attachments, transactionId) {
 
         const filename = att.file_path.split('/').pop();
         const docUrl = '<?php echo env('APP_URL'); ?>/' + att.file_path;
+        
+        let fileExt = filename.split('.').pop().toLowerCase();
+        let iconClass = 'bi-file-earmark-text text-secondary';
+        if (fileExt === 'pdf') {
+            iconClass = 'bi-file-earmark-pdf text-danger';
+        } else if (['jpg', 'jpeg', 'png'].includes(fileExt)) {
+            iconClass = 'bi-file-earmark-image text-success';
+        } else if (fileExt === 'docx') {
+            iconClass = 'bi-file-earmark-word text-primary';
+        }
+
+        let fileSizeMb = ((att.file_size || 0) / (1024 * 1024)).toFixed(1);
+        let fileTime = att.file_time ? new Date(att.file_time * 1000).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Unknown date';
 
         let actionButtons = '';
         if (att.status === 'pending') {
@@ -827,13 +934,19 @@ function renderAttachmentChecklist(attachments, transactionId) {
         const itemHTML = `
             <div class="list-group-item p-3 border-bottom d-flex flex-column gap-1">
                 <div class="d-flex justify-content-between align-items-start gap-2">
-                    <div>
+                    <div class="flex-grow-1 overflow-hidden">
                         <span class="text-muted fs-9 text-uppercase fw-semibold">Mandatory Documentary Requirement</span>
-                        <span class="fw-bold text-dark fs-8 d-block">${att.file_label || 'Unlabeled Document'}</span>
-                        <span class="text-muted fs-9 d-block mt-1"><i class="bi bi-file-earmark me-1"></i>Uploaded file:</span>
-                        <a href="${docUrl}" target="_blank" class="fs-9 text-primary text-decoration-none"><i class="bi bi-download me-1"></i>${filename}</a>
+                        <span class="fw-bold text-dark fs-8 d-block mb-2">${att.file_label || 'Unlabeled Document'}</span>
+                        
+                        <div class="d-flex align-items-center gap-3 border rounded p-2 bg-light shadow-sm me-2">
+                            <i class="bi ${iconClass} fs-3"></i>
+                            <div class="d-flex flex-column text-truncate">
+                                <a href="${docUrl}" target="_blank" class="text-primary fs-8 fw-semibold text-truncate text-decoration-none" title="${filename}">${filename}</a>
+                                <span class="text-muted fs-9">${fileSizeMb} MB &bull; Uploaded: ${fileTime}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div>${badgeHTML}</div>
+                    <div class="flex-shrink-0">${badgeHTML}</div>
                 </div>
                 ${actionButtons}
             </div>
@@ -1023,7 +1136,10 @@ function toggleWorkflowFormDetails() {
     if (showDV && currentModalTransactionData) {
         dvSection.style.display = 'block';
         document.getElementById('modalDvNumber').value = currentModalTransactionData.dv_number || '';
-        document.getElementById('modalBirNumber').value = currentModalTransactionData.bir_2307_number || '';
+        const birInput = document.getElementById('modalBirNumber');
+        if (birInput) {
+            birInput.value = currentModalTransactionData.bir_2307_number || '';
+        }
     } else {
         dvSection.style.display = 'none';
     }
@@ -1035,7 +1151,8 @@ async function handleWorkflowSubmit(e) {
     const action = document.getElementById('workflowAction').value;
     const remarks = document.getElementById('workflowRemarks').value.trim();
     const dvNumber = document.getElementById('modalDvNumber').value.trim();
-    const birNumber = document.getElementById('modalBirNumber').value.trim();
+    const birNumberEl = document.getElementById('modalBirNumber');
+    const birNumber = birNumberEl ? birNumberEl.value.trim() : '';
 
     if (action === '' && currentModalTransactionData.current_status !== 'Pending Requestor' && currentModalTransactionData.current_status !== 'Pending Signatory Approval') {
         API.showToast('Please select a workflow action.', 'warning');

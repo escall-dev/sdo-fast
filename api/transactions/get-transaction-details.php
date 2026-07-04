@@ -77,6 +77,19 @@ try {
     $stmt->execute(['tx_id' => $transactionId]);
     $attachments = $stmt->fetchAll();
 
+    // Add file metadata (size, upload date) to attachments
+    $baseDir = dirname(dirname(__DIR__)) . '/';
+    foreach ($attachments as &$att) {
+        $fullPath = $baseDir . $att['file_path'];
+        if (file_exists($fullPath)) {
+            $att['file_size'] = filesize($fullPath);
+            $att['file_time'] = filemtime($fullPath);
+        } else {
+            $att['file_size'] = 0;
+            $att['file_time'] = time();
+        }
+    }
+
     // 3. Fetch budget check
     $stmt = $fastPDO->prepare("
         SELECT bc.*, u.full_name as checker_name 

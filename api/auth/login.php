@@ -57,7 +57,20 @@ try {
         $_SESSION['user_username'] = $user['username'];
         $_SESSION['user_role'] = $user['role_name'] ?? 'User';
         $_SESSION['user_position'] = $user['position_name'] ?? '';
-        
+
+        // Remember-me token
+        if ($remember) {
+            $token = bin2hex(random_bytes(64));
+            $hash = hash('sha256', $token);
+            $upd = $fastPDO->prepare("UPDATE users SET remember_token = :hash WHERE id = :id");
+            $upd->execute(['hash' => $hash, 'id' => $user['id']]);
+            setcookie('remember_me', $token, time() + 86400 * 30, '/', '', isset($_SERVER['HTTPS']), true);
+        } else {
+            $upd = $fastPDO->prepare("UPDATE users SET remember_token = NULL WHERE id = :id");
+            $upd->execute(['id' => $user['id']]);
+            setcookie('remember_me', '', time() - 3600, '/');
+        }
+
         // Log Login activity
         $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
         $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';

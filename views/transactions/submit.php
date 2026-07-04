@@ -208,19 +208,16 @@ if ($fastPDO !== null) {
                                             <label for="modeOfTravel" class="form-label fs-8 fw-semibold text-muted">Mode of Travel <span class="text-danger">*</span></label>
                                             <select name="mode_of_travel" id="modeOfTravel" class="form-select">
                                                 <option value="" disabled selected>Select Mode of Travel</option>
-                                                <optgroup label="With Official Receipt (OR) Required">
-                                                    <option value="Plane (airfare)">✈ Plane (airfare)</option>
-                                                    <option value="Bus">🚌 Bus</option>
-                                                    <option value="Taxi/ride-hailing">🚕 Taxi / Ride-hailing</option>
-                                                    <option value="Van rental">🚐 Van rental</option>
-                                                    <option value="Ferry/boat">⛴ Ferry / Boat</option>
-                                                    <option value="Motorcycle/ride-hailing">🏍 Motorcycle / Ride-hailing</option>
-                                                    <option value="Train (MRT, LRT, PNR)">🚆 Train (MRT, LRT, PNR)</option>
-                                                </optgroup>
-                                                <optgroup label="No Official Receipt Required">
-                                                    <option value="Jeep">🛻 Jeep</option>
-                                                    <option value="Tricycle">🛺 Tricycle</option>
-                                                </optgroup>
+                                                <?php
+                                                $travelModes = [];
+                                                try {
+                                                    $modeStmt = $fastPDO->query("SELECT name FROM modes_of_travel WHERE is_active = 1 ORDER BY name ASC");
+                                                    $travelModes = $modeStmt->fetchAll(PDO::FETCH_COLUMN);
+                                                } catch (PDOException $e) {}
+                                                foreach ($travelModes as $mode):
+                                                ?>
+                                                    <option value="<?php echo htmlspecialchars($mode); ?>"><?php echo htmlspecialchars($mode); ?></option>
+                                                <?php endforeach; ?>
                                             </select>
                                         </div>
                                     </div>

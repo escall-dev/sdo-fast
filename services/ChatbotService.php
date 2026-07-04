@@ -446,6 +446,8 @@ class ChatbotService
         ];
     }
 
+    private static ?string $lastApiError = null;
+
     /**
      * Unified POST request runner supporting curl and fallback to stream wrapper.
      */
@@ -499,6 +501,13 @@ class ChatbotService
         }
     }
 
+    private static function isImageError($response): bool
+    {
+        $errText = strtolower($response ?? '');
+        return strpos($errText, 'image input') !== false
+            || strpos($errText, 'image') !== false && (strpos($errText, 'not support') !== false || strpos($errText, 'unsupported') !== false || strpos($errText, 'cannot read') !== false);
+    }
+
     /**
      * query to Groq
      */
@@ -532,6 +541,9 @@ class ChatbotService
             return $data['choices'][0]['message']['content'] ?? null;
         }
 
+        if (self::isImageError($result['response'])) {
+            self::$lastApiError = 'image';
+        }
         error_log("Groq Chatbot API error code {$result['code']}: " . $result['response']);
         return null;
     }
@@ -582,6 +594,9 @@ class ChatbotService
             return $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
         }
 
+        if (self::isImageError($result['response'])) {
+            self::$lastApiError = 'image';
+        }
         error_log("Gemini Chatbot API error code {$result['code']}: " . $result['response']);
         return null;
     }

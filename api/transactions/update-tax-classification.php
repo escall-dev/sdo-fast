@@ -118,48 +118,19 @@ try {
     $allApproved = ($counts['total'] > 0 && $counts['approved_count'] == $counts['total']);
     $autoAdvanced = false;
 
-    if ($allApproved) {
-        // Workflow v3: Auto-advance to Stage 4: Pending Signatories
-        $advanceStmt = $fastPDO->prepare("UPDATE transactions SET current_status = 'Pending Signatory Approval' WHERE id = :id");
-        $advanceStmt->execute(['id' => $transactionId]);
-
-        // Append Accounting Support's tax classification to the existing Mandatory Documentary Requirements Submitted log entry
-        $updateRemarksStmt = $fastPDO->prepare("
-            UPDATE transaction_status_logs 
-            SET remarks = CONCAT(COALESCE(remarks, ''), '\n', :review_remarks),
-                changed_by = :user_id
-            WHERE transaction_id = :tx_id AND new_status = 'Pending Accounting Support'
-            ORDER BY id DESC LIMIT 1
-        ");
-        $updateRemarksStmt->execute([
-            'review_remarks' => "Tax classification set to '{$taxType}'. All attachments approved. Routed to Signatories.",
-            'user_id' => $userId,
-            'tx_id' => $transactionId
-        ]);
-
-        AuditLogService::log(
-            $fastPDO, $userId,
-            "Tax classification set and transaction auto-advanced: {$transaction['tracking_number']}",
-            ['status' => 'Pending Accounting Support', 'tax_type' => null],
-            ['status' => 'Pending Signatories', 'tax_type' => $taxType]
-        );
-
-        $autoAdvanced = true;
-    } else {
-        // Just log the tax classification update
-        AuditLogService::log(
-            $fastPDO, $userId,
-            "Updated tax classification to '{$taxType}' for transaction: {$transaction['tracking_number']}",
-            ['tax_type' => null],
-            ['tax_type' => $taxType]
-        );
-    }
+    // Just log the tax classification update
+    AuditLogService::log(
+        $fastPDO, $userId,
+        "Updated tax classification to '{$taxType}' for transaction: {$transaction['tracking_number']}",
+        ['tax_type' => null],
+        ['tax_type' => $taxType]
+    );
 
     $fastPDO->commit();
 
     $message = "Tax classification updated to '{$taxType}' successfully.";
-    if ($autoAdvanced) {
-        $message .= " All attachments approved — transaction advanced to Pending Budget.";
+    if ($allApproved) {
+        $message .= " All attachments approved. You may now route the transaction to Signatories.";
     }
 
     echo json_encode([

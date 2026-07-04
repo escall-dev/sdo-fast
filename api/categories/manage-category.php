@@ -110,6 +110,7 @@ if ($action === 'save') {
     $docConditions = $_POST['doc_condition'] ?? [];
     $docSections = $_POST['doc_section'] ?? [];
     $docModes = $_POST['doc_modes_of_travel'] ?? [];
+    $docStages = $_POST['doc_stage'] ?? [];
 
     if (is_array($docTitles)) {
         foreach ($docTitles as $i => $title) {
@@ -133,6 +134,7 @@ if ($action === 'save') {
                 'section_title' => trim((string)($docSections[$i] ?? '')),
                 'sort_order' => $i,
                 'modes_of_travel' => $modes,
+                'stage' => isset($docStages[$i]) && in_array($docStages[$i], ['submission', 'liquidation']) ? $docStages[$i] : 'submission',
             ];
         }
     }

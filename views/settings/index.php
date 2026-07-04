@@ -83,6 +83,16 @@ if ($fastPDO !== null) {
                     <i class="bi bi-tags me-2"></i>Coverage Categories
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-semibold" id="sysconfigs-tab" data-bs-toggle="tab" data-bs-target="#sysconfigsContent" type="button" role="tab" aria-controls="sysconfigsContent" aria-selected="false">
+                    <i class="bi bi-gear me-2"></i>System Configurations
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-semibold" id="checklists-tab" data-bs-toggle="tab" data-bs-target="#checklistsContent" type="button" role="tab" aria-controls="checklistsContent" aria-selected="false">
+                    <i class="bi bi-card-checklist me-2"></i>Document Checklists
+                </button>
+            </li>
         </ul>
     </div>
 </div>
@@ -296,6 +306,116 @@ if ($fastPDO !== null) {
             </div>
         </div>
     </div>
+    
+    <!-- Tab 4: System Configurations -->
+    <div class="tab-pane fade" id="sysconfigsContent" role="tabpanel" aria-labelledby="sysconfigs-tab">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-8">
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0 fw-bold text-primary-dark">System Configurations</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted fs-8 mb-4">Manage global system behaviors and features.</p>
+                        
+                        <form id="sysconfigsForm" onsubmit="handleSysConfigsSubmit(event)">
+                            <div class="list-group mb-4">
+                                <!-- BIR 2307 Toggle -->
+                                <div class="list-group-item d-flex justify-content-between align-items-center p-3">
+                                    <div>
+                                        <h6 class="mb-1 fw-bold text-dark">Enable BIR 2307 Number Field</h6>
+                                        <p class="mb-0 fs-8 text-muted">When active, Accounting Support and Cashiers can input a BIR 2307 Number during document inspection and cash release.</p>
+                                    </div>
+                                    <div class="form-check form-switch fs-4 mb-0">
+                                        <input class="form-check-input cursor-pointer" type="checkbox" id="configEnableBirNumber" name="enable_bir_number" value="1">
+                                    </div>
+                                </div>
+                                <!-- Signatory Tracker Toggle -->
+                                <div class="list-group-item d-flex justify-content-between align-items-center p-3">
+                                    <div>
+                                        <h6 class="mb-1 fw-bold text-dark">Enable Approval & Signatures in Progress Tracker</h6>
+                                        <p class="mb-0 fs-8 text-muted">When active, the "Document for Approval and Signature" section will be displayed in the transaction Progress Tracker.</p>
+                                    </div>
+                                    <div class="form-check form-switch fs-4 mb-0">
+                                        <input class="form-check-input cursor-pointer" type="checkbox" id="configEnableSignatoryTracker" name="enable_signatory_tracker" value="1">
+                                    </div>
+                                </div>
+                                <!-- Add other system settings here in the future -->
+                            </div>
+
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary px-4">Save Configurations</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0 fw-bold text-primary-dark">Mode of Travel Configurations</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted fs-8 mb-4">Manage the modes of travel available for Travel Reimbursements.</p>
+                        
+                        <form id="travelModesForm" onsubmit="handleTravelModesSubmit(event)">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fs-8 fw-semibold text-muted mb-0">Travel Modes</label>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addTravelModeRow()">
+                                    <i class="bi bi-plus-lg me-1"></i>Add Mode
+                                </button>
+                            </div>
+                            <div id="travelModesContainer" class="d-flex flex-column gap-3 mb-4">
+                                <div class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm me-2" role="status"></div>Loading travel modes...</div>
+                            </div>
+
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary px-4">Save Travel Modes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 5: Document Checklists -->
+    <div class="tab-pane fade" id="checklistsContent" role="tabpanel" aria-labelledby="checklists-tab">
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                        <div>
+                            <h5 class="mb-0 fw-bold text-primary-dark">Document Checklists</h5>
+                            <span class="text-muted fs-8">Manage required documents for Submission and Liquidation stages.</span>
+                        </div>
+                        <button class="btn btn-primary btn-sm px-3" onclick="openChecklistModal()">
+                            <i class="bi bi-plus-lg me-1"></i> Add Checklist Item
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" id="checklistsTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4">Transaction Type</th>
+                                        <th>Category</th>
+                                        <th>Stage</th>
+                                        <th>Document Title</th>
+                                        <th>Required</th>
+                                        <th>Status</th>
+                                        <th class="text-end pe-4">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="7" class="text-center py-4 text-muted">Loading checklists...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- =========================================================================
@@ -415,15 +535,6 @@ if ($fastPDO !== null) {
                             <option value="">-- Select Mode to View/Edit Documents --</option>
                             <option value="UNASSIGNED">-- View Unassigned/Standalone Documents --</option>
                             <option value="GLOBAL">All Modes (documents checked for every mode)</option>
-                            <option value="Plane (airfare)">Plane (airfare)</option>
-                            <option value="Bus">Bus</option>
-                            <option value="Taxi/ride-hailing">Taxi/ride-hailing</option>
-                            <option value="Van rental">Van rental</option>
-                            <option value="Ferry/boat">Ferry/boat</option>
-                            <option value="Motorcycle/ride-hailing">Motorcycle/ride-hailing</option>
-                            <option value="Train (MRT, LRT, PNR)">Train (MRT, LRT, PNR)</option>
-                            <option value="Jeep">Jeep</option>
-                            <option value="Tricycle">Tricycle</option>
                         </select>
                     </div>
 
@@ -504,9 +615,266 @@ if ($fastPDO !== null) {
 </div>
 
 <!-- =========================================================================
+     MODAL: EDIT CHECKLIST DOCUMENT ITEM
+     ========================================================================= -->
+<div class="modal fade" id="editChecklistDocModal" tabindex="-1" aria-labelledby="editChecklistDocModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-primary-dark" id="editChecklistDocModalLabel">Checklist Document Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editChecklistDocForm" onsubmit="handleChecklistDocSubmit(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="chkDocId">
+                    <input type="hidden" id="chkOriginalCatId">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fs-8 fw-semibold">Coverage Category <span class="text-danger">*</span></label>
+                        <select id="chkCategoryId" class="form-select" required onchange="toggleChecklistModesOfTravel()">
+                            <option value="">-- Select Category --</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fs-8 fw-semibold">Document Title <span class="text-danger">*</span></label>
+                        <input type="text" id="chkTitle" class="form-control" maxlength="255" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fs-8 fw-semibold">Section (optional)</label>
+                        <input type="text" id="chkSectionTitle" class="form-control" maxlength="255" placeholder="e.g. Mandatory Documents">
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fs-8 fw-semibold">Stage</label>
+                            <select id="chkStage" class="form-select">
+                                <option value="submission">Submission</option>
+                                <option value="liquidation">Liquidation</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="chkIsRequired" checked>
+                                <label class="form-check-label fs-8 fw-semibold" for="chkIsRequired">Required</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fs-8 fw-semibold">Condition (optional)</label>
+                        <input type="text" id="chkConditionText" class="form-control" maxlength="255" placeholder="e.g. If amount exceeds 10,000">
+                    </div>
+
+                    <div class="mb-3 d-none" id="chkModesOfTravelContainer">
+                        <label class="form-label fs-8 fw-semibold">Modes of Travel</label>
+                        <div class="d-flex flex-wrap gap-2" id="chkModesOfTravelCheckboxGroup">
+                            <!-- Dynamically populated checkboxes -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">Save Checklist Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================================
      JAVASCRIPT SETTINGS SUBMIT & PERMISSIONS HANDLERS
      ========================================================================= -->
 <script>
+// System Configurations
+async function loadSystemConfigurations() {
+    try {
+        const response = await fetch('<?php echo env('APP_URL'); ?>/api/settings/manage-system-settings.php');
+        const data = await response.json();
+        if (data.success && data.settings) {
+            const birSetting = data.settings['enable_bir_number'];
+            if (birSetting) {
+                document.getElementById('configEnableBirNumber').checked = (birSetting.setting_value === '1');
+            }
+            const signatorySetting = data.settings['enable_signatory_tracker'];
+            if (signatorySetting) {
+                document.getElementById('configEnableSignatoryTracker').checked = (signatorySetting.setting_value === '1');
+            }
+        }
+    } catch (err) {
+        console.error('Failed to load system configs:', err);
+    }
+}
+
+async function handleSysConfigsSubmit(e) {
+    e.preventDefault();
+    API.showSpinner();
+    
+    const enableBir = document.getElementById('configEnableBirNumber').checked ? '1' : '0';
+    const enableSignatory = document.getElementById('configEnableSignatoryTracker').checked ? '1' : '0';
+    
+    try {
+        const response = await fetch('<?php echo env('APP_URL'); ?>/api/settings/manage-system-settings.php', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '<?php echo $_SESSION['csrf_token']; ?>'
+            },
+            body: JSON.stringify({
+                settings: {
+                    'enable_bir_number': enableBir,
+                    'enable_signatory_tracker': enableSignatory
+                }
+            })
+        });
+        
+        const data = await response.json();
+        API.hideSpinner();
+        
+        if (data.success) {
+            API.showToast(data.message, 'success');
+        } else {
+            API.showToast(data.message || 'Failed to save configurations.', 'danger');
+        }
+    } catch (err) {
+        API.hideSpinner();
+        API.showToast('Network error while saving configurations.', 'danger');
+    }
+}
+
+// Load configurations on initialization
+let globalTravelModes = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadSystemConfigurations();
+    loadTravelModes();
+});
+
+async function loadTravelModes() {
+    try {
+        const response = await fetch('<?php echo env('APP_URL'); ?>/api/settings/manage-travel-modes.php');
+        const data = await response.json();
+        
+        const container = document.getElementById('travelModesContainer');
+        container.innerHTML = '';
+        
+        if (data.success && data.modes && data.modes.length > 0) {
+            globalTravelModes = data.modes;
+            data.modes.forEach(mode => addTravelModeRow(mode));
+            updateAdminModeFilterDropdown();
+        } else {
+            globalTravelModes = [];
+            addTravelModeRow();
+            updateAdminModeFilterDropdown();
+        }
+    } catch (err) {
+        console.error('Failed to load travel modes:', err);
+        const container = document.getElementById('travelModesContainer');
+        container.innerHTML = '<div class="alert alert-danger p-2 fs-8 mb-0">Failed to load travel modes.</div>';
+    }
+}
+
+function addTravelModeRow(mode = {}) {
+    const container = document.getElementById('travelModesContainer');
+    const row = document.createElement('div');
+    row.className = 'p-3 border rounded-3 bg-light-subtle travel-mode-row';
+    const isChecked = mode.is_active !== undefined ? (mode.is_active == 1 ? 'checked' : '') : 'checked';
+    row.innerHTML = `
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-8">
+                <label class="form-label fs-9 fw-semibold text-muted">Mode Name</label>
+                <input type="text" name="mode_name[]" class="form-control mode-name-input" maxlength="100" required value="${escapeHtml(mode.name || '')}" placeholder="e.g. Plane (airfare)">
+            </div>
+            <div class="col-8 col-md-3">
+                <div class="form-check form-switch mt-2">
+                    <input class="form-check-input mode-active-input" type="checkbox" name="is_active[]" value="1" ${isChecked}>
+                    <label class="form-check-label fs-9 text-muted">Active</label>
+                </div>
+            </div>
+            <div class="col-4 col-md-1 text-end">
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeTravelModeRow(this)" title="Remove Mode">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    container.appendChild(row);
+}
+
+function removeTravelModeRow(button) {
+    const row = button.closest('.travel-mode-row');
+    if (!row) return;
+    const container = document.getElementById('travelModesContainer');
+    if (container.querySelectorAll('.travel-mode-row').length === 1) {
+        API.showToast('At least one travel mode must remain.', 'danger');
+        return;
+    }
+    row.remove();
+}
+
+async function handleTravelModesSubmit(e) {
+    e.preventDefault();
+    const rows = [...document.querySelectorAll('#travelModesContainer .travel-mode-row')];
+    if (rows.length === 0) {
+        API.showToast('Please add at least one travel mode.', 'danger');
+        return;
+    }
+
+    const seen = new Set();
+    for (const row of rows) {
+        const typeInput = row.querySelector('.mode-name-input');
+        const modeName = (typeInput?.value || '').trim().toLowerCase();
+        if (!modeName) {
+            API.showToast('Mode name is required for all rows.', 'danger');
+            typeInput?.focus();
+            return;
+        }
+        if (seen.has(modeName)) {
+            API.showToast('Mode names must be unique.', 'danger');
+            typeInput?.focus();
+            return;
+        }
+        seen.add(modeName);
+    }
+
+    const formData = new FormData();
+    const token = document.querySelector('#taxSettingsForm input[name="csrf_token"]');
+    if(token) {
+        formData.append('csrf_token', token.value);
+    } else {
+        formData.append('csrf_token', '<?php echo $_SESSION['csrf_token']; ?>');
+    }
+    
+    rows.forEach(row => {
+        formData.append('mode_name[]', row.querySelector('.mode-name-input').value.trim());
+        formData.append('is_active[]', row.querySelector('.mode-active-input').checked ? '1' : '0');
+    });
+
+    API.showSpinner();
+
+    try {
+        const response = await fetch('<?php echo env('APP_URL'); ?>/api/settings/manage-travel-modes.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        API.hideSpinner();
+
+        if (data.success) {
+            API.showToast(data.message, 'success');
+            loadTravelModes(); // Reload to refresh global array
+        } else {
+            API.showToast(data.message || 'Failed to save travel modes.', 'danger');
+        }
+    } catch (err) {
+        API.hideSpinner();
+        API.showToast('Network error while saving travel modes.', 'danger');
+    }
+}
+
+
 async function handleSettingsSubmit(e) {
     e.preventDefault();
     const form = document.getElementById('taxSettingsForm');
@@ -780,6 +1148,9 @@ async function loadCoverageCategories() {
         aliasOptions = data.alias_options || [];
         renderCategoryTable('Cash Advance', 'caCategoriesTableBody');
         renderCategoryTable('Reimbursement', 'reimbCategoriesTableBody');
+        if (typeof renderChecklistsTable === 'function') {
+            renderChecklistsTable();
+        }
     } catch (err) {
         console.error(err);
         API.showToast('Failed to load coverage categories.', 'danger');
@@ -841,7 +1212,7 @@ function filterAdminDocuments() {
         }
         
         const docRows = docRowsContainer.querySelectorAll('.doc-row');
-        const totalModes = 9; // Total number of mode checkboxes
+        const totalModes = globalTravelModes.filter(m => m.is_active == 1).length; // Total number of active mode checkboxes
         docRows.forEach(row => {
             const checkboxes = row.querySelectorAll('.doc-mode-cb:checked');
             const checkedModes = Array.from(checkboxes).map(cb => cb.value);
@@ -880,11 +1251,7 @@ function addDocumentRow(doc = {}, isNew = false) {
     const container = document.getElementById('documentRowsContainer');
     const row = document.createElement('div');
     row.className = 'border rounded-3 p-2 doc-row';
-    const allModes = [
-        'Plane (airfare)', 'Bus', 'Taxi/ride-hailing', 'Van rental',
-        'Ferry/boat', 'Motorcycle/ride-hailing', 'Train (MRT, LRT, PNR)',
-        'Jeep', 'Tricycle'
-    ];
+    const allModes = globalTravelModes.filter(m => m.is_active == 1).map(m => m.name);
     let selectedModes = doc.modes_of_travel || doc.modesOfTravel || [];
     
     const filterContainer = document.getElementById('adminModeFilterContainer');
@@ -919,15 +1286,22 @@ function addDocumentRow(doc = {}, isNew = false) {
 
     row.innerHTML = `
         <div class="row g-2 align-items-end">
-            <div class="col-md-5">
+            <div class="col-md-4">
                 <label class="form-label fs-9 text-muted">Document Title</label>
                 <input type="text" name="doc_title[]" class="form-control form-control-sm" value="${escapeHtml(doc.title || '')}" required>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label fs-9 text-muted">Section (optional)</label>
                 <input type="text" name="doc_section[]" class="form-control form-control-sm" value="${escapeHtml(doc.section_title || '')}">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
+                <label class="form-label fs-9 text-muted">Stage</label>
+                <select name="doc_stage[]" class="form-select form-select-sm">
+                    <option value="submission" ${doc.stage === 'submission' || !doc.stage ? 'selected' : ''}>Submission</option>
+                    <option value="liquidation" ${doc.stage === 'liquidation' ? 'selected' : ''}>Liquidation</option>
+                </select>
+            </div>
+            <div class="col-md-2">
                 <label class="form-label fs-9 text-muted">Condition</label>
                 <input type="text" name="doc_condition[]" class="form-control form-control-sm" value="${escapeHtml(doc.condition_text || '')}">
             </div>
@@ -1016,7 +1390,6 @@ function openCategoryModal(id = null) {
         toggleCategoryFieldConfig();
         setFieldConfigCheckboxes(cat.transaction_type, cat.field_config);
         resetDocumentRows(cat.documents || []);
-        filterAdminDocuments();
     } else {
         document.getElementById('editCategoryModalLabel').textContent = 'Add Coverage Category';
         const activePill = document.querySelector('#categoryTypeTabs .nav-link.active');
@@ -1025,9 +1398,34 @@ function openCategoryModal(id = null) {
         }
         toggleCategoryFieldConfig();
     }
+    
+    // Reset admin mode filter dropdown logic
+    document.getElementById('adminModeFilter').value = '';
+    filterAdminDocuments();
 
     const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('editCategoryModal'));
     modal.show();
+}
+
+function updateAdminModeFilterDropdown() {
+    const select = document.getElementById('adminModeFilter');
+    if (!select) return;
+    const existingVal = select.value;
+    select.innerHTML = `
+        <option value="">-- Select Mode to View/Edit Documents --</option>
+        <option value="UNASSIGNED">-- View Unassigned/Standalone Documents --</option>
+        <option value="GLOBAL">All Modes (documents checked for every mode)</option>
+    `;
+    globalTravelModes.forEach(mode => {
+        if (mode.is_active == 1) {
+            const opt = document.createElement('option');
+            opt.value = mode.name;
+            opt.textContent = mode.name;
+            select.appendChild(opt);
+        }
+    });
+    // Try to restore previous selection
+    select.value = existingVal;
 }
 
 async function handleCategorySave(e) {
@@ -1067,6 +1465,7 @@ async function handleCategorySave(e) {
         if (!title) return;
         formData.append('doc_title[]', title);
         formData.append('doc_section[]', row.querySelector('input[name="doc_section[]"]')?.value || '');
+        formData.append('doc_stage[]', row.querySelector('select[name="doc_stage[]"]')?.value || 'submission');
         formData.append('doc_condition[]', row.querySelector('input[name="doc_condition[]"]')?.value || '');
         formData.append('doc_required[]', row.querySelector('input[name="doc_required[]"]')?.checked ? '1' : '0');
 
@@ -1168,9 +1567,290 @@ async function deleteCoverageCategory(id) {
     }
 }
 
+// =========================================================================
+// DOCUMENT CHECKLISTS (TAB 5)
+// =========================================================================
+function renderChecklistsTable() {
+    const tbody = document.querySelector('#checklistsTable tbody');
+    if (!tbody) return;
+    
+    let rowsHtml = '';
+    let totalDocsCount = 0;
+    
+    coverageCategories.forEach(cat => {
+        const docs = cat.documents || [];
+        docs.forEach(doc => {
+            totalDocsCount++;
+            rowsHtml += `
+                <tr>
+                    <td class="ps-4 fw-semibold">${escapeHtml(cat.transaction_type)}</td>
+                    <td>${escapeHtml(cat.name)}</td>
+                    <td><span class="badge ${doc.stage === 'liquidation' ? 'bg-warning text-dark' : 'bg-info text-white'}">${escapeHtml(doc.stage || 'submission')}</span></td>
+                    <td>${escapeHtml(doc.title)}</td>
+                    <td>
+                        ${doc.is_required ? '<span class="badge bg-danger-subtle text-danger">Required</span>' : '<span class="badge bg-light text-secondary border">Optional</span>'}
+                    </td>
+                    <td>
+                        ${cat.is_active ? '<span class="badge bg-success-subtle text-success">Active</span>' : '<span class="badge bg-secondary-subtle text-secondary">Inactive</span>'}
+                    </td>
+                    <td class="text-end pe-4">
+                        <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="editChecklistDoc(${cat.id}, ${doc.id})">
+                            <i class="bi bi-pencil"></i> Edit
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteChecklistDoc(${cat.id}, ${doc.id})">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+    });
+    
+    if (totalDocsCount === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No checklist items found.</td></tr>';
+    } else {
+        tbody.innerHTML = rowsHtml;
+    }
+}
+
+function openChecklistModal(catId = null, docId = null) {
+    const form = document.getElementById('editChecklistDocForm');
+    form.reset();
+    
+    // Populate categories select
+    const select = document.getElementById('chkCategoryId');
+    select.innerHTML = '<option value="">-- Select Category --</option>';
+    coverageCategories.forEach(cat => {
+        if (cat.is_active) {
+            select.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.transaction_type)}: ${escapeHtml(cat.name)}</option>`;
+        }
+    });
+
+    // Populate travel modes checkboxes
+    const modesContainer = document.getElementById('chkModesOfTravelCheckboxGroup');
+    modesContainer.innerHTML = '';
+    const activeModes = globalTravelModes.filter(m => m.is_active == 1);
+    activeModes.forEach(mode => {
+        modesContainer.innerHTML += `
+            <div class="form-check form-check-inline mb-1">
+                <input class="form-check-input chk-mode-cb" type="checkbox" value="${escapeHtml(mode.name)}" id="chkMode_${escapeHtml(mode.name)}">
+                <label class="form-check-label fs-9" for="chkMode_${escapeHtml(mode.name)}">${escapeHtml(mode.name)}</label>
+            </div>
+        `;
+    });
+
+    document.getElementById('chkDocId').value = docId || '';
+    document.getElementById('chkOriginalCatId').value = catId || '';
+    document.getElementById('chkIsRequired').checked = true;
+    document.getElementById('chkModesOfTravelContainer').classList.add('d-none');
+
+    if (catId && docId) {
+        // Edit mode
+        document.getElementById('editChecklistDocModalLabel').innerText = 'Edit Checklist Document Item';
+        document.getElementById('chkCategoryId').value = catId;
+        document.getElementById('chkCategoryId').disabled = true;
+        
+        const cat = coverageCategories.find(c => c.id == catId);
+        if (cat) {
+            const doc = (cat.documents || []).find(d => d.id == docId);
+            if (doc) {
+                document.getElementById('chkTitle').value = doc.title || '';
+                document.getElementById('chkSectionTitle').value = doc.section_title || '';
+                document.getElementById('chkStage').value = doc.stage || 'submission';
+                document.getElementById('chkIsRequired').checked = doc.is_required !== 0;
+                document.getElementById('chkConditionText').value = doc.condition_text || '';
+                
+                // Show modes of travel if applicable
+                if (cat.transaction_type === 'Reimbursement' && cat.name === 'Travel') {
+                    document.getElementById('chkModesOfTravelContainer').classList.remove('d-none');
+                    const selectedModes = doc.modes_of_travel || [];
+                    selectedModes.forEach(m => {
+                        const cb = document.getElementById(`chkMode_${m}`);
+                        if (cb) cb.checked = true;
+                    });
+                }
+            }
+        }
+    } else {
+        // Add mode
+        document.getElementById('editChecklistDocModalLabel').innerText = 'Add Checklist Document Item';
+        document.getElementById('chkCategoryId').disabled = false;
+    }
+
+    const modalEl = document.getElementById('editChecklistDocModal');
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+}
+
+function toggleChecklistModesOfTravel() {
+    const catId = document.getElementById('chkCategoryId').value;
+    const container = document.getElementById('chkModesOfTravelContainer');
+    if (!catId) {
+        container.classList.add('d-none');
+        return;
+    }
+    const cat = coverageCategories.find(c => c.id == catId);
+    if (cat && cat.transaction_type === 'Reimbursement' && cat.name === 'Travel') {
+        container.classList.remove('d-none');
+    } else {
+        container.classList.add('d-none');
+    }
+}
+
+async function handleChecklistDocSubmit(e) {
+    e.preventDefault();
+    const docId = document.getElementById('chkDocId').value;
+    const catId = document.getElementById('chkCategoryId').value;
+    
+    if (!catId) {
+        API.showToast('Please select a category.', 'danger');
+        return;
+    }
+    
+    const cat = coverageCategories.find(c => c.id == catId);
+    if (!cat) {
+        API.showToast('Category not found.', 'danger');
+        return;
+    }
+    
+    // Prepare the document object
+    const title = document.getElementById('chkTitle').value.trim();
+    const sectionTitle = document.getElementById('chkSectionTitle').value.trim();
+    const stage = document.getElementById('chkStage').value;
+    const isRequired = document.getElementById('chkIsRequired').checked ? 1 : 0;
+    const conditionText = document.getElementById('chkConditionText').value.trim();
+    
+    let modesOfTravel = null;
+    if (cat.transaction_type === 'Reimbursement' && cat.name === 'Travel') {
+        const checkedCbs = document.querySelectorAll('#chkModesOfTravelCheckboxGroup .chk-mode-cb:checked');
+        modesOfTravel = Array.from(checkedCbs).map(cb => cb.value);
+    }
+    
+    const docObj = {
+        id: docId ? parseInt(docId) : null,
+        title,
+        section_title: sectionTitle,
+        stage,
+        is_required: isRequired,
+        condition_text: conditionText,
+        modes_of_travel: modesOfTravel
+    };
+
+    let updatedDocs = [...(cat.documents || [])];
+    if (docId) {
+        // Edit mode
+        const idx = updatedDocs.findIndex(d => d.id == docId);
+        if (idx !== -1) {
+            updatedDocs[idx] = docObj;
+        }
+    } else {
+        // Add mode
+        updatedDocs.push(docObj);
+    }
+
+    // Hide modal
+    bootstrap.Modal.getInstance(document.getElementById('editChecklistDocModal'))?.hide();
+    
+    // Save
+    await saveChecklistCategoryDocs(cat, updatedDocs);
+}
+
+async function saveChecklistCategoryDocs(cat, updatedDocs) {
+    const formData = new FormData();
+    formData.append('action', 'save');
+    formData.append('csrf_token', '<?php echo $_SESSION['csrf_token']; ?>');
+    formData.append('id', cat.id);
+    formData.append('transaction_type', cat.transaction_type);
+    formData.append('name', cat.name);
+    formData.append('display_label', cat.display_label || '');
+    formData.append('sort_order', cat.sort_order || '0');
+    formData.append('is_active', cat.is_active ? '1' : '0');
+    
+    if (cat.alias_category_id) {
+        formData.append('alias_category_id', cat.alias_category_id);
+        formData.append('alias_transaction_type', cat.alias_transaction_type || '');
+    }
+    formData.append('alias_note', cat.alias_note || '');
+    formData.append('alias_source_label', cat.alias_source_label || '');
+
+    // Field Config
+    const fieldKeys = cat.transaction_type === 'Cash Advance'
+        ? Object.keys(CA_FIELD_LABELS)
+        : Object.keys(REIMB_FIELD_LABELS);
+    fieldKeys.forEach(key => {
+        const val = cat.field_config && cat.field_config[key] ? '1' : '0';
+        formData.append(`field_config[${key}]`, val);
+    });
+
+    // Documents
+    updatedDocs.forEach((doc, idx) => {
+        formData.append('doc_title[]', doc.title.trim());
+        formData.append('doc_section[]', doc.section_title || '');
+        formData.append('doc_stage[]', doc.stage || 'submission');
+        formData.append('doc_condition[]', doc.condition_text || '');
+        formData.append('doc_required[]', doc.is_required ? '1' : '0');
+        
+        let modes = '';
+        if (doc.modes_of_travel && doc.modes_of_travel.length > 0) {
+            modes = JSON.stringify(doc.modes_of_travel);
+        }
+        formData.append('doc_modes_of_travel[]', modes);
+    });
+
+    API.showSpinner();
+    try {
+        const response = await fetch('<?php echo env('APP_URL'); ?>/api/categories/manage-category.php', {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': '<?php echo $_SESSION['csrf_token']; ?>' },
+            body: formData
+        });
+        const data = await response.json();
+        if (data.success) {
+            API.showToast(data.message, 'success');
+            await loadCoverageCategories();
+        } else {
+            API.showToast(data.message || 'Failed to save checklist item.', 'danger');
+        }
+    } catch (err) {
+        console.error(err);
+        API.showToast('Network error while saving checklist item.', 'danger');
+    } finally {
+        API.hideSpinner();
+    }
+}
+
+async function deleteChecklistDoc(catId, docId) {
+    const cat = coverageCategories.find(c => c.id == catId);
+    if (!cat) return;
+    
+    const doc = (cat.documents || []).find(d => d.id == docId);
+    if (!doc) return;
+    
+    const confirmed = await API.confirmAction(
+        'Delete Checklist Item?',
+        `Are you sure you want to delete "${doc.title}"?`,
+        'Yes, delete',
+        'danger'
+    );
+    
+    if (!confirmed) return;
+    
+    const updatedDocs = (cat.documents || []).filter(d => d.id != docId);
+    await saveChecklistCategoryDocs(cat, updatedDocs);
+}
+
+// Bind to window for HTML inline event handlers
+window.openChecklistModal = openChecklistModal;
+window.editChecklistDoc = openChecklistModal;
+window.deleteChecklistDoc = deleteChecklistDoc;
+window.toggleChecklistModesOfTravel = toggleChecklistModesOfTravel;
+window.handleChecklistDocSubmit = handleChecklistDocSubmit;
+
 document.getElementById('categories-tab')?.addEventListener('shown.bs.tab', loadCoverageCategories);
+document.getElementById('checklists-tab')?.addEventListener('shown.bs.tab', loadCoverageCategories);
 document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('categoriesContent')?.classList.contains('active')) {
+    if (document.getElementById('categoriesContent')?.classList.contains('active') ||
+        document.getElementById('checklistsContent')?.classList.contains('active')) {
         loadCoverageCategories();
     }
 });

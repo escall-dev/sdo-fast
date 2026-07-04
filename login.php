@@ -150,6 +150,15 @@ if (empty($_SESSION['csrf_token'])) {
             object-fit: cover;
             border: 3px solid rgba(255, 255, 255, 0.1);
         }
+        .form-check-input {
+            background-color: #070c17;
+            border: 1px solid #121b2d;
+            cursor: pointer;
+        }
+        .form-check-input:checked {
+            background-color: #214da2;
+            border-color: #214da2;
+        }
         .page-footer {
             margin-top: 1.5rem;
             text-align: center;
@@ -211,8 +220,12 @@ if (empty($_SESSION['csrf_token'])) {
                 </div>
             </div>
 
-            <!-- Forgot Password Link -->
-            <div class="d-flex justify-content-end mb-4">
+            <!-- Remember Me & Forgot Password -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="form-check">
+                    <input type="checkbox" name="remember" class="form-check-input" id="rememberCheck">
+                    <label class="form-check-label fs-8 text-accent-link" for="rememberCheck">Remember me</label>
+                </div>
                 <a href="<?php echo env('APP_URL'); ?>/forgot-password.php" class="text-decoration-none fs-8 text-accent-link fw-semibold">
                     <i class="bi bi-key-fill me-1"></i>Forgot Password?
                 </a>

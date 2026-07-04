@@ -258,6 +258,9 @@ INSERT INTO `integration_tokens` (`system_name`, `token_hash`, `status`) VALUES
 ('SDO-FAST', 'd6ee6e99996b79758e578c772eaef2d973c1d4a8ec9d58be3a105c31750e50fc', 'active')
 ON DUPLICATE KEY UPDATE `token_hash` = VALUES(`token_hash`);
 
--- P. procurement_checklist column for document_details (SDO-BACtrack integration)
+-- P. remember_token column for users (remember-me feature)
+ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `remember_token` VARCHAR(255) DEFAULT NULL AFTER `password`;
+
+-- Q. procurement_checklist column for document_details (SDO-BACtrack integration)
 -- Stores the BAC procurement checklist items as a JSON object
 ALTER TABLE `document_details` ADD COLUMN IF NOT EXISTS `procurement_checklist` JSON DEFAULT NULL AFTER `attachment_path`;

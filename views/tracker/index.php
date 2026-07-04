@@ -258,6 +258,18 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                 $stmtSt = $fastPDO->prepare("SELECT st.*, u.full_name as completed_by_name FROM signatory_tasks st LEFT JOIN users u ON st.completed_by = u.id WHERE st.transaction_id = ?");
                 $stmtSt->execute([$transaction['id']]);
                 $signatoryTasksDetails = $stmtSt->fetchAll(PDO::FETCH_ASSOC);
+
+                // Fetch system settings
+                $systemSettings = [];
+                try {
+                    $stmtSys = $fastPDO->query("SELECT setting_key, setting_value FROM system_settings");
+                    while ($sysRow = $stmtSys->fetch(PDO::FETCH_ASSOC)) {
+                        $systemSettings[$sysRow['setting_key']] = $sysRow['setting_value'];
+                    }
+                } catch (PDOException $e) {
+                    // Ignore
+                }
+                $enableSignatoryTracker = (!isset($systemSettings['enable_signatory_tracker']) || $systemSettings['enable_signatory_tracker'] === '1');
             }
         } else {
             $errorMsg = "No transaction record matches tracking number: '" . htmlspecialchars($searchQuery) . "'.";
@@ -315,7 +327,7 @@ if (!empty($searchQuery) && $fastPDO !== null) {
 
         <?php if ($transaction): 
             // Determine active step index to highlight timeline
-            $statusList = ['Pending Budget', 'Pending Requestor', 'Pending Accounting Support', 'Pending Signatory Approval', 'For Payment', 'Released'];
+            $statusList = ['Pending Budget', 'Pending Requestor', 'Pending Accounting Support', 'Pending Signatory Approval', 'For Payment', 'Released', 'Pending Liquidation', 'Liquidated'];
             if ($transaction['current_status'] === 'Rejected') {
                 $statusList[count($statusList) - 1] = 'Rejected';
             } elseif ($transaction['current_status'] === 'Returned') {
@@ -331,6 +343,8 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                 'Pending Signatory Approval' => 'Document for Approval and Signature',
                 'For Payment' => 'Release of Payment',
                 'Released' => 'Payment Released',
+                'Pending Liquidation' => 'Pending Liquidation',
+                'Liquidated' => 'Liquidated',
                 'Rejected' => 'Disapproved',
                 'Returned' => 'Returned to Requestor'
             ];
@@ -346,17 +360,21 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                     <h5 class="mb-0 fw-bold text-primary-dark">Tracking Details - <?php echo htmlspecialchars($transaction['tracking_number']); ?></h5>
                     <div class="d-flex align-items-center gap-2">
                         <?php 
-                        // Workflow v3: Show resubmit button if at Pending Requestor and user is requestor
+                        // Workflow v3: Show resubmit button if at Pending Requestor or Pending Liquidation and user is requestor
                         $currentUserId = $_SESSION['user_id'] ?? 0;
-                        if ($transaction['current_status'] === 'Pending Requestor' && (int)$transaction['requestor_id'] === (int)$currentUserId):
+                        if (in_array($transaction['current_status'], ['Pending Requestor', 'Pending Liquidation']) && (int)$transaction['requestor_id'] === (int)$currentUserId):
                         ?>
                             <a href="<?php echo env('APP_URL'); ?>/views/transactions/resubmit-documents.php?id=<?php echo $transaction['id']; ?>" class="btn btn-success btn-sm px-3">
-                                <i class="bi bi-upload me-1"></i> Submit Mandatory Documentary Requirements
+                                <i class="bi bi-upload me-1"></i> Submit <?php echo $transaction['current_status'] === 'Pending Liquidation' ? 'Liquidation' : 'Mandatory Documentary'; ?> Requirements
                             </a>
                         <?php endif; ?>
                         <span class="badge badge-status <?php 
                             switch($currentStatus) {
-                                case 'Released': echo 'bg-success'; break;
+                                case 'Released': 
+                                case 'Liquidated': 
+                                    echo 'bg-success'; break;
+                                case 'Pending Liquidation': 
+                                    echo 'bg-warning text-dark'; break;
                                 case 'Rejected': echo 'bg-danger'; break;
                                 case 'Returned': echo 'bg-dark'; break;
                                 default: echo 'bg-warning text-dark'; break;
@@ -408,10 +426,12 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                             <span class="text-muted d-block text-uppercase fw-semibold">Disbursement Voucher (DV) No.</span>
                             <strong class="text-dark"><?php echo htmlspecialchars($transaction['dv_number'] ?: 'Not Assigned'); ?></strong>
                         </div>
+                        <?php if (!empty($transaction['bir_2307_number'])): ?>
                         <div class="col-12 col-sm-6 col-md-4">
                             <span class="text-muted d-block text-uppercase fw-semibold">BIR 2307 Ref No.</span>
-                            <strong class="text-dark"><?php echo htmlspecialchars($transaction['bir_2307_number'] ?: 'Not Assigned'); ?></strong>
+                            <strong class="text-dark"><?php echo htmlspecialchars($transaction['bir_2307_number']); ?></strong>
                         </div>
+                        <?php endif; ?>
                         <div class="col-12 col-sm-6 col-md-4">
                             <span class="text-muted d-block text-uppercase fw-semibold">Supporting Attachment(s)</span>
                             <?php 
@@ -502,16 +522,6 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                                         <?php endif; ?>
                                     </div>
 
-                                    <?php $caChecklistHtml = renderDocumentChecklistHtml('Cash Advance', $caCat); ?>
-                                    <?php if ($caChecklistHtml !== ''): ?>
-                                        <div class="mt-4 pt-3 border-top">
-                                            <h6 class="fw-bold text-primary-dark mb-2 fs-8 d-flex align-items-center gap-2">
-                                                <i class="bi bi-clipboard2-check text-primary"></i>
-                                                <span>Documents Checklist (DM 214)</span>
-                                            </h6>
-                                            <?php echo $caChecklistHtml; ?>
-                                        </div>
-                                    <?php endif; ?>
                                 </div>
                             </div>
                         <?php endif; ?>
@@ -643,19 +653,6 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                                         <?php endif; ?>
                                     </div>
 
-                                    <?php 
-                                    $reimbLookupCat = ($reimbCat === 'Communications Allowance') ? 'Communication Load' : $reimbCat;
-                                    $reimbChecklistHtml = renderDocumentChecklistHtml('Reimbursement', $reimbLookupCat); 
-                                    ?>
-                                    <?php if ($reimbChecklistHtml !== ''): ?>
-                                        <div class="mt-4 pt-3 border-top">
-                                            <h6 class="fw-bold text-primary-dark mb-2 fs-8 d-flex align-items-center gap-2">
-                                                <i class="bi bi-clipboard2-check text-primary"></i>
-                                                <span>Documents Checklist (DM 214)</span>
-                                            </h6>
-                                            <?php echo $reimbChecklistHtml; ?>
-                                        </div>
-                                    <?php endif; ?>
                                 </div>
                             </div>
                         <?php endif; ?>
@@ -728,7 +725,7 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                         <?php endif; ?>
 
                         <!-- Signatory Document Verification (Workflow v3) -->
-                        <?php if (!empty($signatoryTasksDetails)): ?>
+                        <?php if (!empty($signatoryTasksDetails) && $enableSignatoryTracker): ?>
                             <div class="col-12 mt-3">
                                 <div class="p-3 rounded-3 bg-white border">
                                     <h6 class="fw-bold text-primary-dark mb-3 fs-8 text-uppercase"><i class="bi bi-check2-square me-1 text-primary"></i>Document for Approval and Signature</h6>
@@ -980,6 +977,16 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                                 'subtitle' => 'Disbursement check or payment released by Cashier',
                                 'role' => 'Cashier'
                             ],
+                            'Pending Liquidation' => [
+                                'title' => 'Pending Liquidation',
+                                'subtitle' => 'Cash advance requires liquidation within 60 days',
+                                'role' => 'Accounting Support'
+                            ],
+                            'Liquidated' => [
+                                'title' => 'Liquidated',
+                                'subtitle' => 'Cash advance liquidation requirements met and approved',
+                                'role' => 'Accounting Support'
+                            ],
                             'Rejected' => [
                                 'title' => 'Transaction Disapproved',
                                 'subtitle' => 'Request denied by audit staff',
@@ -1008,9 +1015,12 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                             $nodeBg = 'var(--color-primary)';
                             $nodeIcon = '<i class="bi bi-check text-white"></i>';
                             
-                            if ($logStatus === 'Released') {
+                            if ($logStatus === 'Released' || $logStatus === 'Liquidated') {
                                 $nodeBg = '#28a745';
                                 $nodeIcon = '<i class="bi bi-check2-all text-white fs-5"></i>';
+                            } elseif ($logStatus === 'Pending Liquidation') {
+                                $nodeBg = '#ffc107';
+                                $nodeIcon = '<i class="bi bi-hourglass-split text-dark fs-5"></i>';
                             } elseif ($logStatus === 'Rejected') {
                                 $nodeBg = '#dc3545';
                                 $nodeIcon = '<i class="bi bi-x text-white fs-5"></i>';

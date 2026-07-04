@@ -66,12 +66,13 @@ if (!$transaction) {
     exit;
 }
 
-// Only allow at Stage 2 (Pending Requestor — awaiting document submission)
-if ($transaction['current_status'] !== 'Pending Requestor') {
+// Only allow at Stage 2 (Pending Requestor) or Liquidation (Pending Liquidation)
+if (!in_array($transaction['current_status'], ['Pending Requestor', 'Pending Liquidation'])) {
     http_response_code(422);
-    echo json_encode(['success' => false, 'message' => 'Document submission is only allowed after budget approval. Current status: ' . $transaction['current_status']]);
+    echo json_encode(['success' => false, 'message' => 'Document submission is only allowed after budget approval or during liquidation. Current status: ' . $transaction['current_status']]);
     exit;
 }
+$isLiquidation = ($transaction['current_status'] === 'Pending Liquidation');
 
 // Only the requestor (or Super Admin) can submit documents
 $isRequestor = ((int)$transaction['requestor_id'] === (int)$userId);
@@ -188,7 +189,8 @@ if ($type === 'Reimbursement' && $reimbCategory !== '') {
 $allUploadedFiles = [];
 
 // Validate required uploads and process files
-if ($type === 'Cash Advance') {
+if (!$isLiquidation) {
+    if ($type === 'Cash Advance') {
     if (!empty($caFieldConfig['taItinerary'])) {
         if (!isset($_FILES['approved_ta']) || $_FILES['approved_ta']['error'] === UPLOAD_ERR_NO_FILE) {
             http_response_code(422);
@@ -297,6 +299,7 @@ if ($type === 'Cash Advance') {
             $allUploadedFiles[] = ['path' => $path, 'label' => 'Utility Bill / Proof'];
             $updReimb = $fastPDO->prepare("UPDATE reimbursement_details SET bill_proof_path = :bp WHERE transaction_id = :id");
             $updReimb->execute(['bp' => $path, 'id' => $transactionId]);
+        }
         }
     }
 }
@@ -522,28 +525,31 @@ try {
 
     $fastPDO->beginTransaction();
 
-    // 1. Advance status to Pending Accounting Support (Document Inspection)
-    $newStatus = 'Pending Accounting Support';
+    // 1. Determine target status based on context
+    //    - Liquidation upload: stay at Pending Liquidation so Accounting Support can review
+    //    - Normal submission: advance to Pending Accounting Support for Document Inspection
+    $newStatus = $isLiquidation ? 'Pending Liquidation' : 'Pending Accounting Support';
     $updateStmt = $fastPDO->prepare("UPDATE transactions SET current_status = :status, remarks = :remarks WHERE id = :id");
     $updateStmt->execute([
         'status' => $newStatus,
-        'remarks' => $remarks ?: 'Mandatory Documentary Requirements submitted.',
+        'remarks' => $remarks ?: ($isLiquidation ? 'Liquidation Documentary Requirements submitted.' : 'Mandatory Documentary Requirements submitted.'),
         'id' => $transactionId
     ]);
 
     // 2. Record status log
     $logStmt = $fastPDO->prepare("
         INSERT INTO transaction_status_logs (transaction_id, previous_status, new_status, changed_by, remarks)
-        VALUES (:tx_id, 'Pending Requestor', :new_status, :user_id, :remarks)
+        VALUES (:tx_id, :prev_status, :new_status, :user_id, :remarks)
     ");
     $logStmt->execute([
         'tx_id' => $transactionId,
+        'prev_status' => $transaction['current_status'],
         'new_status' => $newStatus,
         'user_id' => $userId,
-        'remarks' => 'Mandatory Documentary Requirements submitted by requestor. ' . count($allUploadedFiles) . ' file(s) uploaded. ' . $remarks
+        'remarks' => ($isLiquidation ? 'Liquidation' : 'Mandatory') . ' Documentary Requirements submitted by requestor. ' . count($allUploadedFiles) . ' file(s) uploaded. ' . $remarks
     ]);
 
-    // 3. Seed attachment_approvals for Stage 4 (Document Inspection)
+    // 3. Seed attachment_approvals for Document Inspection (both normal and liquidation)
     $insertApproval = $fastPDO->prepare("
         INSERT INTO attachment_approvals (transaction_id, file_path, file_label, status)
         VALUES (:tx_id, :file_path, :file_label, 'pending')
@@ -574,13 +580,13 @@ try {
 
     AuditLogService::log($fastPDO, $userId,
         "Documents submitted for: {$transaction['tracking_number']}",
-        ['status' => 'Pending Requestor'],
+        ['status' => $transaction['current_status']],
         ['status' => $newStatus, 'files' => count($allUploadedFiles)]
     );
 
     echo json_encode([
         'success' => true,
-        'message' => 'Mandatory Documentary Requirements submitted successfully. Transaction routed to Accounting Support for Document Inspection.',
+        'message' => ($isLiquidation ? 'Liquidation' : 'Mandatory') . ' Documentary Requirements submitted successfully. ' . ($isLiquidation ? 'Transaction remains pending liquidation for Accounting Support review.' : 'Transaction routed to Accounting Support for Document Inspection.'),
         'tracking_number' => $transaction['tracking_number'],
         'new_status' => $newStatus,
         'files_uploaded' => count($allUploadedFiles)

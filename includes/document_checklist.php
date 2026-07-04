@@ -50,7 +50,7 @@ function resolveDocumentChecklist(string $transactionType, string $category): ar
     }
 }
 
-function getDocumentChecklistsForJs(): string
+function getDocumentChecklistsForJs(string $stage = 'submission'): string
 {
     global $fastPDO;
 
@@ -59,7 +59,7 @@ function getDocumentChecklistsForJs(): string
     }
 
     try {
-        $checklists = CoverageCategoryService::getChecklistConfig($fastPDO);
+        $checklists = CoverageCategoryService::getChecklistConfig($fastPDO, $stage);
         $aliases = CoverageCategoryService::getAliasesForJs($fastPDO);
         return json_encode(['checklists' => $checklists, 'aliases' => $aliases], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP);
     } catch (Throwable $e) {

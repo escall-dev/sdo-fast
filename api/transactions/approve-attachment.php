@@ -61,9 +61,9 @@ try {
         exit;
     }
 
-    if ($transaction['current_status'] !== 'Pending Accounting Support') {
+    if (!in_array($transaction['current_status'], ['Pending Accounting Support', 'Pending Liquidation'])) {
         http_response_code(422);
-        echo json_encode(['success' => false, 'message' => 'Transaction is not at Stage 3 (Pending Accounting Support — Document Inspection). Current status: ' . $transaction['current_status']]);
+        echo json_encode(['success' => false, 'message' => 'Attachment review is only allowed during Document Inspection or Liquidation review. Current status: ' . $transaction['current_status']]);
         exit;
     }
 
@@ -113,42 +113,13 @@ try {
     $allApproved = ($counts['total'] > 0 && $counts['approved_count'] == $counts['total']);
     $autoAdvanced = false;
 
-    if ($allApproved && !empty($taxType)) {
-        // Workflow v3: Auto-advance to Stage 4: Pending Signatories
-        $advanceStmt = $fastPDO->prepare("UPDATE transactions SET current_status = 'Pending Signatory Approval' WHERE id = :id");
-        $advanceStmt->execute(['id' => $transactionId]);
-
-        // Append Accounting Support's review to the existing Mandatory Documentary Requirements Submitted log entry
-        $updateRemarksStmt = $fastPDO->prepare("
-            UPDATE transaction_status_logs 
-            SET remarks = CONCAT(COALESCE(remarks, ''), '\n', :review_remarks),
-                changed_by = :user_id
-            WHERE transaction_id = :tx_id AND new_status = 'Pending Accounting Support'
-            ORDER BY id DESC LIMIT 1
-        ");
-        $updateRemarksStmt->execute([
-            'review_remarks' => 'All attachments approved and tax classification set. Routed to Signatories.',
-            'user_id' => $userId,
-            'tx_id' => $transactionId
-        ]);
-
-        AuditLogService::log(
-            $fastPDO, $userId,
-            "All attachments approved and tax classification set, transaction auto-advanced: {$transaction['tracking_number']}",
-            ['status' => 'Pending Accounting Support'],
-            ['status' => 'Pending Signatories']
-        );
-
-        $autoAdvanced = true;
-    }
-
     $fastPDO->commit();
 
     $message = "Attachment " . ($action === 'approve' ? 'approved' : 'rejected') . " successfully.";
-    if ($autoAdvanced) {
-        $message .= " All attachments approved and tax classification set — transaction forwarded to Signatories.";
-    } elseif ($allApproved && empty($taxType)) {
+    if ($allApproved && empty($taxType)) {
         $message .= " All attachments approved, but you must select a Tax Classification before the transaction can proceed to the Signatories stage.";
+    } elseif ($allApproved && !empty($taxType)) {
+        $message .= " All attachments approved. You may now route the transaction to Signatories.";
     }
 
     echo json_encode([

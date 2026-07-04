@@ -74,6 +74,8 @@ $allowedStatuses = [
     'Pending Signatory Approval',  // Stage 4 — Document for Approval and Signature
     'For Payment',                 // Stage 5 — awaiting Cashier release
     'Released',                    // Stage 6 — Payment Released
+    'Pending Liquidation',         // Stage 7 — Liquidation tracking (Cash Advance only)
+    'Liquidated',                  // Stage 8 — Liquidation complete
     'Rejected',
     'Returned'
 ];
@@ -113,6 +115,13 @@ try {
     } elseif ($userRole === 'Accounting Staff' || $userPosition === 'Accounting Support') {
         // Stage 3 (Pending Accounting Support): Document Inspection → forward to Signatory Approval, return, reject
         if ($oldStatus === 'Pending Accounting Support' && in_array($newStatus, ['Pending Signatory Approval', 'Returned', 'Rejected'])) {
+            $authorized = true;
+        }
+        // Liquidation Stage: Accounting Support marks Cash Advance as Pending Liquidation from Released, and then Liquidated
+        if ($oldStatus === 'Released' && $newStatus === 'Pending Liquidation') {
+            $authorized = true;
+        }
+        if ($oldStatus === 'Pending Liquidation' && in_array($newStatus, ['Liquidated', 'Returned', 'Rejected'])) {
             $authorized = true;
         }
         // Can return/reject at any stage they have visibility of

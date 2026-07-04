@@ -111,6 +111,22 @@ if ($type === 'Cash Advance') {
             exit;
         }
     }
+    
+    // Liquidation Check: Block new Cash Advance submissions if there is a pending liquidation
+    $pendingLiqStmt = $fastPDO->prepare("
+        SELECT tracking_number FROM transactions 
+        WHERE requestor_id = :userId 
+        AND transaction_type = 'Cash Advance' 
+        AND current_status = 'Pending Liquidation'
+        LIMIT 1
+    ");
+    $pendingLiqStmt->execute(['userId' => $userId]);
+    $pendingLiq = $pendingLiqStmt->fetch(PDO::FETCH_ASSOC);
+    if ($pendingLiq) {
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => 'You cannot submit a new Cash Advance request because you still have an unsettled Cash Advance (' . $pendingLiq['tracking_number'] . '). This previous Cash Advance needs to be liquidated (settled with official receipts and documents) before you can request a new one. Please go to your transactions, find the unsettled one, and complete the liquidation process first.']);
+        exit;
+    }
 }
 
 // Reimbursement validations
@@ -152,11 +168,13 @@ if ($type === 'Reimbursement') {
     }
 
     // Mode of Travel is required for Travel category
-    $allowedModes = [
-        'Plane (airfare)', 'Bus', 'Taxi/ride-hailing', 'Van rental',
-        'Ferry/boat', 'Motorcycle/ride-hailing', 'Train (MRT, LRT, PNR)',
-        'Jeep', 'Tricycle'
-    ];
+    $allowedModes = [];
+    try {
+        $modesStmt = $fastPDO->query("SELECT name FROM modes_of_travel WHERE is_active = 1");
+        $allowedModes = $modesStmt->fetchAll(PDO::FETCH_COLUMN);
+    } catch (PDOException $e) {
+        error_log("Modes of travel retrieval failure: " . $e->getMessage());
+    }
     if ($reimbursementCategory === 'Travel') {
         if (empty($modeOfTravel) || !in_array($modeOfTravel, $allowedModes)) {
             http_response_code(422);

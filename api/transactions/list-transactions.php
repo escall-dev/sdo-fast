@@ -128,7 +128,8 @@ try {
         SELECT t.*, u.full_name as requestor_name, u.email as requestor_email, 
                d.dv_number, d.bir_2307_number, d.tax_type,
                cad.category as cash_advance_category, {$fundTrackingSelect},
-               rd.category as reimbursement_category
+               rd.category as reimbursement_category,
+               (SELECT created_at FROM transaction_status_logs WHERE transaction_id = t.id AND new_status = 'Pending Liquidation' ORDER BY id DESC LIMIT 1) as liquidation_start_date
         FROM transactions t
         LEFT JOIN users u ON t.requestor_id = u.id
         LEFT JOIN document_details d ON t.id = d.transaction_id

@@ -43,6 +43,16 @@ if (empty($userMessage)) {
     exit;
 }
 
+// Check if message contains image/file content (not supported)
+if (preg_match('/data:\s*image\//i', $userMessage) || preg_match('/^https?:\/\/\S+\.(png|jpg|jpeg|gif|webp|bmp|svg)/i', $userMessage)) {
+    http_response_code(400);
+    echo json_encode([
+        'success' => false,
+        'message' => 'This assistant can only read text messages. Please type your question instead of sending an image or file.'
+    ]);
+    exit;
+}
+
 $userId = $_SESSION['user_id'];
 
 // 1. Session Rate Limiting Check (Limit to 1 message every 2 seconds to prevent spam)

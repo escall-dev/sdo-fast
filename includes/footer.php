@@ -93,6 +93,73 @@
 <script src="<?php echo env('APP_URL'); ?>/assets/js/api.js?v=<?php echo time(); ?>"></script>
 <script src="<?php echo env('APP_URL'); ?>/assets/js/main.js?v=<?php echo time(); ?>"></script>
 
+<!-- Session Timeout Warning -->
+<?php if (isLoggedIn()): ?>
+<script>
+(function() {
+    var timeoutLimit = <?php echo SESSION_TIMEOUT_LIMIT; ?>;
+    var warningAt = (timeoutLimit - 60) * 1000;
+    var warningTimer, countdownInterval;
+
+    function showTimeoutWarning() {
+        var secondsLeft = 60;
+        Swal.fire({
+            title: 'Session Expiring Soon',
+            html: 'Your session will expire in <strong id="countdown">60</strong> seconds due to inactivity.',
+            icon: 'warning',
+            showConfirmButton: true,
+            confirmButtonText: 'Stay Logged In',
+            showCancelButton: true,
+            cancelButtonText: 'Logout',
+            confirmButtonColor: '#214da2',
+            cancelButtonColor: '#6c757d',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: function() {
+                countdownInterval = setInterval(function() {
+                    secondsLeft--;
+                    var el = document.getElementById('countdown');
+                    if (el) el.textContent = secondsLeft;
+                    if (secondsLeft <= 0) {
+                        clearInterval(countdownInterval);
+                        Swal.close();
+                        window.location.href = '<?php echo env('APP_URL'); ?>/api/auth/logout.php';
+                    }
+                }, 1000);
+            }
+        }).then(function(result) {
+            clearInterval(countdownInterval);
+            if (result.isConfirmed) {
+                fetch('<?php echo env('APP_URL'); ?>/api/auth/ping.php')
+                    .then(function(r) {
+                        if (!r.ok) throw new Error();
+                        return r.json();
+                    })
+                    .then(function(d) {
+                        if (d.success) window.location.reload();
+                    })
+                    .catch(function() {
+                        window.location.href = '<?php echo env('APP_URL'); ?>/api/auth/logout.php';
+                    });
+            } else {
+                window.location.href = '<?php echo env('APP_URL'); ?>/api/auth/logout.php';
+            }
+        });
+    }
+
+    function resetWarningTimer() {
+        if (warningTimer) clearTimeout(warningTimer);
+        warningTimer = setTimeout(showTimeoutWarning, warningAt);
+    }
+
+    document.addEventListener('click', resetWarningTimer);
+    document.addEventListener('keydown', resetWarningTimer);
+
+    warningTimer = setTimeout(showTimeoutWarning, warningAt);
+})();
+</script>
+<?php endif; ?>
+
 <!-- Inline Chatbot Actions -->
 <?php if (isLoggedIn()): ?>
 <script>

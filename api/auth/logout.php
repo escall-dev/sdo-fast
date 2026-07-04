@@ -11,7 +11,12 @@ if (isLoggedIn() && $fastPDO !== null) {
     try {
         $userId = $_SESSION['user_id'];
         $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-        
+
+        // Clear remember-me token
+        $upd = $fastPDO->prepare("UPDATE users SET remember_token = NULL WHERE id = :id");
+        $upd->execute(['id' => $userId]);
+        setcookie('remember_me', '', time() - 3600, '/');
+
         // Log logout action in activity_logs
         $actStmt = $fastPDO->prepare("
             INSERT INTO activity_logs (user_id, activity, ip_address) 

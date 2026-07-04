@@ -115,15 +115,22 @@ class CoverageCategoryService
         return self::mapCategoryRow($row, $docs);
     }
 
-    public static function getDocumentsForCategory(PDO $pdo, int $categoryId): array
+    public static function getDocumentsForCategory(PDO $pdo, int $categoryId, ?string $stage = 'submission'): array
     {
-        $stmt = $pdo->prepare("
-            SELECT id, section_title, sort_order, title, is_required, condition_text, modes_of_travel
+        $sql = "
+            SELECT id, section_title, sort_order, title, is_required, condition_text, modes_of_travel, stage
             FROM coverage_category_documents
-            WHERE category_id = :category_id
-            ORDER BY COALESCE(section_title, ''), sort_order ASC, id ASC
-        ");
-        $stmt->execute(['category_id' => $categoryId]);
+            WHERE category_id = :category_id";
+        
+        $params = ['category_id' => $categoryId];
+        if ($stage !== null) {
+            $sql .= " AND stage = :stage";
+            $params['stage'] = $stage;
+        }
+        $sql .= " ORDER BY COALESCE(section_title, ''), sort_order ASC, id ASC";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return array_map(function ($row) {
@@ -142,6 +149,7 @@ class CoverageCategoryService
                 'is_required' => (int)$row['is_required'],
                 'condition_text' => $row['condition_text'],
                 'modes_of_travel' => $modes,
+                'stage' => $row['stage'],
             ];
         }, $rows);
     }
@@ -158,7 +166,7 @@ class CoverageCategoryService
 
         $result = [];
         foreach ($rows as $row) {
-            $docs = self::getDocumentsForCategory($pdo, (int)$row['id']);
+            $docs = self::getDocumentsForCategory($pdo, (int)$row['id'], null);
             $result[] = self::mapCategoryRow($row, $docs);
         }
         return $result;
@@ -179,7 +187,7 @@ class CoverageCategoryService
         return ['caFieldMap' => $caMap, 'reimbFieldMap' => $reimbMap];
     }
 
-    public static function getChecklistConfig(PDO $pdo): array
+    public static function getChecklistConfig(PDO $pdo, string $stage = 'submission'): array
     {
         $config = ['Cash Advance' => [], 'Reimbursement' => []];
 
@@ -191,7 +199,7 @@ class CoverageCategoryService
         $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($categories as $cat) {
-            $docs = self::getDocumentsForCategory($pdo, (int)$cat['id']);
+            $docs = self::getDocumentsForCategory($pdo, (int)$cat['id'], $stage);
             $mainDocs = [];
             $sections = [];
 
@@ -413,9 +421,9 @@ class CoverageCategoryService
 
             $insertDoc = $pdo->prepare("
                 INSERT INTO coverage_category_documents
-                    (category_id, section_title, sort_order, title, is_required, condition_text, modes_of_travel)
+                    (category_id, section_title, sort_order, title, is_required, condition_text, modes_of_travel, stage)
                 VALUES
-                    (:category_id, :section_title, :sort_order, :title, :is_required, :condition_text, :modes_of_travel)
+                    (:category_id, :section_title, :sort_order, :title, :is_required, :condition_text, :modes_of_travel, :stage)
             ");
 
             foreach ($documents as $sort => $doc) {
@@ -438,6 +446,7 @@ class CoverageCategoryService
                     'is_required' => !empty($doc['is_required']) ? 1 : 0,
                     'condition_text' => trim((string)($doc['condition_text'] ?? '')) ?: null,
                     'modes_of_travel' => $modesOfTravel,
+                    'stage' => $doc['stage'] ?? 'submission',
                 ]);
             }
 
@@ -451,7 +460,7 @@ class CoverageCategoryService
         }
     }
 
-    public static function resolveDocumentChecklist(PDO $pdo, string $transactionType, string $category): array
+    public static function resolveDocumentChecklist(PDO $pdo, string $transactionType, string $category, string $stage = 'submission'): array
     {
         $empty = ['documents' => [], 'sections' => [], 'note' => null, 'source_label' => null];
 
