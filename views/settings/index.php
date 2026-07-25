@@ -58,6 +58,9 @@ if ($fastPDO !== null) {
         foreach ($usersStmt->fetchAll() as $row) {
             $roleUsers[$row['role_id']][] = $row;
         }
+
+        // Fetch transaction types
+        $transactionTypes = $fastPDO->query("SELECT * FROM transaction_types ORDER BY id ASC")->fetchAll();
     } catch (PDOException $e) {
         error_log("Failed to load settings data: " . $e->getMessage());
     }
@@ -91,6 +94,11 @@ if ($fastPDO !== null) {
             <li class="nav-item" role="presentation">
                 <button class="nav-link fw-semibold" id="checklists-tab" data-bs-toggle="tab" data-bs-target="#checklistsContent" type="button" role="tab" aria-controls="checklistsContent" aria-selected="false">
                     <i class="bi bi-card-checklist me-2"></i>Document Checklists
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-semibold" id="transaction-types-tab" data-bs-toggle="tab" data-bs-target="#transactionTypesContent" type="button" role="tab" aria-controls="transactionTypesContent" aria-selected="false">
+                    <i class="bi bi-list-check me-2"></i>Transaction Types
                 </button>
             </li>
         </ul>
@@ -408,6 +416,61 @@ if ($fastPDO !== null) {
                                 </thead>
                                 <tbody>
                                     <tr><td colspan="7" class="text-center py-4 text-muted">Loading checklists...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tab 6: Transaction Types -->
+    <div class="tab-pane fade" id="transactionTypesContent" role="tabpanel" aria-labelledby="transaction-types-tab">
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="mb-0 fw-bold text-primary-dark">Transaction Types</h5>
+                        <span class="text-muted fs-8">Enable or disable transaction types available in the system.</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4">ID</th>
+                                        <th>Name</th>
+                                        <th>Status</th>
+                                        <th class="text-end pe-4">Toggle</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($transactionTypes)): ?>
+                                        <tr><td colspan="4" class="text-center py-4 text-muted">No transaction types found.</td></tr>
+                                    <?php else: ?>
+                                        <?php foreach ($transactionTypes as $tt): ?>
+                                            <tr>
+                                                <td class="ps-4"><?php echo htmlspecialchars($tt['id']); ?></td>
+                                                <td class="fw-medium text-dark"><?php echo htmlspecialchars($tt['name']); ?></td>
+                                                <td>
+                                                    <?php if ($tt['is_active']): ?>
+                                                        <span class="badge bg-success bg-opacity-10 text-success px-2 py-1">Active</span>
+                                                    <?php else: ?>
+                                                        <span class="badge bg-secondary bg-opacity-10 text-secondary px-2 py-1">Disabled</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="text-end pe-4">
+                                                    <div class="form-check form-switch d-flex justify-content-end mb-0">
+                                                        <input class="form-check-input" type="checkbox" role="switch" 
+                                                               id="ttSwitch_<?php echo $tt['id']; ?>" 
+                                                               <?php echo $tt['is_active'] ? 'checked' : ''; ?>
+                                                               onchange="toggleTransactionType(<?php echo $tt['id']; ?>, this.checked)">
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </tbody>
                             </table>
                         </div>
@@ -1837,6 +1900,31 @@ async function deleteChecklistDoc(catId, docId) {
     
     const updatedDocs = (cat.documents || []).filter(d => d.id != docId);
     await saveChecklistCategoryDocs(cat, updatedDocs);
+}
+
+async function toggleTransactionType(id, isActive) {
+    try {
+        const response = await fetch('<?php echo env('APP_URL'); ?>/api/settings/toggle_transaction_type.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '<?php echo $_SESSION['csrf_token']; ?>'
+            },
+            body: JSON.stringify({ id: id, is_active: isActive ? 1 : 0 })
+        });
+        const data = await response.json();
+        if (data.success) {
+            API.showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 1000); // Reload to reflect changes
+        } else {
+            API.showToast(data.error || 'Failed to update transaction type.', 'danger');
+            document.getElementById('ttSwitch_' + id).checked = !isActive; // Revert
+        }
+    } catch (err) {
+        console.error(err);
+        API.showToast('Network error while updating transaction type.', 'danger');
+        document.getElementById('ttSwitch_' + id).checked = !isActive; // Revert
+    }
 }
 
 // Bind to window for HTML inline event handlers

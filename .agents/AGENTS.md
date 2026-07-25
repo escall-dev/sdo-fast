@@ -8,7 +8,7 @@
 - **"Transaction Type" / "Category" Editing**: Whenever the user talks about editing the requirements for a transaction type or category, ALWAYS default to looking at the Super Admin Settings (`views/settings/index.php`), not the user-facing submit form, unless explicitly stated otherwise.
 
 ### Refactoring & Data Migration
-- **Hardcoded to Dynamic**: Whenever refactoring hardcoded frontend logic (like conditional checklists) into dynamic database-driven logic, ALWAYS write a database script to migrate the existing hardcoded mappings into the database. Do not just delete the hardcoded UI logic, as that will break existing behavior until the user manually configures the database.
+- **Hardcoded to Dynamic**: Whenever refactoring hardcoded frontend logic, dropdown options, or form enumerations into dynamic database-driven logic, ALWAYS write a database script to migrate the existing hardcoded mappings (or initial values) into the database. Do not just delete the hardcoded UI logic, as that will break existing behavior until the user manually configures the database.
 
 ### UI/UX Modal Consistency
 - **Custom Confirmations**: NEVER use the native browser `window.confirm()` or `window.alert()` for user notifications or destructive action confirmations. ALWAYS use the system's built-in UI utilities (e.g., `API.confirmAction()` or `API.showToast()`) to maintain a consistent look and feel.

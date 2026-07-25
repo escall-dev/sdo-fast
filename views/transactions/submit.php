@@ -25,6 +25,7 @@ $categoryFieldMaps = ['caFieldMap' => [], 'reimbFieldMap' => []];
 if ($fastPDO !== null) {
     try {
         $taxConfigurations = $fastPDO->query("SELECT * FROM tax_configurations WHERE is_active = 1")->fetchAll();
+        $activeTransactionTypes = $fastPDO->query("SELECT name FROM transaction_types WHERE is_active = 1 ORDER BY id ASC")->fetchAll(PDO::FETCH_COLUMN);
         $caCategories = CoverageCategoryService::getActiveCategories($fastPDO, 'Cash Advance');
         $reimbCategories = CoverageCategoryService::getActiveCategories($fastPDO, 'Reimbursement');
         $categoryFieldMaps = CoverageCategoryService::getFieldMapsForJs($fastPDO);
@@ -50,9 +51,9 @@ if ($fastPDO !== null) {
                             <label for="transactionType" class="form-label fs-8 fw-semibold text-muted">Transaction Type <span class="text-danger">*</span></label>
                             <select name="transaction_type" id="transactionType" class="form-select" required>
                                 <option value="" disabled selected>Select Type</option>
-                                <option value="Cash Advance">Cash Advance</option>
-                                <option value="Reimbursement">Reimbursement</option>
-                                <option value="Payroll">Payroll</option>
+                                <?php foreach ($activeTransactionTypes as $type): ?>
+                                    <option value="<?php echo htmlspecialchars($type); ?>"><?php echo htmlspecialchars($type); ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                         
