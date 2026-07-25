@@ -545,18 +545,51 @@ document.addEventListener('DOMContentLoaded', function() {
             <span class="badge bg-danger-subtle text-danger fs-9">${reqCount} Required</span>
             <span class="badge bg-secondary-subtle text-secondary fs-9">${optCount} Optional</span>
         </div>`;
-        if (requiredDocs.length > 0) {
-            html += '<h6 class="fw-semibold text-secondary fs-8 mb-2">Required Documents</h6>';
-            html += '<ul class="list-group list-group-flush border rounded-3 overflow-hidden mb-0">';
-            html += renderDocumentRows(requiredDocs);
-            html += '</ul>';
-        }
 
-        if (optionalDocs.length > 0) {
-            html += '<h6 class="fw-semibold text-secondary fs-8 mt-3 mb-2">Optional / Conditional Documents</h6>';
-            html += '<ul class="list-group list-group-flush border rounded-3 overflow-hidden mb-0">';
-            html += renderDocumentRows(optionalDocs);
-            html += '</ul>';
+        if (txType === 'Reimbursement' && category === 'Travel') {
+            const checkedModes = Array.from(document.querySelectorAll('.mode-of-travel-checkbox:checked')).map(cb => cb.value);
+            
+            const generalDocs = allDocs.filter(d => !d.modesOfTravel || d.modesOfTravel.length === 0);
+            if (generalDocs.length > 0) {
+                const req = generalDocs.filter(d => d.required);
+                const opt = generalDocs.filter(d => !d.required);
+                html += '<h6 class="fw-bold text-dark fs-7 mt-3 mb-2">General Travel Requirements</h6>';
+                if (req.length > 0) {
+                    html += '<ul class="list-group list-group-flush border rounded-3 overflow-hidden mb-3">' + renderDocumentRows(req) + '</ul>';
+                }
+                if (opt.length > 0) {
+                    html += '<ul class="list-group list-group-flush border rounded-3 overflow-hidden mb-3">' + renderDocumentRows(opt) + '</ul>';
+                }
+            }
+
+            checkedModes.forEach(mode => {
+                const modeDocs = allDocs.filter(d => d.modesOfTravel && d.modesOfTravel.includes(mode));
+                if (modeDocs.length > 0) {
+                    const req = modeDocs.filter(d => d.required);
+                    const opt = modeDocs.filter(d => !d.required);
+                    html += `<h6 class="fw-bold text-dark fs-7 mt-3 mb-2">${escapeHtml(mode)}</h6>`;
+                    if (req.length > 0) {
+                        html += '<ul class="list-group list-group-flush border rounded-3 overflow-hidden mb-3">' + renderDocumentRows(req) + '</ul>';
+                    }
+                    if (opt.length > 0) {
+                        html += '<ul class="list-group list-group-flush border rounded-3 overflow-hidden mb-3">' + renderDocumentRows(opt) + '</ul>';
+                    }
+                }
+            });
+        } else {
+            if (requiredDocs.length > 0) {
+                html += '<h6 class="fw-semibold text-secondary fs-8 mb-2">Required Documents</h6>';
+                html += '<ul class="list-group list-group-flush border rounded-3 overflow-hidden mb-0">';
+                html += renderDocumentRows(requiredDocs);
+                html += '</ul>';
+            }
+
+            if (optionalDocs.length > 0) {
+                html += '<h6 class="fw-semibold text-secondary fs-8 mt-3 mb-2">Optional / Conditional Documents</h6>';
+                html += '<ul class="list-group list-group-flush border rounded-3 overflow-hidden mb-0">';
+                html += renderDocumentRows(optionalDocs);
+                html += '</ul>';
+            }
         }
 
         documentChecklistContent.innerHTML = html;

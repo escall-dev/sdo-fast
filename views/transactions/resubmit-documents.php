@@ -548,27 +548,63 @@ function renderChecklist() {
         </div>
     </div>`;
 
-    if (requiredDocs.length > 0) {
-        html += '<h6 class="fw-semibold text-secondary fs-8 mb-2">Required Documents</h6>';
-        html += '<div class="d-flex flex-column gap-3 mb-4">';
-        html += renderDocRows(requiredDocs);
-        html += '</div>';
-    }
-    
-    // 10. Collapsible optional section
-    if (optionalDocs.length > 0) {
-        html += `
-        <div class="d-flex align-items-center justify-content-between mt-3 mb-2">
-            <h6 class="fw-semibold text-secondary fs-8 mb-0">Optional / Conditional Documents</h6>
-            <button class="btn btn-sm btn-link text-decoration-none fs-9 py-0" type="button" data-bs-toggle="collapse" data-bs-target="#optionalDocsCollapse" aria-expanded="false" aria-controls="optionalDocsCollapse">
-                Toggle Visibility <i class="bi bi-chevron-down ms-1"></i>
-            </button>
-        </div>
-        <div class="collapse" id="optionalDocsCollapse">
-            <div class="d-flex flex-column gap-3 mb-2">
-                ${renderDocRows(optionalDocs)}
+    if (CHECKLIST_TX_TYPE === 'Reimbursement' && CHECKLIST_CATEGORY === 'Travel') {
+        const selectedModes = Array.isArray(REIMB_MODE_OF_TRAVEL) ? REIMB_MODE_OF_TRAVEL : [];
+        const generalDocs = allDocs.filter(d => !d.modesOfTravel || d.modesOfTravel.length === 0);
+        
+        if (generalDocs.length > 0) {
+            const req = generalDocs.filter(d => d.required);
+            const opt = generalDocs.filter(d => !d.required);
+            html += '<h5 class="fw-bold text-dark fs-6 mt-4 mb-3 border-bottom pb-2">General Travel Requirements</h5>';
+            if (req.length > 0) {
+                html += '<h6 class="fw-semibold text-secondary fs-8 mb-2">Required Documents</h6>';
+                html += '<div class="d-flex flex-column gap-3 mb-4">' + renderDocRows(req).join('') + '</div>';
+            }
+            if (opt.length > 0) {
+                html += '<h6 class="fw-semibold text-secondary fs-8 mb-2">Optional / Conditional Documents</h6>';
+                html += '<div class="d-flex flex-column gap-3 mb-4">' + renderDocRows(opt).join('') + '</div>';
+            }
+        }
+
+        selectedModes.forEach(mode => {
+            const modeDocs = allDocs.filter(d => d.modesOfTravel && d.modesOfTravel.includes(mode));
+            if (modeDocs.length > 0) {
+                const req = modeDocs.filter(d => d.required);
+                const opt = modeDocs.filter(d => !d.required);
+                html += `<h5 class="fw-bold text-dark fs-6 mt-4 mb-3 border-bottom pb-2">${escapeHtml(mode)}</h5>`;
+                if (req.length > 0) {
+                    html += '<h6 class="fw-semibold text-secondary fs-8 mb-2">Required Documents</h6>';
+                    html += '<div class="d-flex flex-column gap-3 mb-4">' + renderDocRows(req).join('') + '</div>';
+                }
+                if (opt.length > 0) {
+                    html += '<h6 class="fw-semibold text-secondary fs-8 mb-2">Optional / Conditional Documents</h6>';
+                    html += '<div class="d-flex flex-column gap-3 mb-4">' + renderDocRows(opt).join('') + '</div>';
+                }
+            }
+        });
+    } else {
+        if (requiredDocs.length > 0) {
+            html += '<h6 class="fw-semibold text-secondary fs-8 mb-2">Required Documents</h6>';
+            html += '<div class="d-flex flex-column gap-3 mb-4">';
+            html += renderDocRows(requiredDocs).join('');
+            html += '</div>';
+        }
+        
+        // 10. Collapsible optional section
+        if (optionalDocs.length > 0) {
+            html += `
+            <div class="d-flex align-items-center justify-content-between mt-3 mb-2">
+                <h6 class="fw-semibold text-secondary fs-8 mb-0">Optional / Conditional Documents</h6>
+                <button class="btn btn-sm btn-link text-decoration-none fs-9 py-0" type="button" data-bs-toggle="collapse" data-bs-target="#optionalDocsCollapse" aria-expanded="false" aria-controls="optionalDocsCollapse">
+                    Toggle Visibility <i class="bi bi-chevron-down ms-1"></i>
+                </button>
             </div>
-        </div>`;
+            <div class="collapse" id="optionalDocsCollapse">
+                <div class="d-flex flex-column gap-3 mb-2">
+                    ${renderDocRows(optionalDocs).join('')}
+                </div>
+            </div>`;
+        }
     }
     container.innerHTML = html;
     wireAttachEvents();
