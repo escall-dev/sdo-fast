@@ -524,6 +524,16 @@ function renderChecklist() {
         }
         return true;
     });
+    // ponytail: debug — remove once root cause confirmed
+    console.log('[DEBUG renderChecklist]', {
+        CHECKLIST_TX_TYPE, CHECKLIST_CATEGORY,
+        REIMB_MODE_OF_TRAVEL,
+        entry,
+        baseDocs,
+        sectionDocs,
+        allDocsCount: allDocs.length,
+        allDocs
+    });
     const requiredDocs = allDocs.filter(d => d.required);
     const optionalDocs = allDocs.filter(d => !d.required);
 
