@@ -519,7 +519,7 @@ function renderChecklist() {
             if (selectedModes.length === 0) {
                 return !d.modesOfTravel || d.modesOfTravel.length === 0;
             }
-            if (!d.modesOfTravel || d.modesOfTravel.length === 0) return true;
+            if (!d.modesOfTravel || d.modesOfTravel.length === 0) return false;
             return selectedModes.some(mode => d.modesOfTravel.includes(mode));
         }
         return true;
