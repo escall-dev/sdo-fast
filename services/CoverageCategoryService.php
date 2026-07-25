@@ -139,6 +139,9 @@ class CoverageCategoryService
                 $decoded = json_decode($row['modes_of_travel'], true);
                 if (is_array($decoded)) {
                     $modes = $decoded;
+                } else {
+                    // Fallback for legacy data that was stored as raw strings
+                    $modes = [$row['modes_of_travel']];
                 }
             }
             return [
