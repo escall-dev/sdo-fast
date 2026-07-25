@@ -1065,3 +1065,74 @@ body {
     background-color: #cbd5e1 !important;
 }
 
+/* =========================================================================
+   DASHBOARD LANDING PAGE STYLES
+   ========================================================================= */
+.dashboard-hero-card {
+    background: linear-gradient(135deg, #1b4a9a 0%, #0f377e 60%, #1e3a8a 100%);
+    border: none;
+    border-radius: 16px;
+    color: #ffffff;
+    box-shadow: 0 10px 25px -5px rgba(27, 74, 154, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-hero-card::before {
+    content: '';
+    position: absolute;
+    top: -50px;
+    right: -50px;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    pointer-events: none;
+}
+
+.dashboard-hero-card::after {
+    content: '';
+    position: absolute;
+    bottom: -80px;
+    right: 80px;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.04);
+    pointer-events: none;
+}
+
+.landing-shortcut-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    height: 100%;
+}
+
+.landing-shortcut-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.08);
+    border-color: #93c5fd;
+    color: inherit;
+}
+
+.landing-shortcut-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    transition: transform 0.2s ease;
+}
+
+.landing-shortcut-card:hover .landing-shortcut-icon {
+    transform: scale(1.08);
+}
+
+

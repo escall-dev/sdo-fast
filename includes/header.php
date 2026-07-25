@@ -39,7 +39,7 @@ if (isset($pageTheme) && $pageTheme === 'template') {
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
     
     <!-- Custom Theme Stylesheet -->
-    <link rel="stylesheet" href="<?php echo env('APP_URL'); ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo env('APP_URL'); ?>/assets/css/style.css?v=<?php echo time(); ?>">
 </head>
 <body class="<?php echo $bodyClass; ?>">
     <script>

@@ -13,3 +13,8 @@
 ### UI/UX Modal Consistency
 - **Custom Confirmations**: NEVER use the native browser `window.confirm()` or `window.alert()` for user notifications or destructive action confirmations. ALWAYS use the system's built-in UI utilities (e.g., `API.confirmAction()` or `API.showToast()`) to maintain a consistent look and feel.
 - **Destructive Actions**: Any action that deletes data from the screen or database (like removing a row from a list or deactivating an item) MUST first prompt the user with a confirmation modal before proceeding.
+
+### UI/UX Hero & Landing Hub Guidelines
+- **Color Consistency**: Hero landing cards must use the same background color or gradient as the primary sidebar nav (e.g., `.dashboard-hero-card`) to maintain theme uniformity.
+- **Minimalism**: Keep hero hubs clean and minimal. Do not clutter them with large background graphics/icons (like calculators) or redundant user role badges unless explicitly requested.
+- **Primary Actions**: Primary call-to-action buttons in the hero section (like "Overview") should match the system's designated accent color (e.g., the logout button's orange `#f97316` with white text), rather than using standard Bootstrap utility colors like `btn-warning`.
