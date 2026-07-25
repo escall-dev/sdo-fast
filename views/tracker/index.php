@@ -549,12 +549,15 @@ if (!empty($searchQuery) && $fastPDO !== null) {
                                                 <strong class="text-dark fs-8 d-block"><?php echo htmlspecialchars($transaction['reimb_venue'] ?: 'N/A'); ?></strong>
                                             </div>
                                         <?php endif; ?>
-                                        <?php if ($reimbCat === 'Travel' && !empty($transaction['reimb_mode_of_travel'])): ?>
+                                        <?php if ($reimbCat === 'Travel' && !empty($transaction['reimb_mode_of_travel'])): 
+                                            $modes = json_decode($transaction['reimb_mode_of_travel'], true);
+                                            $displayMode = (is_array($modes)) ? implode(', ', $modes) : $transaction['reimb_mode_of_travel'];
+                                        ?>
                                             <div class="col-12 col-sm-6">
                                                 <small class="text-muted d-block text-uppercase fw-semibold mb-1" style="font-size: 0.7rem;">Mode of Travel</small>
                                                 <strong class="text-dark fs-8 d-block">
                                                     <i class="bi bi-ticket-detailed text-primary me-1"></i>
-                                                    <?php echo htmlspecialchars($transaction['reimb_mode_of_travel']); ?>
+                                                    <?php echo htmlspecialchars($displayMode); ?>
                                                 </strong>
                                             </div>
                                         <?php endif; ?>

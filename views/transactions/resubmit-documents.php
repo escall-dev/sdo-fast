@@ -88,10 +88,13 @@ if ($transactionId > 0 && $fastPDO !== null) {
                                 <span class="text-muted d-block text-uppercase fw-semibold">Budget Status</span>
                                 <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Source of Funds Verified</span>
                             </div>
-                            <?php if ($transaction['transaction_type'] === 'Reimbursement' && ($transaction['reimb_category'] ?? '') === 'Travel' && !empty($transaction['reimb_mode_of_travel'])): ?>
+                            <?php if ($transaction['transaction_type'] === 'Reimbursement' && ($transaction['reimb_category'] ?? '') === 'Travel' && !empty($transaction['reimb_mode_of_travel'])): 
+                                $modes = json_decode($transaction['reimb_mode_of_travel'], true);
+                                $displayMode = (is_array($modes)) ? implode(', ', $modes) : $transaction['reimb_mode_of_travel'];
+                            ?>
                             <div class="col-12 col-sm-6">
                                 <span class="text-muted d-block text-uppercase fw-semibold">Mode of Travel</span>
-                                <strong class="text-dark"><?php echo htmlspecialchars($transaction['reimb_mode_of_travel']); ?></strong>
+                                <strong class="text-dark"><?php echo htmlspecialchars($displayMode); ?></strong>
                             </div>
                             <?php endif; ?>
                         </div>
@@ -145,7 +148,8 @@ if ($transactionId > 0 && $fastPDO !== null) {
                         $type = $transaction['transaction_type'];
                         $caCategory = $transaction['ca_category'] ?? '';
                         $reimbCategory = $transaction['reimb_category'] ?? '';
-                        $reimbModeOfTravel = $transaction['reimb_mode_of_travel'] ?? '';
+                        $reimbModeOfTravelRaw = $transaction['reimb_mode_of_travel'] ?? '';
+                        $reimbModeOfTravel = json_decode($reimbModeOfTravelRaw, true) ?: (empty($reimbModeOfTravelRaw) ? [] : [$reimbModeOfTravelRaw]);
 
                         $caFieldConfig = [];
                         $reimbFieldConfig = [];
@@ -511,11 +515,12 @@ function renderChecklist() {
     const allDocs = baseDocs.concat(sectionDocs).filter(d => {
         // For Travel reimbursements, only show docs matching the selected Mode of Travel
         if (CHECKLIST_TX_TYPE === 'Reimbursement' && CHECKLIST_CATEGORY === 'Travel') {
-            const selectedMode = REIMB_MODE_OF_TRAVEL;
-            if (!selectedMode) return true;
-            // Only show documents explicitly assigned to the selected mode
-            if (!d.modesOfTravel || d.modesOfTravel.length === 0) return false;
-            return d.modesOfTravel.includes(selectedMode);
+            const selectedModes = Array.isArray(REIMB_MODE_OF_TRAVEL) ? REIMB_MODE_OF_TRAVEL : [];
+            if (selectedModes.length === 0) {
+                return !d.modesOfTravel || d.modesOfTravel.length === 0;
+            }
+            if (!d.modesOfTravel || d.modesOfTravel.length === 0) return true;
+            return selectedModes.some(mode => d.modesOfTravel.includes(mode));
         }
         return true;
     });

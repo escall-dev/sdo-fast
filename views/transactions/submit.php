@@ -205,21 +205,26 @@ if ($fastPDO !== null) {
                                 <!-- Mode of Travel — visible only for Travel reimbursement -->
                                 <div id="modeOfTravelSection" class="d-none">
                                     <div class="row g-3 mb-3">
-                                        <div class="col-12">
-                                            <label for="modeOfTravel" class="form-label fs-8 fw-semibold text-muted">Mode of Travel <span class="text-danger">*</span></label>
-                                            <select name="mode_of_travel" id="modeOfTravel" class="form-select">
-                                                <option value="" disabled selected>Select Mode of Travel</option>
+                                        <div class="col-12" id="modeOfTravelContainer">
+                                            <label class="form-label fs-8 fw-semibold text-muted">Mode of Travel <span class="text-danger">*</span></label>
+                                            <div class="d-flex flex-wrap gap-2">
                                                 <?php
                                                 $travelModes = [];
                                                 try {
                                                     $modeStmt = $fastPDO->query("SELECT name FROM modes_of_travel WHERE is_active = 1 ORDER BY name ASC");
                                                     $travelModes = $modeStmt->fetchAll(PDO::FETCH_COLUMN);
                                                 } catch (PDOException $e) {}
-                                                foreach ($travelModes as $mode):
+                                                foreach ($travelModes as $index => $mode):
+                                                    $checkboxId = 'modeOfTravel_' . $index;
                                                 ?>
-                                                    <option value="<?php echo htmlspecialchars($mode); ?>"><?php echo htmlspecialchars($mode); ?></option>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input mode-of-travel-checkbox" type="checkbox" name="mode_of_travel[]" value="<?php echo htmlspecialchars($mode); ?>" id="<?php echo $checkboxId; ?>">
+                                                        <label class="form-check-label fs-8" for="<?php echo $checkboxId; ?>">
+                                                            <?php echo htmlspecialchars($mode); ?>
+                                                        </label>
+                                                    </div>
                                                 <?php endforeach; ?>
-                                            </select>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -397,7 +402,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Mode of Travel elements
     const modeOfTravelSection = document.getElementById('modeOfTravelSection');
-    const modeOfTravelSelect = document.getElementById('modeOfTravel');
+    const modeOfTravelContainer = document.getElementById('modeOfTravelContainer');
 
     function escapeHtml(text) {
         const div = document.createElement('div');
@@ -503,11 +508,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const allDocs = baseDocs.concat(sectionDocs).filter(d => {
             if (txType === 'Reimbursement' && category === 'Travel') {
-                const selectedMode = modeOfTravelSelect ? modeOfTravelSelect.value : '';
-                if (!selectedMode) return true;
-                // Only show documents explicitly assigned to the selected mode
-                if (!d.modesOfTravel || d.modesOfTravel.length === 0) return false;
-                return d.modesOfTravel.includes(selectedMode);
+                const checkedModes = Array.from(document.querySelectorAll('.mode-of-travel-checkbox:checked')).map(cb => cb.value);
+                if (checkedModes.length === 0) {
+                    // Show only base documents if no mode is selected
+                    return !d.modesOfTravel || d.modesOfTravel.length === 0;
+                }
+                // If the doc has no specific modes, it's a base doc, show it.
+                if (!d.modesOfTravel || d.modesOfTravel.length === 0) return true;
+                // Otherwise, check if there's any intersection
+                return checkedModes.some(mode => d.modesOfTravel.includes(mode));
             }
             return true;
         });
@@ -631,12 +640,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const isTravel = reimbCat === 'Travel';
             if (isTravel && cfg.dateVenue) {
                 modeOfTravelSection.classList.remove('d-none');
-                modeOfTravelSelect.disabled = false;
-                modeOfTravelSelect.required = true;
+                setFieldsState(modeOfTravelContainer, true, false); // checkboxes can't be generically required via the helper well, but we enable them
             } else {
                 modeOfTravelSection.classList.add('d-none');
-                modeOfTravelSelect.disabled = true;
-                modeOfTravelSelect.required = false;
+                setFieldsState(modeOfTravelContainer, false, false);
             }
         } else {
             reimbSection.classList.add('d-none');
@@ -648,8 +655,7 @@ document.addEventListener('DOMContentLoaded', function() {
             hideAndDisable(reimbCommunications);
             hideAndDisable(reimbUtilityBills);
             modeOfTravelSection.classList.add('d-none');
-            modeOfTravelSelect.disabled = true;
-            modeOfTravelSelect.required = false;
+            setFieldsState(modeOfTravelContainer, false, false);
         }
 
         updateDocumentChecklist();
@@ -658,9 +664,9 @@ document.addEventListener('DOMContentLoaded', function() {
     txTypeSelect.addEventListener('change', toggleFormFields);
     caCategorySelect.addEventListener('change', toggleFormFields);
     reimbCategorySelect.addEventListener('change', toggleFormFields);
-    if (modeOfTravelSelect) {
-        modeOfTravelSelect.addEventListener('change', updateDocumentChecklist);
-    }
+    document.querySelectorAll('.mode-of-travel-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateDocumentChecklist);
+    });
 
     // Initial call
     toggleFormFields();

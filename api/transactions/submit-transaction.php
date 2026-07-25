@@ -67,7 +67,7 @@ $reimbStartDate = trim($_POST['reimb_start_date'] ?? '');
 $reimbEndDate = trim($_POST['reimb_end_date'] ?? '');
 $reimbVenue = trim($_POST['reimb_venue'] ?? '');
 $utilityMonth = trim($_POST['utility_month'] ?? '');
-$modeOfTravel = trim($_POST['mode_of_travel'] ?? '');
+$modeOfTravel = isset($_POST['mode_of_travel']) && is_array($_POST['mode_of_travel']) ? $_POST['mode_of_travel'] : [];
 
 // 2. Validate Inputs
 if (empty($type) || empty($eventName) || $amount <= 0) {
@@ -176,10 +176,17 @@ if ($type === 'Reimbursement') {
         error_log("Modes of travel retrieval failure: " . $e->getMessage());
     }
     if ($reimbursementCategory === 'Travel') {
-        if (empty($modeOfTravel) || !in_array($modeOfTravel, $allowedModes)) {
+        if (empty($modeOfTravel)) {
             http_response_code(422);
             echo json_encode(['success' => false, 'message' => 'A valid Mode of Travel is required for Travel reimbursement.']);
             exit;
+        }
+        foreach ($modeOfTravel as $mode) {
+            if (!in_array($mode, $allowedModes)) {
+                http_response_code(422);
+                echo json_encode(['success' => false, 'message' => 'Invalid Mode of Travel selected.']);
+                exit;
+            }
         }
     }
 } // end if ($type === 'Reimbursement')
@@ -408,7 +415,7 @@ try {
         $reimbStmt->execute([
             'transaction_id' => $transactionDbId,
             'category' => $reimbursementCategory,
-            'mode_of_travel' => !empty($modeOfTravel) ? $modeOfTravel : null,
+            'mode_of_travel' => !empty($modeOfTravel) ? json_encode($modeOfTravel) : null,
             'reimbursement_month' => $reimbursementMonth ?: null,
             'inclusive_dates' => $reimbInclusiveDates,
             'venue' => !empty($reimbFields['dateVenue']) ? $reimbVenue : null,
