@@ -524,16 +524,7 @@ function renderChecklist() {
         }
         return true;
     });
-    // ponytail: debug — remove once root cause confirmed
-    console.log('[DEBUG renderChecklist]', {
-        CHECKLIST_TX_TYPE, CHECKLIST_CATEGORY,
-        REIMB_MODE_OF_TRAVEL,
-        entry,
-        baseDocs,
-        sectionDocs,
-        allDocsCount: allDocs.length,
-        allDocs
-    });
+
     const requiredDocs = allDocs.filter(d => d.required);
     const optionalDocs = allDocs.filter(d => !d.required);
 
@@ -568,11 +559,11 @@ function renderChecklist() {
             html += '<h5 class="fw-bold text-dark fs-6 mt-4 mb-3 border-bottom pb-2">General Travel Requirements</h5>';
             if (req.length > 0) {
                 html += '<h6 class="fw-semibold text-secondary fs-8 mb-2">Required Documents</h6>';
-                html += '<div class="d-flex flex-column gap-3 mb-4">' + renderDocRows(req).join('') + '</div>';
+                html += '<div class="d-flex flex-column gap-3 mb-4">' + renderDocRows(req) + '</div>';
             }
             if (opt.length > 0) {
                 html += '<h6 class="fw-semibold text-secondary fs-8 mb-2">Optional / Conditional Documents</h6>';
-                html += '<div class="d-flex flex-column gap-3 mb-4">' + renderDocRows(opt).join('') + '</div>';
+                html += '<div class="d-flex flex-column gap-3 mb-4">' + renderDocRows(opt) + '</div>';
             }
         }
 
@@ -584,11 +575,11 @@ function renderChecklist() {
                 html += `<h5 class="fw-bold text-dark fs-6 mt-4 mb-3 border-bottom pb-2">${escapeHtml(mode)}</h5>`;
                 if (req.length > 0) {
                     html += '<h6 class="fw-semibold text-secondary fs-8 mb-2">Required Documents</h6>';
-                    html += '<div class="d-flex flex-column gap-3 mb-4">' + renderDocRows(req).join('') + '</div>';
+                    html += '<div class="d-flex flex-column gap-3 mb-4">' + renderDocRows(req) + '</div>';
                 }
                 if (opt.length > 0) {
                     html += '<h6 class="fw-semibold text-secondary fs-8 mb-2">Optional / Conditional Documents</h6>';
-                    html += '<div class="d-flex flex-column gap-3 mb-4">' + renderDocRows(opt).join('') + '</div>';
+                    html += '<div class="d-flex flex-column gap-3 mb-4">' + renderDocRows(opt) + '</div>';
                 }
             }
         });
@@ -596,7 +587,7 @@ function renderChecklist() {
         if (requiredDocs.length > 0) {
             html += '<h6 class="fw-semibold text-secondary fs-8 mb-2">Required Documents</h6>';
             html += '<div class="d-flex flex-column gap-3 mb-4">';
-            html += renderDocRows(requiredDocs).join('');
+            html += renderDocRows(requiredDocs);
             html += '</div>';
         }
         
@@ -611,7 +602,7 @@ function renderChecklist() {
             </div>
             <div class="collapse" id="optionalDocsCollapse">
                 <div class="d-flex flex-column gap-3 mb-2">
-                    ${renderDocRows(optionalDocs).join('')}
+                    ${renderDocRows(optionalDocs)}
                 </div>
             </div>`;
         }
