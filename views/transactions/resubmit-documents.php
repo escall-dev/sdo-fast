@@ -551,21 +551,6 @@ function renderChecklist() {
 
     if (CHECKLIST_TX_TYPE === 'Reimbursement' && CHECKLIST_CATEGORY === 'Travel') {
         const selectedModes = Array.isArray(REIMB_MODE_OF_TRAVEL) ? REIMB_MODE_OF_TRAVEL : [];
-        const generalDocs = allDocs.filter(d => !d.modesOfTravel || d.modesOfTravel.length === 0);
-        
-        if (generalDocs.length > 0) {
-            const req = generalDocs.filter(d => d.required);
-            const opt = generalDocs.filter(d => !d.required);
-            html += '<h5 class="fw-bold text-dark fs-6 mt-4 mb-3 border-bottom pb-2">General Travel Requirements</h5>';
-            if (req.length > 0) {
-                html += '<h6 class="fw-semibold text-secondary fs-8 mb-2">Required Documents</h6>';
-                html += '<div class="d-flex flex-column gap-3 mb-4">' + renderDocRows(req) + '</div>';
-            }
-            if (opt.length > 0) {
-                html += '<h6 class="fw-semibold text-secondary fs-8 mb-2">Optional / Conditional Documents</h6>';
-                html += '<div class="d-flex flex-column gap-3 mb-4">' + renderDocRows(opt) + '</div>';
-            }
-        }
 
         selectedModes.forEach(mode => {
             const modeDocs = allDocs.filter(d => d.modesOfTravel && d.modesOfTravel.includes(mode));
